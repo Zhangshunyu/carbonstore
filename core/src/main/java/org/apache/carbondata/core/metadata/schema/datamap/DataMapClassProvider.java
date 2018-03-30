@@ -28,7 +28,8 @@ package org.apache.carbondata.core.metadata.schema.datamap;
 
 public enum DataMapClassProvider {
   PREAGGREGATE("org.apache.carbondata.core.datamap.AggregateDataMap", "preaggregate"),
-  TIMESERIES("org.apache.carbondata.core.datamap.TimeSeriesDataMap", "timeseries");
+  TIMESERIES("org.apache.carbondata.core.datamap.TimeSeriesDataMap", "timeseries"),
+  MV("org.apache.carbondata.core.datamap.MVDataMap", "mv");
 
   /**
    * Fully qualified class name of datamap

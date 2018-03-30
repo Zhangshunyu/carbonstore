@@ -37,7 +37,7 @@ object ModularPlanRule extends SignatureRule[ModularPlan] {
   def apply(plan: ModularPlan, childSignatures: Seq[Option[Signature]]): Option[Signature] = {
 
     plan match {
-      case modular.Select(_, _, _, _, _, _, _, _, _) =>
+      case modular.Select(_, _, _, _, _, _, _, _, _, _) =>
         if (childSignatures.map { _.getOrElse(Signature()).groupby }.forall(x => !x)) {
           Some(Signature(
             groupby = false,
@@ -48,7 +48,7 @@ object ModularPlanRule extends SignatureRule[ModularPlan] {
         } else {
           None
         }
-      case modular.GroupBy(_, _, _, _, _, _, _) =>
+      case modular.GroupBy(_, _, _, _, _, _, _, _) =>
         if (childSignatures.length == 1 && !childSignatures(0).getOrElse(Signature()).groupby) {
           Some(Signature(groupby = true, childSignatures(0).getOrElse(Signature()).datasets))
         } else {

@@ -110,13 +110,14 @@ abstract class ModularPlan
   def isSPJGH: Boolean = {
     this match {
       case modular.Select(_, _, _, _, _,
-        Seq(modular.GroupBy(_, _, _, _, sel_c2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-        _, _, _) if sel_c2.children.forall(_.isInstanceOf[modular.LeafNode]) => true
-
-      case modular.GroupBy(_, _, _, _, sel_c2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)
+        Seq(modular.GroupBy(_, _, _, _,
+        sel_c2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)), _, _, _, _)
         if sel_c2.children.forall(_.isInstanceOf[modular.LeafNode]) => true
 
-      case modular.Select(_, _, _, _, _, children, _, _, _)
+      case modular.GroupBy(_, _, _, _, sel_c2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)
+        if sel_c2.children.forall(_.isInstanceOf[modular.LeafNode]) => true
+
+      case modular.Select(_, _, _, _, _, children, _, _, _, _)
         if children.forall(_.isInstanceOf[modular.LeafNode]) => true
 
       case _ => false

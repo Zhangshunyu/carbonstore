@@ -17,11 +17,13 @@
 
 package org.apache.carbondata.mv.testutil
 
+import java.io.File
+
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util._
-import org.apache.spark.sql.test.util.PlanTest
+import org.apache.spark.sql.test.util.{PlanTest, QueryTest}
 
 import org.apache.carbondata.mv.plans.modular
 import org.apache.carbondata.mv.plans.modular.{ModularPlan, OneRowTable, Select}
@@ -30,7 +32,7 @@ import org.apache.carbondata.mv.plans.modular.Flags._
 /**
  * Provides helper methods for comparing plans.
  */
-abstract class ModularPlanTest extends PlanTest with PredicateHelper {
+abstract class ModularPlanTest extends QueryTest with PredicateHelper {
 
   /**
    * Since attribute references are given globally unique ids during analysis,

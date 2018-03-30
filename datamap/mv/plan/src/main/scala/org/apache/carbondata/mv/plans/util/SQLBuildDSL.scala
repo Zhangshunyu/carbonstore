@@ -124,22 +124,24 @@ trait SQLBuildDSL {
       alias: Option[String]): Fragment = {
     plan match {
       case s1@modular.Select(_, _, _, _, _,
-        Seq(g@modular.GroupBy(_, _, _, _, s2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-        _, _, _) if (!s1.skip && !g.skip && !s2.skip) =>
+        Seq(g@modular.GroupBy(_, _, _, _,
+        s2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)), _, _, _, _)
+        if (!s1.skip && !g.skip && !s2.skip) =>
         extractRewrittenOrNonRewrittenSelectGroupBySelect(s1, g, s2, alias)
 
       case s1@modular.Select(_, _, _, _, _,
-        Seq(g@modular.GroupBy(_, _, _, _, s2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-        _, _, _) if (s1.skip && g.skip && s2.skip) =>
+        Seq(g@modular.GroupBy(_, _, _, _,
+        s2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)), _, _, _, _)
+        if (s1.skip && g.skip && s2.skip) =>
         extractRewrittenOrNonRewrittenSelectGroupBySelect(s1, g, s2, alias)
 
-      case s1@modular.Select(_, _, _, _, _,
-        Seq(g@modular.GroupBy(_, _, _, _, s2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-        _, _, _) if (!s1.skip && !g.skip && s2.skip) =>
+      case s1@modular.Select(_, _, _, _, _, Seq(g@modular.GroupBy(_, _, _, _,
+        s2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)), _, _, _, _)
+        if (!s1.skip && !g.skip && s2.skip) =>
         extractRewrittenSelectGroupBy(s1, g, alias)
 
-      case s1@modular.Select(_, _, _, _, _, Seq(s2@modular.Select(_, _, _, _, _, _, _, _, _)),
-        _, _, _) if (!s1.skip && s2.skip) =>
+      case s1@modular.Select(_, _, _, _, _, Seq(s2@modular.Select(_, _, _, _, _, _, _, _, _, _)),
+        _, _, _, _) if (!s1.skip && s2.skip) =>
         extractRewrittenSelect(s1, alias)
 
       case other => extractSimpleOperator(other, alias)
@@ -152,11 +154,12 @@ trait SQLBuildDSL {
       alias: Option[String]): Fragment = {
     plan match {
       case s1@modular.Select(_, _, _, _, _,
-        Seq(g@modular.GroupBy(_, _, _, _, s2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-        _, _, _) if (s1.aliasMap.isEmpty && !g.rewritten) =>
+        Seq(g@modular.GroupBy(_, _, _, _,
+        s2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)), _, _, _, _)
+        if (s1.aliasMap.isEmpty && !g.rewritten) =>
         extractRewrittenOrNonRewrittenSelectGroupBySelect(s1, g, s2, alias)
 
-      case g@modular.GroupBy(_, _, _, _, s2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)
+      case g@modular.GroupBy(_, _, _, _, s2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)
         if (g.alias.isEmpty && !s2.rewritten) =>
         val fragmentList = s2.children.zipWithIndex
           .map { case (child, index) => fragmentExtract(child, s2.aliasMap.get(index)) }
@@ -179,7 +182,7 @@ trait SQLBuildDSL {
           alias,
           (g.flags, g.flagSpec))
 
-      case g@modular.GroupBy(_, _, _, _, _, _, _) if (g.alias.nonEmpty) =>
+      case g@modular.GroupBy(_, _, _, _, _, _, _, _) if (g.alias.nonEmpty) =>
         val from = Seq((fragmentExtract(g.child, g.alias), None, Nil))
         SPJGFragment(
           g.outputList,
@@ -304,7 +307,7 @@ trait SQLBuildDSL {
       operator: ModularPlan,
       alias: Option[String]): Fragment = {
     operator match {
-      case s@modular.Select(_, _, _, _, _, _, _, _, _) =>
+      case s@modular.Select(_, _, _, _, _, _, _, _, _, _) =>
         val fragmentList = s.children.zipWithIndex
           .map { case (child, index) => fragmentExtract(child, s.aliasMap.get(index)) }
         val fList = s.joinEdges.map {

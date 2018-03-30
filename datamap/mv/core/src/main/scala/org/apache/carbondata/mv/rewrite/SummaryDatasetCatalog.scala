@@ -19,43 +19,40 @@ package org.apache.carbondata.mv.rewrite
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import org.apache.spark.SparkContext
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.execution.datasources.FindDataSourceTable
+import org.apache.spark.sql.parser.CarbonSpark2SqlParser
 
-import org.apache.carbondata.mv.plans.modular.{ModularPlan, SimpleModularizer}
-import org.apache.carbondata.mv.plans.util.{BirdcageOptimizer, Signature}
+import org.apache.carbondata.core.datamap.DataMapCatalog
+import org.apache.carbondata.core.datamap.status.DataMapStatusManager
+import org.apache.carbondata.core.metadata.schema.table.DataMapSchema
+import org.apache.carbondata.mv.datamap.{MVHelper, MVState}
+import org.apache.carbondata.mv.plans.modular.{Flags, ModularPlan, ModularRelation, Select}
+import org.apache.carbondata.mv.plans.util.Signature
 
 /** Holds a summary logical plan */
-private[mv] case class SummaryDataset(signature: Option[Signature], plan: LogicalPlan)
+private[mv] case class SummaryDataset(signature: Option[Signature],
+    plan: LogicalPlan,
+    dataMapSchema: DataMapSchema,
+    relation: ModularPlan)
 
-private[mv] class SummaryDatasetCatalog(saprkContext: SparkContext) {
+private[mv] class SummaryDatasetCatalog(sparkSession: SparkSession)
+  extends DataMapCatalog[SummaryDataset] {
 
   @transient
   private val summaryDatasets = new scala.collection.mutable.ArrayBuffer[SummaryDataset]
 
+  val mVState = new MVState(this)
+
   @transient
   private val registerLock = new ReentrantReadWriteLock
 
-  private val optimizer = BirdcageOptimizer
-
-  private val modularizer = SimpleModularizer
-
-  //  /** Returns true if the table is currently registered in-catalog. */
-  //  def isRegistered(tableName: String): Boolean =
-  //    lookupSummaryDataset(sqlContext.table(tableName)).nonEmpty
-  //
-  //  /** Registers the specified table in-memory catalog. */
-  //  def registerTable(tableName: String): Unit =
-  //    registerSummaryDataset(sqlContext.table(tableName), Some(tableName))
-  //
-  //  /** Removes the specified table from the in-memory catalog. */
-  //  def unregisterTable(tableName: String): Unit =
-  //   unregisterSummaryDataset(sqlContext.table(tableName))
-  //
-  //  override def unregisterAllTables(): Unit = {
-  //    clearSummaryDatasetCatalog()
-  //  }
+  /**
+   * parser
+   */
+  lazy val parser = new CarbonSpark2SqlParser
 
   /** Acquires a read lock on the catalog for the duration of `f`. */
   private def readLock[A](f: => A): A = {
@@ -76,7 +73,7 @@ private[mv] class SummaryDatasetCatalog(saprkContext: SparkContext) {
   }
 
   /** Clears all summary tables. */
-  private[mv] def clearSummaryDatasetCatalog(): Unit = {
+  private[mv] def refresh(): Unit = {
     writeLock {
       summaryDatasets.clear()
     }
@@ -94,68 +91,63 @@ private[mv] class SummaryDatasetCatalog(saprkContext: SparkContext) {
    * `RDD.cache()`, the default storage level is set to be `MEMORY_AND_DISK` because recomputing
    * the in-memory columnar representation of the underlying table is expensive.
    */
-  private[mv] def registerSummaryDataset(
-      query: DataFrame,
-      tableName: Option[String] = None): Unit = {
+  private[mv] def registerSchema(dataMapSchema: DataMapSchema): Unit = {
     writeLock {
-      val planToRegister = query.queryExecution.analyzed
-      if (lookupSummaryDataset(planToRegister).nonEmpty) {
-        sys.error(s"Asked to register already registered.")
-      } else {
-        val modularPlan = modularizer.modularize(optimizer.execute(planToRegister)).next()
-          .harmonized
-        val signature = modularPlan.signature
-        summaryDatasets += SummaryDataset(signature, planToRegister)
-      }
+      // TODO Add mvfunction here, don't use preagg function
+      val updatedQuery = parser.addPreAggFunction(dataMapSchema.getCtasQuery)
+      val query = sparkSession.sql(updatedQuery)
+      val planToRegister = MVHelper.dropDummFuc(query.queryExecution.analyzed)
+      val modularPlan = mVState.modularizer.modularize(mVState.optimizer.execute(planToRegister))
+        .next()
+        .harmonized
+      val signature = modularPlan.signature
+      val identifier = dataMapSchema.getRelationIdentifier
+      val output = new FindDataSourceTable(sparkSession).apply(sparkSession.sessionState.catalog
+        .lookupRelation(TableIdentifier(identifier.getTableName, Some(identifier.getDatabaseName))))
+        .output
+      val relation = ModularRelation(identifier.getDatabaseName,
+        identifier.getTableName,
+        output,
+        Flags.NoFlags,
+        Seq.empty)
+      val select = Select(relation.outputList,
+        relation.outputList,
+        Seq.empty,
+        Seq((0, identifier.getTableName)).toMap,
+        Seq.empty,
+        Seq(relation),
+        Flags.NoFlags,
+        Seq.empty,
+        Seq.empty,
+        None)
+
+      summaryDatasets += SummaryDataset(signature, planToRegister, dataMapSchema, select)
     }
   }
 
   /** Removes the given [[DataFrame]] from the catalog */
-  private[mv] def unregisterSummaryDataset(query: DataFrame): Unit = {
+  private[mv] def unregisterSchema(dataMapName: String): Unit = {
     writeLock {
-      val planToRegister = query.queryExecution.analyzed
-      val dataIndex = summaryDatasets.indexWhere(sd => planToRegister.sameResult(sd.plan))
-      require(dataIndex >= 0, s"Table $query is not registered.")
+      val dataIndex = summaryDatasets
+        .indexWhere(sd => sd.dataMapSchema.getDataMapName.equals(dataMapName))
+      require(dataIndex >= 0, s"Datamap $dataMapName is not registered.")
       summaryDatasets.remove(dataIndex)
     }
   }
 
-  /**
-   * Tries to remove the data set for the given [[DataFrame]] from the catalog if it's registered
-   */
-  private[mv] def tryUnregisterSummaryDataset(
-      query: DataFrame,
-      blocking: Boolean = true): Boolean = {
-    writeLock {
-      val planToRegister = query.queryExecution.analyzed
-      val dataIndex = summaryDatasets.indexWhere(sd => planToRegister.sameResult(sd.plan))
-      val found = dataIndex >= 0
-      if (found) {
-        summaryDatasets.remove(dataIndex)
-      }
-      found
-    }
-  }
 
-  /** Optionally returns registered data set for the given [[DataFrame]] */
-  private[mv] def lookupSummaryDataset(query: DataFrame): Option[SummaryDataset] = {
-    readLock {
-      lookupSummaryDataset(query.queryExecution.analyzed)
-    }
-  }
-
-  /** Returns feasible registered summary data sets for processing the given ModularPlan. */
-  private[mv] def lookupSummaryDataset(plan: LogicalPlan): Option[SummaryDataset] = {
-    readLock {
-      summaryDatasets.find(sd => plan.sameResult(sd.plan))
-    }
-  }
+  override def listAllSchema(): Array[SummaryDataset] = summaryDatasets.toArray
 
   /** Returns feasible registered summary data sets for processing the given ModularPlan. */
   private[mv] def lookupFeasibleSummaryDatasets(plan: ModularPlan): Seq[SummaryDataset] = {
     readLock {
       val sig = plan.signature
-      val feasible = summaryDatasets.filter { x =>
+      val statusDetails = DataMapStatusManager.getEnabledDataMapStatusDetails
+      // Only select the enabled datamaps for the query.
+      val enabledDataSets = summaryDatasets.filter{p =>
+        statusDetails.exists(_.getDataMapName.equalsIgnoreCase(p.dataMapSchema.getDataMapName))
+      }
+      val feasible = enabledDataSets.filter { x =>
         (x.signature, sig) match {
           case (Some(sig1), Some(sig2)) =>
             if (sig1.groupby && sig2.groupby && sig1.datasets.subsetOf(sig2.datasets)) {

@@ -509,7 +509,7 @@ object TestTPCDS_1_4_Batch {
       // q20
       ("case_11",
        """
-        |SELECT cs_ship_addr_sk , d_date, d_year, d_qoy, d_moy, i_category, cs_ship_addr_sk,i_item_sk, i_item_id,
+        |SELECT cs_ship_addr_sk , d_date, d_year, d_qoy, d_moy, i_category,i_item_sk, i_item_id,
         |       i_item_desc, i_class, i_current_price, i_brand_id, i_class_id, i_category_id, i_manufact_id,
         |       SUM(cs_ext_sales_price) sales_amt, 
         |       SUM(cs_quantity*cs_list_price) sales,

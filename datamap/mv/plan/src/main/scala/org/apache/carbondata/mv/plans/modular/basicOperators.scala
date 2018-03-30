@@ -36,7 +36,8 @@ case class GroupBy(
     alias: Option[String],
     child: ModularPlan,
     flags: FlagSet,
-    flagSpec: Seq[Seq[Any]]) extends UnaryNode with Matchable {
+    flagSpec: Seq[Seq[Any]],
+    dataMapTableRelation: Option[ModularPlan] = None) extends UnaryNode with Matchable {
   override def output: Seq[Attribute] = outputList.map(_.toAttribute)
 }
 
@@ -49,7 +50,8 @@ case class Select(
     children: Seq[ModularPlan],
     flags: FlagSet,
     flagSpec: Seq[Seq[Any]],
-    windowSpec: Seq[Seq[Any]]) extends ModularPlan with Matchable {
+    windowSpec: Seq[Seq[Any]],
+    dataMapTableRelation: Option[ModularPlan] = None) extends ModularPlan with Matchable {
   override def output: Seq[Attribute] = outputList.map(_.toAttribute)
 
   override def adjacencyList: scala.collection.immutable.Map[Int, Seq[(Int, JoinType)]] = {

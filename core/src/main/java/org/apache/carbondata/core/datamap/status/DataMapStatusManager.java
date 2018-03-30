@@ -50,6 +50,22 @@ public class DataMapStatusManager {
     return storageProvider.getDataMapStatusDetails();
   }
 
+  /**
+   * Get enabled datamap status details
+   * @return
+   * @throws IOException
+   */
+  public static DataMapStatusDetail[] getEnabledDataMapStatusDetails() throws IOException {
+    DataMapStatusDetail[] dataMapStatusDetails = storageProvider.getDataMapStatusDetails();
+    List<DataMapStatusDetail> statusDetailList = new ArrayList<>();
+    for (DataMapStatusDetail statusDetail : dataMapStatusDetails) {
+      if (statusDetail.getStatus() == DataMapStatus.ENABLED) {
+        statusDetailList.add(statusDetail);
+      }
+    }
+    return statusDetailList.toArray(new DataMapStatusDetail[statusDetailList.size()]);
+  }
+
   public static void disableDataMap(String dataMapName) throws Exception {
     DataMapSchema dataMapSchema = validateDataMap(dataMapName, false);
     List<DataMapSchema> list = new ArrayList<>();

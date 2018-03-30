@@ -52,7 +52,9 @@ object ExtractSelectModule extends PredicateHelper {
         outputs,
         inputs,
         predicates,
-        collectChildAliasMappings(AttributeSet(outputs) ++ AttributeSet(predicates), children),
+        collectChildAliasMappings(
+          AttributeSet(outputs).toSeq ++ AttributeSet(predicates).toSeq,
+          children),
         joinedges,
         children,
         flags,
@@ -151,7 +153,7 @@ object ExtractSelectModule extends PredicateHelper {
     }
   }
 
-  def collectChildAliasMappings(attributeSet: AttributeSet, children: Seq[LogicalPlan]
+  def collectChildAliasMappings(attributeSet: Seq[Attribute], children: Seq[LogicalPlan]
   ): Map[Int, String] = {
     val aq = attributeSet.filter(_.qualifier.nonEmpty)
     children.zipWithIndex.flatMap {

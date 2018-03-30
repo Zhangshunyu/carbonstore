@@ -80,20 +80,21 @@ class SQLBuilder private(
       override def apply(tree: ModularPlan): ModularPlan = {
         tree transformDown {
           case s@modular.Select(_, _, _, _, _,
-            Seq(g@modular.GroupBy(_, _, _, _, s2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-            _, _, _) if !s.rewritten && s2.children.forall { _.isInstanceOf[modular.LeafNode] } =>
+            Seq(g@modular.GroupBy(_, _, _, _,
+            s2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)), _, _, _, _)
+            if !s.rewritten && s2.children.forall { _.isInstanceOf[modular.LeafNode] } =>
             val attrMap = AttributeMap(s2.outputList
               .collect { case a: Alias if a.child.isInstanceOf[Attribute] => (a.toAttribute, a) })
             cleanupQualifier(s, s2.aliasMap, s2.children, attrMap)
 
           case g@modular.GroupBy(_, _, _, _,
-            s2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)
+            s2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)
             if !g.rewritten && s2.children.forall { _.isInstanceOf[modular.LeafNode] } =>
             val attrMap = AttributeMap(s2.outputList
               .collect { case a: Alias if a.child.isInstanceOf[Attribute] => (a.toAttribute, a) })
             cleanupQualifier(g, s2.aliasMap, s2.children, attrMap)
 
-          case s@modular.Select(_, _, _, _, _, _, _, _, _)
+          case s@modular.Select(_, _, _, _, _, _, _, _, _, _)
             if !s.rewritten && s.children.forall { _.isInstanceOf[modular.LeafNode] } =>
             cleanupQualifier(s, s.aliasMap, s.children, AttributeMap(Seq.empty[(Attribute, Alias)]))
 
@@ -133,13 +134,15 @@ class SQLBuilder private(
       override def apply(tree: ModularPlan): ModularPlan = {
         tree transformUp {
           case s@modular.Select(_, _, _, _, _,
-            Seq(g@modular.GroupBy(_, _, _, _, s2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-            _, _, _) if s2.children.forall { _.isInstanceOf[modular.LeafNode] } => s
+            Seq(g@modular.GroupBy(_, _, _, _,
+            s2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)), _, _, _, _)
+            if s2.children.forall { _.isInstanceOf[modular.LeafNode] } => s
 
-          case g@modular.GroupBy(_, _, _, _, s2@modular.Select(_, _, _, _, _, _, _, _, _), _, _)
+          case g@modular.GroupBy(_, _, _, _,
+            s2@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)
             if s2.children.forall { _.isInstanceOf[modular.LeafNode] } => g
 
-          case s@modular.Select(_, _, _, _, _, _, _, _, _)
+          case s@modular.Select(_, _, _, _, _, _, _, _, _, _)
             if !s.rewritten && !s.children.forall { _.isInstanceOf[modular.LeafNode] } =>
             var list: List[(Int, String)] = List()
             var newS = s.copy()
@@ -186,7 +189,7 @@ class SQLBuilder private(
               newS
             }
 
-          case g@modular.GroupBy(_, _, _, _, _, _, _) if (!g.rewritten && g.alias.isEmpty) =>
+          case g@modular.GroupBy(_, _, _, _, _, _, _, _) if (!g.rewritten && g.alias.isEmpty) =>
             val newG = if (g.outputList.isEmpty) {
               val ol = g.predicateList.map { case a: Attribute => a }
               g.copy(outputList = ol)

@@ -20,8 +20,9 @@ package org.apache.carbondata.mv.rewrite
 import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeMap, AttributeReference, AttributeSet, Expression, PredicateHelper, _}
 import org.apache.spark.sql.catalyst.plans.{FullOuter, Inner}
 
+import org.apache.carbondata.mv.datamap.MVHelper
 import org.apache.carbondata.mv.plans.modular
-import org.apache.carbondata.mv.plans.modular.{GroupBy, JoinEdge, Matchable, ModularPlan, Select}
+import org.apache.carbondata.mv.plans.modular._
 import org.apache.carbondata.mv.plans.modular.Flags._
 import org.apache.carbondata.mv.plans.util.SQLBuilder
 
@@ -39,12 +40,14 @@ abstract class DefaultMatchPattern extends MatchPattern[ModularPlan] {
       compensation: ModularPlan,
       subsumer: Matchable,
       subsumerName: Option[String]): ModularPlan = {
+    // Create aliasMap with attribute to alias reference attribute
     val aliasMap = AttributeMap(
         subsumer.outputList.collect {
           case a: Alias if a.child.isInstanceOf[Attribute] =>
             (a.child.asInstanceOf[Attribute], a.toAttribute)
           })
 
+    // Check and replace all alias references with subsumer alias map references.
     val compensation1 = compensation.transform {
       case plan if !plan.skip =>
         plan.transformExpressions {
@@ -65,6 +68,7 @@ abstract class DefaultMatchPattern extends MatchPattern[ModularPlan] {
       new UnsupportedOperationException(
         s"duplicate name(s): ${ subsumer.output.map(_.toString + ", ") }")
     }
+    // Replace all compensation1 attributes with refrences of subsumer attributeset
     val compensationFinal = compensation1.transformExpressions {
       case ref: Attribute if subqueryAttributeSet.contains(ref) =>
         AttributeReference(ref.name, ref.dataType)(exprId = ref.exprId, qualifier = subsumerName)
@@ -107,7 +111,8 @@ object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper
       exprE match {
         case a@Alias(_, _) =>
           exprListR.exists(a1 => a1.isInstanceOf[Alias] &&
-                                 a1.asInstanceOf[Alias].child.semanticEquals(a.child))
+                                 a1.asInstanceOf[Alias].child.semanticEquals(a.child)) ||
+          exprListR.exists(_.semanticEquals(exprE) || canEvaluate(exprE, subsumer))
         case exp => exprListR.exists(_.semanticEquals(exp) || canEvaluate(exp, subsumer))
       }
     } else {
@@ -123,8 +128,8 @@ object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper
 
     (subsumer, subsumee, compensation) match {
       case (
-          sel_1a @ modular.Select(_, _, _, _, _, _, _, _, _),
-          sel_1q @ modular.Select(_, _, _, _, _, _, _, _, _), None
+          sel_1a @ modular.Select(_, _, _, _, _, _, _, _, _, _),
+          sel_1q @ modular.Select(_, _, _, _, _, _, _, _, _, _), None
         ) if sel_1a.children.forall { _.isInstanceOf[modular.LeafNode] } &&
              sel_1q.children.forall { _.isInstanceOf[modular.LeafNode] } =>
 
@@ -197,8 +202,9 @@ object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper
               val tChildren = new collection.mutable.ArrayBuffer[ModularPlan]()
               val tAliasMap = new collection.mutable.HashMap[Int, String]()
 
-              tChildren += sel_1a
-              tAliasMap += (tChildren.indexOf(sel_1a) -> rewrite.newSubsumerName())
+              val usel_1a = MVHelper.updateDataMap(sel_1a).asInstanceOf[Select]
+              tChildren += usel_1a
+              tAliasMap += (tChildren.indexOf(usel_1a) -> rewrite.newSubsumerName())
 
               sel_1q.children.zipWithIndex.foreach {
                 case (childe, idx) =>
@@ -230,23 +236,44 @@ object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper
                       null.asInstanceOf[JoinEdge]
                   }
               }
-              val tPredicateList = sel_1q.predicateList.filter { p =>
+              var tPredicateList = sel_1q.predicateList.filter { p =>
                 !sel_1a.predicateList.exists(_.semanticEquals(p)) }
+              val upatedOutputList = if (sel_1a != usel_1a) {
+                MVHelper.updateSubsumeAttrs(
+                  sel_1q.outputList,
+                  sel_1a.outputList,
+                  usel_1a.outputList,
+                  Some(usel_1a.aliasMap.values.head)).asInstanceOf[Seq[NamedExpression]]
+              } else {
+                sel_1q.outputList
+              }
+
+              tPredicateList = if (sel_1a != usel_1a) {
+                MVHelper.updateSubsumeAttrs(
+                  tPredicateList,
+                  sel_1a.outputList,
+                  usel_1a.outputList,
+                  Some(usel_1a.aliasMap.values.head))
+              } else {
+                tPredicateList
+              }
+
               val wip = sel_1q.copy(
+                outputList = upatedOutputList,
                 predicateList = tPredicateList,
                 children = tChildren,
                 joinEdges = tJoinEdges.filter(_ != null),
                 aliasMap = tAliasMap.toMap)
               val subsumerName = wip.aliasMap.get(0)
-              val done = factorOutSubsumer(wip, sel_1a, subsumerName)
+              val done = factorOutSubsumer(wip, usel_1a, subsumerName)
               Seq(done)
             }
           } else Nil
         } else Nil
 
       case (
-        sel_3a @ modular.Select(_, _, _, _, _, _, _, _, _),
-        sel_3q @ modular.Select(_, _, _, _, _, _, _, _, _), None)
+        sel_3a @ modular.Select(_, _, _, _, _, _, _, _, _, _),
+        sel_3q @ modular.Select(_, _, _, _, _, _, _, _, _, _), None)
         if sel_3a.children.forall(_.isInstanceOf[GroupBy]) &&
            sel_3q.children.forall(_.isInstanceOf[GroupBy]) =>
         val isPredicateRmE = sel_3a.predicateList.isEmpty ||
@@ -280,11 +307,12 @@ object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper
                   a1.asInstanceOf[Alias].child.semanticEquals(a.child)
                 }.map(_.toAttribute).get
             })
+            val updatedSelect = MVHelper.updateDataMap(sel_3a, true).asInstanceOf[Select]
             val wip = sel_3q_exp.copy(
-              children = Seq(sel_3a),
+              children = Seq(updatedSelect),
               aliasMap = Seq(0 -> rewrite.newSubsumerName()).toMap)
             val subsumerName = wip.aliasMap.get(0)
-            val done = factorOutSubsumer(wip, sel_3a, subsumerName)
+            val done = factorOutSubsumer(wip, updatedSelect.asInstanceOf[Select], subsumerName)
             Seq(done)
           } else {
             Nil
@@ -304,8 +332,8 @@ object GroupbyGroupbyNoChildDelta extends DefaultMatchPattern {
       rewrite: QueryRewrite): Seq[ModularPlan] = {
     (subsumer, subsumee, compensation) match {
       case (
-        gb_2a @ modular.GroupBy(_, _, _, _, _, _, _),
-        gb_2q @ modular.GroupBy(_, _, _, _, _, _, _),
+        gb_2a @ modular.GroupBy(_, _, _, _, _, _, _, _),
+        gb_2q @ modular.GroupBy(_, _, _, _, _, _, _, _),
         None) =>
         val isGroupingEmR = gb_2q.predicateList.forall(expr =>
           gb_2a.predicateList.exists(_.semanticEquals(expr)))
@@ -313,9 +341,10 @@ object GroupbyGroupbyNoChildDelta extends DefaultMatchPattern {
           gb_2q.predicateList.exists(_.semanticEquals(expr)))
         if (isGroupingEmR && isGroupingRmE) {
           val isOutputEmR = gb_2q.outputList.forall {
-            case a @ Alias(_, _) => gb_2a.outputList.exists(a1 => a1.isInstanceOf[Alias] &&
-                                                                  a1.asInstanceOf[Alias].child
-                                                                    .semanticEquals(a.child))
+            case a @ Alias(_, _) =>
+              gb_2a.outputList.exists{a1 =>
+                a1.isInstanceOf[Alias] && a1.asInstanceOf[Alias].child.semanticEquals(a.child)
+              }
             case exp => gb_2a.outputList.exists(_.semanticEquals(exp))
           }
 
@@ -333,7 +362,7 @@ object GroupbyGroupbyNoChildDelta extends DefaultMatchPattern {
               case g: GroupBy =>
                 Some(g.copy(child = g.child.withNewChildren(
                   g.child.children.map {
-                    case modular.Select(_, _, _, _, _, _, _, _, _) => gb_2a;
+                    case modular.Select(_, _, _, _, _, _, _, _, _, _) => gb_2a;
                     case other => other
                   })));
               case _ => None}.map(Seq(_)).getOrElse(Nil)
@@ -380,9 +409,9 @@ object GroupbyGroupbySelectOnlyChildDelta extends DefaultMatchPattern with Predi
 
     (subsumer, subsumee, compensation, aggInputEinR, compensationSelectOnly) match {
       case (
-        gb_2a @ modular.GroupBy(_, _, _, _, _, _, _),
-        gb_2q @ modular.GroupBy(_, _, _, _, _, _, _),
-        Some(sel_1c1 @ modular.Select(_, _, _, _, _, _, _, _, _)),
+        gb_2a @ modular.GroupBy(_, _, _, _, _, _, _, _),
+        gb_2q @ modular.GroupBy(_, _, _, _, _, _, _, _),
+        Some(sel_1c1 @ modular.Select(_, _, _, _, _, _, _, _, _, _)),
         true,
         true)
         if !gb_2q.flags.hasFlag(EXPAND) && !gb_2a.flags.hasFlag(EXPAND) =>
@@ -399,30 +428,47 @@ object GroupbyGroupbySelectOnlyChildDelta extends DefaultMatchPattern with Predi
         }.forall(identity)
 
         if (isGroupingEdR && ((!needRegrouping && isAggEmR) || needRegrouping) && canPullup) {
+          val ugb_2a = MVHelper.updateDataMap(gb_2a).asInstanceOf[Matchable]
+          val ugb_2a_out = MVHelper.updateDataMap(gb_2a, true).asInstanceOf[GroupBy]
           // pull up
-          val pullupOutputList = gb_2a.outputList.map(_.toAttribute) ++ rejoinOutputList
+          val pullupOutputList = if (ugb_2a_out != gb_2a) {
+            ugb_2a.asInstanceOf[Select].outputList.map(_.toAttribute) ++ rejoinOutputList
+          } else {
+            gb_2a.outputList.map(_.toAttribute) ++ rejoinOutputList
+          }
+          val pred = if (ugb_2a_out != gb_2a) {
+            MVHelper.updateSubsumeAttrs(
+              sel_1c1.predicateList,
+              gb_2a.outputList,
+              ugb_2a_out.outputList,
+              None)
+          } else {
+            sel_1c1.predicateList
+          }
           val sel_2c1 = sel_1c1.copy(
             outputList = pullupOutputList,
             inputList = pullupOutputList,
+            predicateList = pred,
             children = sel_1c1.children.map {
-              case s: Select => gb_2a
+              case s: Select => ugb_2a
               case other => other })
 
           if (needRegrouping && rejoinOutputList.isEmpty) {
             val aliasMap = AttributeMap(gb_2a.outputList.collect {
               case a: Alias => (a.toAttribute, a) })
             Utils.tryMatch(gb_2a, gb_2q, aliasMap).flatMap {
-              case g: GroupBy => Some(g.copy(child = sel_2c1));
+              case g: GroupBy =>
+                Some(g.copy(child = sel_2c1));
               case _ => None
             }.map { wip =>
-              factorOutSubsumer(wip, gb_2a, sel_1c1.aliasMap.get(0))
+              factorOutSubsumer(wip, ugb_2a, sel_1c1.aliasMap.get(0))
             }.map(Seq(_))
              .getOrElse(Nil)
           }
           // TODO: implement regrouping with 1:N rejoin (rejoin tables being the "1" side)
           // via catalog service
           else if (!needRegrouping && isAggEmR) {
-            Seq(sel_2c1).map(wip => factorOutSubsumer(wip, gb_2a, sel_1c1.aliasMap.get(0)))
+            Seq(sel_2c1).map(wip => factorOutSubsumer(wip, ugb_2a, sel_1c1.aliasMap.get(0)))
           } else Nil
         } else Nil
 
@@ -441,8 +487,8 @@ object GroupbyGroupbyGroupbyChildDelta extends DefaultMatchPattern {
 
     (subsumer, subsumee, groupbys.nonEmpty) match {
       case (
-        modular.Select(_, _, _, _, _, _, _, _, _),
-        modular.Select(_, _, _, _, _, _, _, _, _),
+        modular.Select(_, _, _, _, _, _, _, _, _, _),
+        modular.Select(_, _, _, _, _, _, _, _, _, _),
         true) =>
         // TODO: implement me
         Nil
@@ -466,8 +512,8 @@ object SelectSelectSelectChildDelta extends DefaultMatchPattern {
 
     (subsumer, subsumee, compensationSelectOnly) match {
       case (
-        modular.Select(_, _, _, _, _, _, _, _, _),
-        modular.Select(_, _, _, _, _, _, _, _, _),
+        modular.Select(_, _, _, _, _, _, _, _, _, _),
+        modular.Select(_, _, _, _, _, _, _, _, _, _),
         true) =>
         // TODO: implement me
         Nil
@@ -500,11 +546,11 @@ object SelectSelectGroupbyChildDelta extends DefaultMatchPattern with PredicateH
       case (
         sel_3a@modular.Select(
         _, _, Nil, _, _,
-        Seq(gb_2a@modular.GroupBy(_, _, _, _, _, _, _)), _, _, _),
+        Seq(gb_2a@modular.GroupBy(_, _, _, _, _, _, _, _)), _, _, _, _),
         sel_3q@modular.Select(
         _, _, _, _, _,
-        Seq(gb_2q@modular.GroupBy(_, _, _, _, _, _, _)), _, _, _),
-        Some(gb_2c@modular.GroupBy(_, _, _, _, _, _, _)),
+        Seq(gb_2q@modular.GroupBy(_, _, _, _, _, _, _, _)), _, _, _, _),
+        Some(gb_2c@modular.GroupBy(_, _, _, _, _, _, _, _)),
         rchild :: Nil,
         echild :: Nil) =>
         val tbls_sel_3a = sel_3a.collect { case tbl: modular.LeafNode => tbl }
@@ -558,29 +604,49 @@ object SelectSelectGroupbyChildDelta extends DefaultMatchPattern with PredicateH
             isOutputEdR &&
             canSELPullup &&
             canGBPullup) {
+          val usel_3a = MVHelper.updateDataMap(sel_3a).asInstanceOf[Select]
           gb_2c.child match {
             case s: Select =>
               val sel_3c1 = s.withNewChildren(
                 s.children.map {
-                  case gb: GroupBy => sel_3a.setSkip()
+                  case gb: GroupBy => usel_3a.setSkip()
                   case other => other })
-              val gb_3c2 = gb_2c.copy(child = sel_3c1)
+              val output = if (sel_3a != usel_3a) {
+                MVHelper.updateSubsumeAttrs(
+                  gb_2c.outputList,
+                  sel_3a.outputList,
+                  usel_3a.outputList,
+                  None).asInstanceOf[Seq[NamedExpression]]
+              } else {
+                gb_2c.outputList
+              }
+              val pred = if (sel_3a != usel_3a) {
+                MVHelper.updateSubsumeAttrs(
+                  gb_2c.predicateList,
+                  sel_3a.outputList,
+                  usel_3a.outputList,
+                  None).asInstanceOf[Seq[NamedExpression]]
+              } else {
+                gb_2c.predicateList
+              }
+              val gb_3c2 = gb_2c.copy(outputList = output, predicateList = pred, child = sel_3c1)
 
               val aliasMap_exp = AttributeMap(
-                gb_2c.outputList.collect {
+                output.collect {
+                  case attr: AttributeReference => (attr, attr)
                   case a: Alias => (a.toAttribute, a) })
               val sel_3q_exp = sel_3q.transformExpressions({
                 case attr: Attribute if aliasMap_exp.contains(attr) => aliasMap_exp(attr)
               })
 
-              val mappings = sel_3q_exp.outputList zip gb_2c.outputList
+              val mappings = sel_3q_exp.outputList zip output
 
               val oList = for ((o1, o2) <- mappings) yield {
                 if (o1.name != o2.name) Alias(o2, o1.name)(exprId = o1.exprId) else o2
               }
 
               val wip = sel_3q_exp.copy(outputList = oList, children = Seq(gb_3c2))
-              val sel_3c3 = Some(factorOutSubsumer(wip, sel_3a, s.aliasMap.get(0)))
+              val sel_3c3 = Some(factorOutSubsumer(wip, usel_3a, s.aliasMap.get(0)))
               sel_3c3.map(Seq(_)).getOrElse(Nil)
 
             case _ => Nil

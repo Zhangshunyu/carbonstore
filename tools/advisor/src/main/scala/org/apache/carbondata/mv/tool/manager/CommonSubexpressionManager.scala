@@ -126,15 +126,16 @@ case class EliminateNonStarNCanonicalizeSPJGs(conf: SQLConf)
       case Some(factTable::Nil) =>
         batch flatMap { case (subplan, freq) =>
           subplan match {
-            case modular.GroupBy(_, _, _, _, sel @ modular.Select(_, _, _, _, _, _, _, _, _), _, _)
+            case modular.GroupBy(_, _, _, _,
+            sel @ modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)
               if sel.children.forall(_.isInstanceOf[modular.LeafNode]) =>
               collectCanonicalizedStarSPJG(signature, Some(factTable), subplan, sel)
                 .map(plan => (plan, freq))
             case modular.Select(
               _, _, _, _, _,
               Seq(modular.GroupBy(
-                _, _, _, _, sel @ modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-              _, _, _) if sel.children.forall(_.isInstanceOf[modular.LeafNode]) =>
+                _, _, _, _, sel @ modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)),
+              _, _, _, _) if sel.children.forall(_.isInstanceOf[modular.LeafNode]) =>
               collectCanonicalizedStarSPJG(signature, Some(factTable), subplan, sel)
                 .map(plan => (plan, freq))
             case _ => Seq.empty
@@ -232,7 +233,7 @@ case class FindPromisingTrivialCandidates(spark: SparkSession, conf: SQLConf)
   def apply(batch: Seq[(ModularPlan, Int)]): Seq[(ModularPlan, Int)] = {
     val distinctBatch = batch.map { pp =>
       pp._1 match {
-        case plan@modular.GroupBy(outputList, _, _, _, _, _, _) =>
+        case plan@modular.GroupBy(outputList, _, _, _, _, _, _, _) =>
           val distinctExprGroups = outputList
             .groupBy { case a: Alias => a.child.semanticHash(); case e => e.semanticHash() }
           val distinctNamedExprs = for (exprs <- distinctExprGroups.values if !(
@@ -293,8 +294,8 @@ case class CreateCandidateCSEs(spark: SparkSession, conf: SQLConf)
     (planR, planM) match {
       // TODO: add handling for grouping set
       case (
-        r @ modular.GroupBy(outputListR, inputListR, predicateListR, _, childR, _, _),
-        m @ modular.GroupBy(outputListM, inputListM, predicateListM, _, childM, _, _)) =>
+        r @ modular.GroupBy(outputListR, inputListR, predicateListR, _, childR, _, _, _),
+        m @ modular.GroupBy(outputListM, inputListM, predicateListM, _, childM, _, _, _)) =>
         val combinedResult = combinePlans(r.child, m.child, isFirst)
 
         val combinedOutputGroups =
@@ -343,8 +344,8 @@ case class CreateCandidateCSEs(spark: SparkSession, conf: SQLConf)
         }
 
       case (
-        r @ modular.Select(outputListR, inputListR, _, _, _, childrenR, _, _, _),
-        m @ modular.Select(outputListM, inputListM, _, _, _, childrenM, _, _, _)) =>
+        r @ modular.Select(outputListR, inputListR, _, _, _, childrenR, _, _, _, _),
+        m @ modular.Select(outputListM, inputListM, _, _, _, childrenM, _, _, _, _)) =>
         val combinedChildren =
           r.children.zip(m.children).map {
             case (childR, childM) => combinePlans(childR, childM, isFirst)

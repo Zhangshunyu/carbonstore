@@ -15,27 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.mv.internal
+package org.apache.carbondata.mv.datamap
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 
-import org.apache.carbondata.mv.MQOSession
 import org.apache.carbondata.mv.plans.modular.SimpleModularizer
 import org.apache.carbondata.mv.plans.util.BirdcageOptimizer
-import org.apache.carbondata.mv.rewrite.{DefaultMatchMaker, Navigator, QueryRewrite}
+import org.apache.carbondata.mv.rewrite.{DefaultMatchMaker, Navigator, QueryRewrite, SummaryDatasetCatalog}
 
 /**
- * A class that holds all session-specific state in a given [[MQOSession]].
+ * A class that holds all session-specific state.
  */
-private[mv] class SessionState(mqoSession: MQOSession) {
+private[mv] class MVState(summaryDatasetCatalog: SummaryDatasetCatalog) {
 
   // Note: These are all lazy vals because they depend on each other (e.g. conf) and we
   // want subclasses to override some of the fields. Otherwise, we would get a lot of NPEs.
-
-  /**
-   * Internal catalog for managing table and database states.
-   */
-  lazy val catalog = mqoSession.sharedState.summaryDatasetCatalog
 
   /**
    * Modular query plan modularizer
@@ -49,8 +43,13 @@ private[mv] class SessionState(mqoSession: MQOSession) {
 
   lazy val matcher = DefaultMatchMaker
 
-  lazy val navigator: Navigator = new Navigator(catalog, mqoSession)
+  lazy val navigator: Navigator = new Navigator(summaryDatasetCatalog, this)
 
-  def rewritePlan(plan: LogicalPlan): QueryRewrite = new QueryRewrite(mqoSession, plan)
+  /**
+   * Rewrite the logical query plan to MV plan if applicable.
+   * @param plan
+   * @return
+   */
+  def rewritePlan(plan: LogicalPlan): QueryRewrite = new QueryRewrite(this, plan)
 
 }

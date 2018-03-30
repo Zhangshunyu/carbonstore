@@ -83,9 +83,9 @@ object HarmonizedRelation {
       _,
       _,
       _,
-      Select(_, _, _, _, _, dim :: Nil, NoFlags, Nil, Nil),
+      Select(_, _, _, _, _, dim :: Nil, NoFlags, Nil, Nil, _),
       NoFlags,
-      Nil) if (dim.isInstanceOf[ModularRelation]) =>
+      Nil, _) if (dim.isInstanceOf[ModularRelation]) =>
         if (g.outputList
           .forall(col => col.isInstanceOf[AttributeReference] ||
                          (col.isInstanceOf[Alias] &&

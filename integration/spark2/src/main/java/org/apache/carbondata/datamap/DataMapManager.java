@@ -23,7 +23,9 @@ import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchemaStorageProvider;
 import org.apache.carbondata.core.metadata.schema.table.DiskBasedDMSchemaStorageProvider;
 import org.apache.carbondata.core.util.CarbonProperties;
+import org.apache.carbondata.spark.util.CarbonScalaUtil;
 
+import static org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.MV;
 import static org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.PREAGGREGATE;
 import static org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider.TIMESERIES;
 
@@ -52,6 +54,10 @@ public class DataMapManager {
       provider = new PreAggregateDataMapProvider(sparkSession);
     } else if (dataMapSchema.getProviderName().equalsIgnoreCase(TIMESERIES.toString())) {
       provider = new TimeseriesDataMapProvider(sparkSession);
+    } else if (dataMapSchema.getProviderName().equalsIgnoreCase(MV.toString())) {
+      provider = (DataMapProvider) CarbonScalaUtil
+          .createDataMapProvider("org.apache.carbondata.mv.datamap.MVDataMapProvider", sparkSession,
+              getDataMapSchemaStorageProvider());
     } else {
       provider = new IndexDataMapProvider(getDataMapSchemaStorageProvider());
     }

@@ -49,7 +49,7 @@ object SimpleModularizer extends ModularPatterns {
       plans: Iterator[ModularPlan]): Iterator[ModularPlan] = {
     def makeup(plan: ModularPlan): ModularPlan = {
       plan transform {
-        case g@GroupBy(_, _, _, _, s@Select(_, _, _, aliasmap, _, children, _, _, _), _, _) =>
+        case g@GroupBy(_, _, _, _, s@Select(_, _, _, aliasmap, _, children, _, _, _, _), _, _, _) =>
           val aq = AttributeSet(g.outputList).filter(_.qualifier.nonEmpty)
           val makeupmap = children.zipWithIndex.flatMap {
             case (child, i) =>

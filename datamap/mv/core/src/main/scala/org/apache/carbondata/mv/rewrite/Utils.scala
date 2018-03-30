@@ -247,12 +247,12 @@ private[rewrite] object Utils extends PredicateHelper {
         sel_3a@modular.Select(
           _, _, _, _, _,
           Seq(gb_2a@modular.GroupBy(
-            _, _, _, _, sel_2a@modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-          _, _, _),
+            _, _, _, _, sel_2a@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)),
+          _, _, _, _),
         sel_3q@modular.Select(
-          _, _, _, _, _, Seq(gb_2q@modular.GroupBy(_, _, _, _, _, _, _)), _, _, _),
+          _, _, _, _, _, Seq(gb_2q@modular.GroupBy(_, _, _, _, _, _, _, _)), _, _, _, _),
         Some(gb_2c@modular.GroupBy(
-          _, _, _, _, sel_2c@modular.Select(_, _, _, _, _, _, _, _, _), _, _))
+          _, _, _, _, sel_2c@modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _))
         ) =>
         if (sel_3q.predicateList.contains(exprE)) {
           val expr1E = exprE.transform {
@@ -321,7 +321,7 @@ private[rewrite] object Utils extends PredicateHelper {
       // TODO: refine this
       case modular.Select(
         _, _, predicateList, _, _,
-        Seq(modular.GroupBy(_, _, _, _, _, _, _)), _, _, _)
+        Seq(modular.GroupBy(_, _, _, _, _, _, _, _)), _, _, _, _)
         if predicateList.nonEmpty => false
       case _ => true
     }

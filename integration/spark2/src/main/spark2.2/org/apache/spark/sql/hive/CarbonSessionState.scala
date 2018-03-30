@@ -162,10 +162,24 @@ class CarbonAnalyzer(catalog: SessionCatalog,
     conf: SQLConf,
     sparkSession: SparkSession,
     analyzer: Analyzer) extends Analyzer(catalog, conf) {
+  val mvPlan = try {
+    CarbonReflectionUtils.createObject(
+      "org.apache.carbondata.mv.datamap.MVAnalyzerRule",
+      sparkSession)._1.asInstanceOf[Rule[LogicalPlan]]
+  } catch {
+    case e: Exception =>
+      null
+  }
   override def execute(plan: LogicalPlan): LogicalPlan = {
     var logicalPlan = analyzer.execute(plan)
     logicalPlan = CarbonPreAggregateDataLoadingRules(sparkSession).apply(logicalPlan)
-    CarbonPreAggregateQueryRules(sparkSession).apply(logicalPlan)
+    logicalPlan = CarbonPreAggregateQueryRules(sparkSession).apply(logicalPlan)
+    // TODO Get the analyzer rules from registered datamap class and apply here.
+    if (mvPlan != null) {
+      mvPlan.apply(logicalPlan)
+    } else {
+      logicalPlan
+    }
   }
 }
 
@@ -194,7 +208,7 @@ class CarbonSessionStateBuilder(sparkSession: SparkSession,
    * Internal catalog for managing table and database states.
    */
   /**
-   * Create a [[CarbonSessionCatalogBuild]].
+   * Create a [[CarbonSessionCatalog]].
    */
   override protected lazy val catalog: CarbonHiveSessionCatalog = {
     val catalog = new CarbonHiveSessionCatalog(

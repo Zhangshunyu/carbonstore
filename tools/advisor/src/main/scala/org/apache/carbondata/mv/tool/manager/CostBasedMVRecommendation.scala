@@ -174,7 +174,7 @@ case class CostBasedMVRecommendation(spark: SparkSession, conf: SQLConf) extends
     input match {
       case g@modular.GroupBy(
       _, _, _, _,
-      modular.Select(_, _, _, _, _, children, NoFlags, Nil, Nil), NoFlags, Nil) =>
+      modular.Select(_, _, _, _, _, children, NoFlags, Nil, Nil, _), NoFlags, Nil, _) =>
         val statsList = children.map(_.stats(spark, conf))
         val ndvs = g.predicateList.flatMap {
           case subexp@Substring(col: AttributeReference, pos: Literal, len: Literal) if

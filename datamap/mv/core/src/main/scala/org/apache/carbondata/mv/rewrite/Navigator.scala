@@ -19,12 +19,12 @@ package org.apache.carbondata.mv.rewrite
 
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeMap, AttributeSet}
 
-import org.apache.carbondata.mv.MQOSession
+import org.apache.carbondata.mv.datamap.{MVHelper, MVState}
 import org.apache.carbondata.mv.expressions.modular._
+import org.apache.carbondata.mv.plans.modular.{GroupBy, ModularPlan, Select}
 import org.apache.carbondata.mv.plans.modular
-import org.apache.carbondata.mv.plans.modular.{ModularPlan, Select}
 
-private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MQOSession) {
+private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MVState) {
 
   def rewriteWithSummaryDatasets(plan: ModularPlan, rewrite: QueryRewrite): ModularPlan = {
     val replaced = plan.transformAllExpressions {
@@ -40,20 +40,44 @@ private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MQOSession)
   }
 
   def rewriteWithSummaryDatasetsCore(plan: ModularPlan, rewrite: QueryRewrite): ModularPlan = {
-    plan transformDown {
+    val rewrittenPlan = plan transformDown {
       case currentFragment =>
         if (currentFragment.rewritten || !currentFragment.isSPJGH) currentFragment
         else {
           val compensation =
             (for { dataset <- catalog.lookupFeasibleSummaryDatasets(currentFragment).toStream
-                   subsumer <- session.sessionState.modularizer.modularize(
-                     session.sessionState.optimizer.execute(dataset.plan)).map(_.harmonized)
+                   subsumer <- session.modularizer.modularize(
+                     session.optimizer.execute(dataset.plan)).map(_.harmonized)
                    subsumee <- unifySubsumee(currentFragment)
-                   comp <- subsume(unifySubsumer2(unifySubsumer1(subsumer, subsumee), subsumee),
+                   comp <- subsume(
+                     unifySubsumer2(
+                       unifySubsumer1(
+                         subsumer,
+                         subsumee,
+                         dataset.relation),
+                       subsumee),
                      subsumee, rewrite)
                  } yield comp).headOption
           compensation.map(_.setRewritten).getOrElse(currentFragment)
         }
+    }
+    var updated = false
+    rewrittenPlan.collect {
+      case currentFragment if currentFragment.rewritten =>
+        updated = true
+    }
+    // In case it is rewritten plan and the datamap table is not updated then update the datamap
+    // table in plan.
+    if (updated) {
+      val updatedDataMapTablePlan = rewrittenPlan.transform {
+        case s: Select =>
+          MVHelper.updateDataMap(s, updateDirect = true)
+        case g: GroupBy =>
+          MVHelper.updateDataMap(g, updateDirect = true)
+      }
+      updatedDataMapTablePlan.setRewritten()
+    } else {
+      rewrittenPlan
     }
   }
 
@@ -66,7 +90,7 @@ private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MQOSession)
         case (Nil, Nil) => None
         case (r, e) if r.forall(_.isInstanceOf[modular.LeafNode]) &&
                        e.forall(_.isInstanceOf[modular.LeafNode]) =>
-          val iter = session.sessionState.matcher.execute(subsumer, subsumee, None, rewrite)
+          val iter = session.matcher.execute(subsumer, subsumee, None, rewrite)
           if (iter.hasNext) Some(iter.next)
           else None
 
@@ -74,9 +98,9 @@ private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MQOSession)
           val compensation = subsume(rchild, echild, rewrite)
           val oiter = compensation.map {
             case comp if comp.eq(rchild) =>
-              session.sessionState.matcher.execute(subsumer, subsumee, None, rewrite)
+              session.matcher.execute(subsumer, subsumee, None, rewrite)
             case _ =>
-              session.sessionState.matcher.execute(subsumer, subsumee, compensation, rewrite)
+              session.matcher.execute(subsumer, subsumee, compensation, rewrite)
           }
           oiter.flatMap { case iter if iter.hasNext => Some(iter.next)
                           case _ => None }
@@ -86,10 +110,34 @@ private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MQOSession)
     } else None
   }
 
+  private def updateDatamap(rchild: ModularPlan, subsume: ModularPlan) = {
+    val update = rchild match {
+      case s: Select if s.dataMapTableRelation.isDefined =>
+        true
+      case g: GroupBy if g.dataMapTableRelation.isDefined =>
+        true
+      case _ => false
+    }
+
+    if (update) {
+      subsume match {
+        case s: Select =>
+          s.copy(children = Seq(rchild))
+
+        case g: GroupBy =>
+          g.copy(child = rchild)
+        case _ => subsume
+      }
+    } else {
+      subsume
+    }
+  }
+
   // add Select operator as placeholder on top of subsumee to facilitate matching
   def unifySubsumee(subsumee: ModularPlan): Option[ModularPlan] = {
     subsumee match {
-      case gb @ modular.GroupBy(_, _, _, _, modular.Select(_, _, _, _, _, _, _, _, _), _, _) =>
+      case gb @ modular.GroupBy(_, _, _, _,
+        modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _) =>
         Some(
           Select(gb.outputList, gb.outputList, Nil, Map.empty, Nil, gb :: Nil, gb.flags,
             gb.flagSpec, Seq.empty))
@@ -98,18 +146,27 @@ private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MQOSession)
   }
 
   // add Select operator as placeholder on top of subsumer to facilitate matching
-  def unifySubsumer1(subsumer: ModularPlan, subsumee: ModularPlan): ModularPlan = {
-    (subsumer, subsumee) match {
+  def unifySubsumer1(
+      subsumer: ModularPlan,
+      subsumee: ModularPlan,
+      dataMapRelation: ModularPlan): ModularPlan = {
+    // Update datamap table relation to the subsumer modular plan
+    val updatedSubsumer = subsumer match {
+      case s: Select => s.copy(dataMapTableRelation = Some(dataMapRelation))
+      case g: GroupBy => g.copy(dataMapTableRelation = Some(dataMapRelation))
+      case other => other
+    }
+    (updatedSubsumer, subsumee) match {
       case (r @
-        modular.GroupBy(_, _, _, _, modular.Select(_, _, _, _, _, _, _, _, _), _, _),
+        modular.GroupBy(_, _, _, _, modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _),
         modular.Select(_, _, _, _, _,
-          Seq(modular.GroupBy(_, _, _, _, modular.Select(_, _, _, _, _, _, _, _, _), _, _)),
-          _, _, _)
+          Seq(modular.GroupBy(_, _, _, _, modular.Select(_, _, _, _, _, _, _, _, _, _), _, _, _)),
+          _, _, _, _)
         ) =>
         modular.Select(
           r.outputList, r.outputList, Nil, Map.empty, Nil, r :: Nil, r.flags,
           r.flagSpec, Seq.empty).setSkip()
-      case _ => subsumer.setSkip()
+      case _ => updatedSubsumer.setSkip()
     }
   }
 

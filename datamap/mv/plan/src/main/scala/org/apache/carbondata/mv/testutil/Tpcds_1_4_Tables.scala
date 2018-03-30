@@ -56,8 +56,7 @@ object Tpcds_1_4_Tables {
        |  `cs_net_paid_inc_ship_tax` decimal(7,2),
        |  `cs_net_profit` decimal(7,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE catalog_returns (
@@ -89,8 +88,7 @@ object Tpcds_1_4_Tables {
        |  `cr_store_credit` decimal(7,2),
        |  `cr_net_loss` decimal(7,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE inventory (
@@ -99,8 +97,7 @@ object Tpcds_1_4_Tables {
        |  `inv_warehouse_sk` int,
        |  `inv_quantity_on_hand` int
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE store_sales (
@@ -128,8 +125,7 @@ object Tpcds_1_4_Tables {
        |  `ss_net_paid_inc_tax` decimal(7,2),
        |  `ss_net_profit` decimal(7,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE store_returns (
@@ -154,8 +150,7 @@ object Tpcds_1_4_Tables {
        |  `sr_store_credit` decimal(7,2),
        |  `sr_net_loss` decimal(7,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE web_sales (
@@ -194,8 +189,7 @@ object Tpcds_1_4_Tables {
        |  `ws_net_paid_inc_ship_tax` decimal(7,2),
        |  `ws_net_profit` decimal(7,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE web_returns (
@@ -224,8 +218,7 @@ object Tpcds_1_4_Tables {
        |  `wr_account_credit` decimal(7,2),
        |  `wr_net_loss` decimal(7,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE call_center (
@@ -261,8 +254,7 @@ object Tpcds_1_4_Tables {
        |  `cc_gmt_offset` decimal(5,2),
        |  `cc_tax_percentage` decimal(5,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE catalog_page (
@@ -276,8 +268,7 @@ object Tpcds_1_4_Tables {
        |  `cp_description` string,
        |  `cp_type` string
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE customer (
@@ -300,8 +291,7 @@ object Tpcds_1_4_Tables {
        |  `c_email_address` string,
        |  `c_last_review_date` string
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE customer_address (
@@ -319,8 +309,7 @@ object Tpcds_1_4_Tables {
        |  `ca_gmt_offset` decimal(5,2),
        |  `ca_location_type` string
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE customer_demographics (
@@ -334,8 +323,7 @@ object Tpcds_1_4_Tables {
        |  `cd_dep_employed_count` int,
        |  `cd_dep_college_count` int
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE date_dim (
@@ -368,8 +356,7 @@ object Tpcds_1_4_Tables {
        |  `d_current_quarter` string,
        |  `d_current_year` string
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE household_demographics (
@@ -379,8 +366,7 @@ object Tpcds_1_4_Tables {
        |  `hd_dep_count` int,
        |  `hd_vehicle_count` int
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE income_band (
@@ -388,8 +374,7 @@ object Tpcds_1_4_Tables {
        |  `ib_lower_bound` int,
        |  `ib_upper_bound` int
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE item (
@@ -416,8 +401,7 @@ object Tpcds_1_4_Tables {
        |  `i_manager_id` int,
        |  `i_product_name` string
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE promotion (
@@ -441,8 +425,7 @@ object Tpcds_1_4_Tables {
        |  `p_purpose` string,
        |  `p_discount_active` string
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE reason (
@@ -450,8 +433,7 @@ object Tpcds_1_4_Tables {
        |  `r_reason_id` string,
        |  `r_reason_desc` string
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE ship_mode (
@@ -462,8 +444,7 @@ object Tpcds_1_4_Tables {
        |  `sm_carrier` string,
        |  `sm_contract` string
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE store (
@@ -497,8 +478,7 @@ object Tpcds_1_4_Tables {
        |  `s_gmt_offset` decimal(5,2),
        |  `s_tax_precentage` decimal(5,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE time_dim (
@@ -513,8 +493,7 @@ object Tpcds_1_4_Tables {
        |  `t_sub_shift` string,
        |  `t_meal_time` string
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE warehouse (
@@ -533,8 +512,7 @@ object Tpcds_1_4_Tables {
        |  `w_country` string,
        |  `w_gmt_offset` decimal(5,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE web_page (
@@ -553,8 +531,7 @@ object Tpcds_1_4_Tables {
        |  `wp_image_count` int,
        |  `wp_max_ad_count` int
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE web_site (
@@ -585,8 +562,7 @@ object Tpcds_1_4_Tables {
        |  `web_gmt_offset` decimal(5,2),
        |  `web_tax_percentage` decimal(5,2)
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
       """.stripMargin.trim,
     s"""
        |CREATE TABLE sdr_dyn_seq_custer_iot_all_hour_60min
@@ -794,8 +770,7 @@ object Tpcds_1_4_Tables {
        |    `counter_100` double,
        |    `batchno`     double
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
           """.stripMargin.trim,
     s"""
        |CREATE TABLE dim_apn_iot
@@ -807,8 +782,7 @@ object Tpcds_1_4_Tables {
        |    `customer_name`       String,
        |    `id`                  bigint
        |)
-       |ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'
-       |STORED AS TEXTFILE
+       |STORED BY 'org.apache.carbondata.format'
           """.stripMargin.trim,
     s"""
        |CREATE TABLE tradeflow_all (
@@ -821,14 +795,14 @@ object Tpcds_1_4_Tables {
        | b_country    smallint,
        | imex         smallint,
        | y_year       smallint)
-       |STORED AS parquet
+       |STORED BY 'org.apache.carbondata.format'
           """.stripMargin.trim,
     s"""
        |CREATE TABLE country (
        | countryid   smallint ,
        | country_en  string   ,
        | country_cn  string   )
-       |STORED AS parquet
+       |STORED BY 'org.apache.carbondata.format'
           """.stripMargin.trim,
     s"""
        |CREATE TABLE updatetime (
@@ -839,7 +813,7 @@ object Tpcds_1_4_Tables {
        | startdate     string   ,
        | newdate       string   ,
        | minnewdate    string   )
-       |STORED AS parquet
+       |STORED BY 'org.apache.carbondata.format'
           """.stripMargin.trim
   )
 }

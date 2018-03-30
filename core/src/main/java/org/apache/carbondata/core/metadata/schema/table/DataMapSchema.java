@@ -147,7 +147,8 @@ public class DataMapSchema implements Serializable, Writable {
    */
   public boolean isIndexDataMap() {
     if (providerName.equalsIgnoreCase(DataMapClassProvider.PREAGGREGATE.getShortName()) ||
-        providerName.equalsIgnoreCase(DataMapClassProvider.TIMESERIES.getShortName())) {
+        providerName.equalsIgnoreCase(DataMapClassProvider.TIMESERIES.getShortName()) ||
+        ctasQuery != null) {
       return false;
     } else {
       return true;

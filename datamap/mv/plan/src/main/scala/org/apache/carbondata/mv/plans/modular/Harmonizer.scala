@@ -52,7 +52,7 @@ object HarmonizeDimensionTable extends Rule[ModularPlan] with PredicateHelper {
 
   def apply(plan: ModularPlan): ModularPlan = {
     plan transform {
-      case s@Select(_, _, _, _, jedges, fact :: dims, _, _, _) if
+      case s@Select(_, _, _, _, jedges, fact :: dims, _, _, _, _) if
       jedges.forall(e => e.joinType == LeftOuter || e.joinType == Inner) &&
       fact.isInstanceOf[ModularRelation] &&
       dims.filterNot(_.isInstanceOf[modular.LeafNode]).nonEmpty &&
@@ -65,9 +65,9 @@ object HarmonizeDimensionTable extends Rule[ModularPlan] with PredicateHelper {
           _,
           _,
           _,
-          s1@Select(_, _, _, _, _, dim :: Nil, NoFlags, Nil, Nil),
+          s1@Select(_, _, _, _, _, dim :: Nil, NoFlags, Nil, Nil, _),
           NoFlags,
-          Nil) if (dim.isInstanceOf[ModularRelation]) => {
+          Nil, _) if (dim.isInstanceOf[ModularRelation]) => {
             val rAliasMap = AttributeMap(h.outputList
               .collect { case a: Alias => (a.child.asInstanceOf[Attribute], a.toAttribute) })
             val pullUpPredicates = s1.predicateList
@@ -101,12 +101,13 @@ object HarmonizeFactTable extends Rule[ModularPlan] with PredicateHelper with Ag
 
   def apply(plan: ModularPlan): ModularPlan = {
     plan transform {
-      case g@GroupBy(_, _, _, _, s@Select(_, _, _, aliasm, jedges, fact :: dims, _, _, _), _, _) if
-      s.adjacencyList.keySet.size <= 1 &&
-      jedges.forall(e => e.joinType == Inner) && // !s.flags.hasFlag(DISTINCT) &&
-      fact.isInstanceOf[ModularRelation] &&
-      (fact :: dims).forall(_.isInstanceOf[modular.LeafNode]) &&
-      dims.nonEmpty => {
+      case g@GroupBy(_, _, _, _,
+        s@Select(_, _, _, aliasm, jedges, fact :: dims, _, _, _, _), _, _, _)
+        if s.adjacencyList.keySet.size <= 1 &&
+           jedges.forall(e => e.joinType == Inner) && // !s.flags.hasFlag(DISTINCT) &&
+           fact.isInstanceOf[ModularRelation] &&
+           (fact :: dims).forall(_.isInstanceOf[modular.LeafNode]) &&
+           dims.nonEmpty => {
         val selAliasMap = AttributeMap(s.outputList.collect {
           case a: Alias if (a.child.isInstanceOf[Attribute]) => (a.toAttribute, a.child
             .asInstanceOf[Attribute])
