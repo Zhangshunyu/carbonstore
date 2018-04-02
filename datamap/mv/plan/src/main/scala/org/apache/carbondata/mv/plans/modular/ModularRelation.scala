@@ -21,7 +21,8 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeMap, AttributeReference, NamedExpression}
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.logical
-import org.apache.spark.sql.catalyst.plans.logical.Statistics
+import org.apache.spark.sql.catalyst.plans.logical.{Statistics, SubqueryAlias}
+import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
 
 import org.apache.carbondata.mv.plans.modular.Flags._
@@ -43,8 +44,9 @@ case class ModularRelation(databaseName: String,
     flags: FlagSet,
     rest: Seq[Seq[Any]]) extends LeafNode {
   override def computeStats(spark: SparkSession, conf: SQLConf): Statistics = {
-    val plan = spark.table(s"${ databaseName }.${ tableName }").queryExecution.optimizedPlan
-    val stats = plan.stats(conf)
+    val table = spark.table(s"${ databaseName }.${ tableName }").queryExecution
+    val plan = table.analyzed
+    val stats = table.analyzed.asInstanceOf[SubqueryAlias].child.asInstanceOf[LogicalRelation].stats(conf)
     val output = outputList.map(_.toAttribute)
     val mapSeq = plan.collect { case n: logical.LeafNode => n }.map {
       table => AttributeMap(table.output.zip(output))

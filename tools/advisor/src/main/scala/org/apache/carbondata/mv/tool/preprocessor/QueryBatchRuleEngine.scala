@@ -30,6 +30,8 @@ abstract class QueryBatchRuleEngine[ToolPlan <: TreeNode[ToolPlan]] {
   protected val phases: Seq[Phase[ToolPlan]]
 
   def preprocess(batch: Seq[(ToolPlan, Int)]): Seq[(ToolPlan, Int)] = {
-    phases.foldLeft(batch) { case (phasedBatch, phase) => phase(phasedBatch) }
+    phases.foldLeft(batch) {
+      case (phasedBatch, phase) => phase(phasedBatch)
+    }
   }
 }

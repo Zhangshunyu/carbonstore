@@ -22,15 +22,14 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.test.util.QueryTest
 
 trait TestHiveSingleton extends QueryTest with BeforeAndAfterAll {
-  protected val spark: SparkSession = TestHive.sparkSession
-  protected val hiveContext: TestHiveContext = TestHive
+//  protected val hiveContext: TestHiveContext = TestHive
 
-  protected override def afterAll(): Unit = {
-    try {
-      hiveContext.reset()
-    } finally {
-      super.afterAll()
-    }
-  }
+//  protected override def afterAll(): Unit = {
+//    try {
+//      hiveContext.reset()
+//    } finally {
+//      super.afterAll()
+//    }
+//  }
 
 }

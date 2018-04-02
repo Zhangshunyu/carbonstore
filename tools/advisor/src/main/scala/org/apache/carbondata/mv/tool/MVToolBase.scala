@@ -73,6 +73,14 @@ abstract class MVToolBase extends Logging {
     }
   }
 
+  object TextFileIterator {
+    def apply(file: File, encoding: String): BufferedReaderIterator = {
+      new BufferedReaderIterator(
+        new BufferedReader(
+          new FileReader(file)))
+    }
+  }
+
   def YML_DEFAULT_DATE_FORMAT: String = "yyyy-MM-dd"
   val ONE_DAY_IN_MILLS: Long = 24 * 60 * 60 * 1000
 
@@ -126,8 +134,8 @@ abstract class MVToolBase extends Logging {
       val d = sdf.format(end - (a * ONE_DAY_IN_MILLS))
       val queryLoggingFile = queryLogFilePathPattern.replace("%d", d)
       val queryLogEntry = queryLogEntryPattern.r
-      val iterator = GzFileIterator(new File(queryLoggingFile), "UTF-8")
-
+      val iterator = TextFileIterator(new File(queryLoggingFile), "UTF-8")
+      // get modular plan for all the input query
       batchQueries(spark, iterator, queryLogEntry, planBatch)
     }
 
@@ -154,6 +162,7 @@ abstract class MVToolBase extends Logging {
       queryLogFilePathPattern,
       queryLogEntryPattern)) {
       val cses = csemanager.execute(batchBySignature)
+      print()
       cses.foreach { case (cse, freq) =>
         // scalastyle:off println
         mvWriter.println(s"${ cse.asCompactSQL };\n")

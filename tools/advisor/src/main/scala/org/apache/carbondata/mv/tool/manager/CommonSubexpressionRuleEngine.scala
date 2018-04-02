@@ -40,5 +40,7 @@ abstract class CommonSubexpressionRuleEngine[ToolPlan <: TreeNode[ToolPlan]] {
   protected val rules: Seq[CoveringRule[ToolPlan]]
 
   def execute(cses: Seq[(ToolPlan, Int)]): Seq[(ToolPlan, Int)] =
-    rules.foldLeft(cses) {case (foldedCSEs, rule) => rule(foldedCSEs)}
+    rules.foldLeft(cses) {
+      case (foldedCSEs, rule) => rule(foldedCSEs)
+    }
 }

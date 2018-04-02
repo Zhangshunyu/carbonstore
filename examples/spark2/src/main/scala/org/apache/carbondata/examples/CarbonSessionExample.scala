@@ -21,9 +21,8 @@ import java.io.File
 
 import org.apache.log4j.PropertyConfigurator
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.catalyst.plans.logical.ColumnStat
 
-import org.apache.carbondata.core.constants.CarbonCommonConstants
-import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.examples.util.ExampleUtils
 
 object CarbonSessionExample {
@@ -44,96 +43,41 @@ object CarbonSessionExample {
     PropertyConfigurator.configure(
       s"$rootPath/examples/spark2/src/main/resources/log4j.properties")
 
-    CarbonProperties.getInstance()
-      .addProperty(CarbonCommonConstants.ENABLE_QUERY_STATISTICS, "true")
+//    CarbonProperties.getInstance()
+//      .addProperty(CarbonCommonConstants.ENABLE_QUERY_STATISTICS, "true")
+//    spark.sql("drop table if exists maintable")
+//    spark.sql("CREATE TABLE mainTable(id int, name string, city string, age string) stored by 'carbondata'")
+//    spark.sql("insert into mainTable values(1,'vishal', 'city1', 21)")
+//    spark.sql("insert into mainTable values(2,'likun', 'city2', 42)")
+//    spark.sql("insert into mainTable values(3,'ravi', 'city3', 32)")
+//    spark.sql("select count(*) from maintable").show()
+//    val table2columnset1 = Map("maintable" -> Set("id", "name", "city", "age"))
+//    spark.sql(s"ANALYZE TABLE maintable COMPUTE STATISTICS")
+//    val cols = table2columnset1.get("maintable").map(_.mkString(", ")).getOrElse("")
+//    spark.sql(s"ANALYZE TABLE maintable COMPUTE STATISTICS FOR COLUMNS $cols")
+//    val a = spark.sql("select name, sum(age) from maintable group by name").queryExecution
+//    val stats = spark.table("default.maintable").queryExecution.analyzed.asInstanceOf[SubqueryAlias].child.asInstanceOf[LogicalRelation].stats(spark.sessionState.conf)
+//    print(a)
 
-    spark.sql("DROP TABLE IF EXISTS carbonsession_table")
+//    val table2columnset1 = Map("maintable" -> Set("id", "name", "city", "age"))
+//    spark.sql(s"ANALYZE TABLE maintable COMPUTE STATISTICS")
+//    val cols = table2columnset1.get("maintable").map(_.mkString(", ")).getOrElse("")
+//    spark.sql(s"ANALYZE TABLE maintable COMPUTE STATISTICS FOR COLUMNS $cols")
+//    val newIdentifier = TableIdentifier("maintable", Some("default"))
+//    var catalogTable = spark.sessionState.catalog.getTableMetadata(newIdentifier)
+//    catalogTable.copy(stats = Some(CatalogStatistics(100, Some(200))))
+//    catalogTable = catalogTable.copy(stats = Some(CatalogStatistics(100, Some(200))))
+//    spark.sessionState.catalog.alterTable(catalogTable)
+//    print()
 
-    // Create table
-    spark.sql(
-      s"""
-         | CREATE TABLE carbonsession_table(
-         | shortField SHORT,
-         | intField INT,
-         | bigintField LONG,
-         | doubleField DOUBLE,
-         | stringField STRING,
-         | timestampField TIMESTAMP,
-         | decimalField DECIMAL(18,2),
-         | dateField DATE,
-         | charField CHAR(5),
-         | floatField FLOAT
-         | )
-         | STORED BY 'carbondata'
-         | TBLPROPERTIES('DICTIONARY_INCLUDE'='dateField, charField')
-       """.stripMargin)
+    val maintable = List("fact1", "fact2", "fact3")
+    val dimensionTable = List("dim1", "dim2", "dim3")
 
-    val path = s"$rootPath/examples/spark2/src/main/resources/data.csv"
 
-    // scalastyle:off
-    spark.sql(
-      s"""
-         | LOAD DATA LOCAL INPATH '$path'
-         | INTO TABLE carbonsession_table
-         | OPTIONS('HEADER'='true', 'COMPLEX_DELIMITER_LEVEL_1'='#')
-       """.stripMargin)
-    // scalastyle:on
-
-    spark.sql(
-      s"""
-         | SELECT charField, stringField, intField
-         | FROM carbonsession_table
-         | WHERE stringfield = 'spark' AND decimalField > 40
-      """.stripMargin).show()
-
-    spark.sql(
-      s"""
-         | SELECT *
-         | FROM carbonsession_table WHERE length(stringField) = 5
-       """.stripMargin).show()
-
-    spark.sql(
-      s"""
-         | SELECT *
-         | FROM carbonsession_table WHERE date_format(dateField, "yyyy-MM-dd") = "2015-07-23"
-       """.stripMargin).show()
-
-    spark.sql("SELECT count(stringField) FROM carbonsession_table").show()
-
-    spark.sql(
-      s"""
-         | SELECT sum(intField), stringField
-         | FROM carbonsession_table
-         | GROUP BY stringField
-       """.stripMargin).show()
-
-    spark.sql(
-      s"""
-         | SELECT t1.*, t2.*
-         | FROM carbonsession_table t1, carbonsession_table t2
-         | WHERE t1.stringField = t2.stringField
-      """.stripMargin).show()
-
-    spark.sql(
-      s"""
-         | WITH t1 AS (
-         | SELECT * FROM carbonsession_table
-         | UNION ALL
-         | SELECT * FROM carbonsession_table
-         | )
-         | SELECT t1.*, t2.*
-         | FROM t1, carbonsession_table t2
-         | WHERE t1.stringField = t2.stringField
-      """.stripMargin).show()
-
-    spark.sql(
-      s"""
-         | SELECT *
-         | FROM carbonsession_table
-         | WHERE stringField = 'spark' and floatField > 2.8
-       """.stripMargin).show()
-
-    // Drop table
-    spark.sql("DROP TABLE IF EXISTS carbonsession_table")
   }
+
+  def getColStats(): (String, ColumnStat) = {
+    ("age", new ColumnStat(1, Some(1), Some(2), 0, 4, 4))
+  }
+
 }

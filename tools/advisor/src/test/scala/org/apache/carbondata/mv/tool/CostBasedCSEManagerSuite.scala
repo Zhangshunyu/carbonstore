@@ -47,15 +47,15 @@ class CostBasedCSEManagerSuite extends TestHiveSingleton {
                               "updatetime" -> Set("countryid", "imex", "newdate", "startdate")
                              )
 
-    spark.conf.set(SQLConf.CBO_ENABLED.key, "true")
-    spark.conf.set(SQLConf.CASE_SENSITIVE.key, "false")
+    sqlContext.sparkSession.conf.set(SQLConf.CBO_ENABLED.key, "true")
+    sqlContext.sparkSession.conf.set(SQLConf.CASE_SENSITIVE.key, "false")
     
     for (tableName <- table2columnset.keySet) {
-      val sqlDF = spark.sql(s"SELECT * FROM $tableName LIMIT 3")
+      val sqlDF = sql(s"SELECT * FROM $tableName LIMIT 3")
 //      sqlDF.show()
-      spark.sql(s"ANALYZE TABLE $tableName COMPUTE STATISTICS")
+      sql(s"ANALYZE TABLE $tableName COMPUTE STATISTICS")
       val cols = table2columnset.get(tableName).map(_.mkString(", ")).getOrElse("")
-      spark.sql(s"ANALYZE TABLE $tableName COMPUTE STATISTICS FOR COLUMNS $cols")
+      sql(s"ANALYZE TABLE $tableName COMPUTE STATISTICS FOR COLUMNS $cols")
     }
 
 //    val x = spark.sql(s"""
@@ -203,9 +203,9 @@ class CostBasedCSEManagerSuite extends TestHiveSingleton {
 //    x.show()
 //    y.show()
 //    z.show()
-    val stats = spark.sessionState.catalog.getTableMetadata(TableIdentifier("country")).stats
-    val stats1 = spark.sessionState.catalog.getTableMetadata(TableIdentifier("tradeflow_all")).stats
-    val stats2 = spark.sessionState.catalog.getTableMetadata(TableIdentifier("updatetime")).stats
+    val stats = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(TableIdentifier("country")).stats
+    val stats1 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(TableIdentifier("tradeflow_all")).stats
+    val stats2 = sqlContext.sparkSession.sessionState.catalog.getTableMetadata(TableIdentifier("updatetime")).stats
 
     val dest = "case_4"
 //    val dest = "case_5"
@@ -214,7 +214,7 @@ class CostBasedCSEManagerSuite extends TestHiveSingleton {
       val batch = mutable.ArrayBuffer[ModularPlan]()
       if (testcase._1 == dest) {
         testcase._2.foreach { query =>
-          val analyzed = spark.sql(query).queryExecution.analyzed
+          val analyzed = sql(query).queryExecution.analyzed
           batch += analyzed.optimize.modularize.harmonize
         }
         val b = collection.immutable.Seq(batch:_*)
@@ -222,8 +222,8 @@ class CostBasedCSEManagerSuite extends TestHiveSingleton {
         val fb = qbPreprocessor.preprocess(b.map(p => (p, 1)))
         val iterator = fb.groupBy(_._1.signature).toIterator
         for ((signature, batchBySignature) <- iterator) {
-          val cses = TestCommonSubexpressionManager.execute(batchBySignature)
-          cses.foreach { case (plan, freq) => 
+          val cses = new TestCommonSubexpressionManager(sqlContext.sparkSession, sqlContext.sparkSession.sessionState.conf).execute(batchBySignature)
+          cses.foreach { case (plan, freq) =>
             Try(plan.asCompactSQL) match {
               case Success(s) => println(s"\n\n===== MV candidate for ${testcase._1} =====\n\n${s}\n\n")
               case Failure(e) => println(s"""\n\n===== MV candidate for ${testcase._1} failed =====\n\n${e.toString}""")
