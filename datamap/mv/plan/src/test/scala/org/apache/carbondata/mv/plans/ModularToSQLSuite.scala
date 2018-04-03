@@ -140,6 +140,8 @@ class ModularToSQLSuite extends ModularPlanTest with BeforeAndAfterAll {
     val optimized = analyzed.optimize
     val modularPlan = analyzed.optimize.modularize
 
+    println(s"\n\n===== ACTUAL QUERY =====\n\n${ query } \n")
+
     println(s"\n\n===== MODULAR PLAN =====\n\n${ modularPlan.treeString } \n")
 
     val compactSql = modularPlan.asCompactSQL

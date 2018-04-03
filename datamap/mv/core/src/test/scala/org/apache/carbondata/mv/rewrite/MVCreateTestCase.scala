@@ -90,6 +90,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with simple and sub projection") {
+    sql("drop datamap if exists datamap2")
     sql("create datamap datamap2 using 'mv' as select empname, designation from fact_table1")
     sql(s"refresh datamap datamap2")
     val df = sql("select empname from fact_table1")
@@ -100,59 +101,60 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with simple and same projection with projection filter") {
+    sql("drop datamap if exists datamap3")
     sql("create datamap datamap3 using 'mv' as select empname, designation from fact_table1")
     sql(s"refresh datamap datamap3")
-    val frame = sql("select empname, designation from fact_table1 where empname='ravi'")
+    val frame = sql("select empname, designation from fact_table1 where empname='shivani'")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap3"))
 
-    checkAnswer(frame, sql("select empname, designation from fact_table2 where empname='ravi'"))
+    checkAnswer(frame, sql("select empname, designation from fact_table2 where empname='shivani'"))
     sql(s"drop datamap datamap3")
   }
 
   test("test create datamap with simple and sub projection with non projection filter") {
     sql("create datamap datamap4 using 'mv' as select empname, designation from fact_table1")
     sql(s"refresh datamap datamap4")
-    val frame = sql("select designation from fact_table1 where empname='ravi'")
+    val frame = sql("select designation from fact_table1 where empname='shivani'")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap4"))
-    checkAnswer(frame, sql("select designation from fact_table2 where empname='ravi'"))
+    checkAnswer(frame, sql("select designation from fact_table2 where empname='shivani'"))
     sql(s"drop datamap datamap4")
   }
 
   test("test create datamap with simple and sub projection with datamap filter") {
-    sql("create datamap datamap5 using 'mv' as select empname, designation from fact_table1 where empname='ravi'")
+    sql("create datamap datamap5 using 'mv' as select empname, designation from fact_table1 where empname='shivani'")
     sql(s"refresh datamap datamap5")
-    val frame = sql("select designation from fact_table1 where empname='ravi'")
+    val frame = sql("select designation from fact_table1 where empname='shivani'")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap5"))
-    checkAnswer(frame, sql("select designation from fact_table2 where empname='ravi'"))
+    checkAnswer(frame, sql("select designation from fact_table2 where empname='shivani'"))
     sql(s"drop datamap datamap5")
   }
 
   test("test create datamap with simple and same projection with datamap filter ") {
-    sql("create datamap datamap6 using 'mv' as select empname, designation from fact_table1 where empname='ravi'")
+    sql("create datamap datamap6 using 'mv' as select empname, designation from fact_table1 where empname='shivani'")
     sql(s"refresh datamap datamap6")
-    val frame = sql("select empname,designation from fact_table1 where empname='ravi'")
+    val frame = sql("select empname,designation from fact_table1 where empname='shivani'")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap6"))
-    checkAnswer(frame, sql("select empname,designation from fact_table2 where empname='ravi'"))
+    checkAnswer(frame, sql("select empname,designation from fact_table2 where empname='shivani'"))
     sql(s"drop datamap datamap6")
   }
 
   test("test create datamap with simple and same projection with datamap filter and extra query column filter") {
-    sql("create datamap datamap7 using 'mv' as select empname, designation from fact_table1 where empname='ravi'")
+    sql("create datamap datamap7 using 'mv' as select empname, designation from fact_table1 where empname='shivani'")
     sql(s"refresh datamap datamap7")
     val frame = sql(
-      "select empname,designation from fact_table1 where empname='ravi' and designation='SA'")
+      "select empname,designation from fact_table1 where empname='shivani' and designation='SA'")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap7"))
-    checkAnswer(frame, sql("select empname,designation from fact_table2 where empname='ravi' and designation='SA'"))
+    checkAnswer(frame, sql("select empname,designation from fact_table2 where empname='shivani' and designation='SA'"))
     sql(s"drop datamap datamap7")
   }
 
   test("test create datamap with simple and same projection with datamap filter and different column filter") {
-    sql("create datamap datamap8 using 'mv' as select empname, designation from fact_table1 where empname='ravi'")
+    sql("create datamap datamap8 using 'mv' as select empname, designation from fact_table1 where empname='shivani'")
     sql(s"refresh datamap datamap8")
     val frame = sql("select empname,designation from fact_table1 where designation='SA'")
     val analyzed = frame.queryExecution.analyzed
@@ -192,6 +194,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with simple and same group by query") {
+    sql("drop datamap if exists datamap12")
     sql("create datamap datamap12 using 'mv' as select empname, sum(utilization) from fact_table1 group by empname")
     sql(s"refresh datamap datamap12")
     val frame = sql("select empname, sum(utilization) from fact_table1 group by empname")
@@ -211,30 +214,43 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop datamap datamap13")
   }
 
-  ignore("test create datamap with simple and sub group by query with filter on query") {
+  test("test create datamap with simple and sub group by query with filter on query") {
+    sql("drop datamap if exists datamap14")
     sql("create datamap datamap14 using 'mv' as select empname, sum(utilization) from fact_table1 group by empname")
     sql(s"refresh datamap datamap14")
     val frame = sql(
-      "select empname,sum(utilization) from fact_table1 where empname='ravi' group by empname")
+      "select empname,sum(utilization) from fact_table1 group by empname having empname='shivani'")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap14"))
-    checkAnswer(frame, sql("select empname,sum(utilization) from fact_table2 where empname='ravi' group by empname"))
+    checkAnswer(frame, sql("select empname,sum(utilization) from fact_table2 where empname='shivani' group by empname"))
     sql(s"drop datamap datamap14")
   }
 
+  test("test create datamap with simple and sub group and sub projection by query with filter on query") {
+    sql("drop datamap if exists datamap32")
+    sql("create datamap datamap32 using 'mv' as select empname, sum(utilization) from fact_table1 group by empname")
+    sql(s"refresh datamap datamap32")
+    val frame = sql(
+      "select empname, sum(utilization) from fact_table1 group by empname having empname='shivani'")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap32"))
+    checkAnswer(frame, sql( "select empname, sum(utilization) from fact_table2 group by empname having empname='shivani'"))
+    sql(s"drop datamap datamap32")
+  }
+
   test("test create datamap with simple and sub group by query with filter on datamap") {
-    sql("create datamap datamap15 using 'mv' as select empname, sum(utilization) from fact_table1 where empname='ravi' group by empname")
+    sql("create datamap datamap15 using 'mv' as select empname, sum(utilization) from fact_table1 where empname='shivani' group by empname")
     sql(s"refresh datamap datamap15")
     val frame = sql(
-      "select empname,sum(utilization) from fact_table1 where empname='ravi' group by empname")
+      "select empname,sum(utilization) from fact_table1 where empname='shivani' group by empname")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap15"))
-    checkAnswer(frame, sql("select empname,sum(utilization) from fact_table2 where empname='ravi' group by empname"))
+    checkAnswer(frame, sql("select empname,sum(utilization) from fact_table2 where empname='shivani' group by empname"))
     sql(s"drop datamap datamap15")
   }
 
   test("test create datamap with simple and sub group by query with filter on datamap and no filter on query") {
-    sql("create datamap datamap16 using 'mv' as select empname, sum(utilization) from fact_table1 where empname='ravi' group by empname")
+    sql("create datamap datamap16 using 'mv' as select empname, sum(utilization) from fact_table1 where empname='shivani' group by empname")
     sql(s"refresh datamap datamap16")
     val frame = sql("select empname,sum(utilization) from fact_table1 group by empname")
     val analyzed = frame.queryExecution.analyzed
@@ -257,6 +273,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with simple and sub group by with expression") {
+    sql("drop datamap if exists datamap18")
     sql("create datamap datamap18 using 'mv' as select empname, sum(CASE WHEN utilization=27 THEN deptno ELSE 0 END) from fact_table1 group by empname")
     sql(s"refresh datamap datamap18")
     val frame = sql(
@@ -268,6 +285,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with simple and sub count group by with expression") {
+    sql("drop datamap if exists datamap19")
     sql("create datamap datamap19 using 'mv' as select empname, count(CASE WHEN utilization=27 THEN deptno ELSE 0 END) from fact_table1 group by empname")
     sql(s"refresh datamap datamap19")
     val frame = sql(
@@ -279,23 +297,25 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   ignore("test create datamap with simple and sub group by with expression and filter on query") {
+    sql("drop datamap if exists datamap20")
     sql("create datamap datamap20 using 'mv' as select empname, sum(CASE WHEN utilization=27 THEN deptno ELSE 0 END) from fact_table1 group by empname")
     sql(s"refresh datamap datamap20")
     val frame = sql(
       "select sum(CASE WHEN utilization=27 THEN deptno ELSE 0 END) from fact_table1 where " +
-      "empname='ravi' group by empname")
+      "empname='shivani' group by empname")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap20"))
     checkAnswer(frame, sql("select sum(CASE WHEN utilization=27 THEN deptno ELSE 0 END) from fact_table2 where " +
-                           "empname='ravi' group by empname"))
+                           "empname='shivani' group by empname"))
     sql(s"drop datamap datamap20")
   }
 
   test("test create datamap with simple join") {
-    sql("create datamap datamap21 using 'mv' as select t1.empname, t2.designation, t2.empname from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname")
+    sql("drop datamap if exists datamap21")
+    sql("create datamap datamap21 using 'mv' as select t1.empname as c1, t2.designation, t2.empname as c2 from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname")
     sql(s"refresh datamap datamap21")
     val frame = sql(
-      "select t1.empname, t2.designation from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname")
+      "select t1.empname as c1, t2.designation from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap21"))
     checkAnswer(frame, sql("select t1.empname, t2.designation from fact_table4 t1,fact_table5 t2 where t1.empname = t2.empname"))
@@ -303,34 +323,37 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with simple join and filter on query") {
+    sql("drop datamap if exists datamap22")
     sql("create datamap datamap22 using 'mv' as select t1.empname, t2.designation, t2.empname from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname")
     sql(s"refresh datamap datamap22")
     val frame = sql(
       "select t1.empname, t2.designation from fact_table1 t1,fact_table2 t2 where t1.empname = " +
-      "t2.empname and t1.empname='ravi'")
+      "t2.empname and t1.empname='shivani'")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap22"))
     checkAnswer(frame, sql("select t1.empname, t2.designation from fact_table4 t1,fact_table5 t2 where t1.empname = " +
-                           "t2.empname and t1.empname='ravi'"))
+                           "t2.empname and t1.empname='shivani'"))
     sql(s"drop datamap datamap22")
   }
 
 
   test("test create datamap with simple join and filter on query and datamap") {
-    sql("create datamap datamap23 using 'mv' as select t1.empname, t2.designation, t2.empname from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname and t1.empname='ravi'")
+    sql("drop datamap if exists datamap23")
+    sql("create datamap datamap23 using 'mv' as select t1.empname, t2.designation from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname and t1.empname='shivani'")
     sql(s"refresh datamap datamap23")
     val frame = sql(
       "select t1.empname, t2.designation from fact_table1 t1,fact_table2 t2 where t1.empname = " +
-      "t2.empname and t1.empname='ravi'")
+      "t2.empname and t1.empname='shivani'")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap23"))
     checkAnswer(frame, sql("select t1.empname, t2.designation from fact_table4 t1,fact_table5 t2 where t1.empname = " +
-                           "t2.empname and t1.empname='ravi'"))
+                           "t2.empname and t1.empname='shivani'"))
     sql(s"drop datamap datamap23")
   }
 
   test("test create datamap with simple join and filter on datamap and no filter on query") {
-    sql("create datamap datamap24 using 'mv' as select t1.empname, t2.designation, t2.empname from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname and t1.empname='ravi'")
+    sql("drop datamap if exists datamap24")
+    sql("create datamap datamap24 using 'mv' as select t1.empname, t2.designation from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname and t1.empname='shivani'")
     sql(s"refresh datamap datamap24")
     val frame = sql(
       "select t1.empname, t2.designation from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname")
@@ -341,10 +364,11 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with multiple join") {
-    sql("create datamap datamap25 using 'mv' as select t1.empname, t2.designation, t2.empname from fact_table1 t1,fact_table2 t2,fact_table3 t3  where t1.empname = t2.empname and t1.empname=t3.empname")
+    sql("drop datamap if exists datamap25")
+    sql("create datamap datamap25 using 'mv' as select t1.empname as c1, t2.designation from fact_table1 t1,fact_table2 t2,fact_table3 t3  where t1.empname = t2.empname and t1.empname=t3.empname")
     sql(s"refresh datamap datamap25")
     val frame = sql(
-      "select t1.empname, t2.designation from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname")
+      "select t1.empname as c1, t2.designation from fact_table1 t1,fact_table2 t2 where t1.empname = t2.empname")
     val analyzed = frame.queryExecution.analyzed
     assert(!verifyMVDataMap(analyzed, "datamap25"))
     checkAnswer(frame, sql("select t1.empname, t2.designation from fact_table4 t1,fact_table5 t2 where t1.empname = t2.empname"))
@@ -378,6 +402,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with join with group by and sub projection") {
+    sql("drop datamap if exists datamap28")
     sql("create datamap datamap28 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1,fact_table2 t2  where t1.empname = t2.empname group by t1.empname, t2.designation")
     sql(s"refresh datamap datamap28")
     val frame = sql(
@@ -391,19 +416,21 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with join with group by and sub projection with filter") {
+    sql("drop datamap if exists datamap29")
     sql("create datamap datamap29 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1,fact_table2 t2  where t1.empname = t2.empname group by t1.empname, t2.designation")
     sql(s"refresh datamap datamap29")
     val frame = sql(
       "select t2.designation, sum(t1.utilization) from fact_table1 t1,fact_table2 t2  where " +
-      "t1.empname = t2.empname and t1.empname='ravi' group by t2.designation")
+      "t1.empname = t2.empname and t1.empname='shivani' group by t2.designation")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap29"))
     checkAnswer(frame, sql("select t2.designation, sum(t1.utilization) from fact_table4 t1,fact_table5 t2  where " +
-                           "t1.empname = t2.empname and t1.empname='ravi' group by t2.designation"))
+                           "t1.empname = t2.empname and t1.empname='shivani' group by t2.designation"))
     sql(s"drop datamap datamap29")
   }
 
-  ignore("test create datamap with join with group by with filter") {
+  test("test create datamap with join with group by with filter") {
+    sql("drop datamap if exists datamap30")
     sql("create datamap datamap30 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1,fact_table2 t2  where t1.empname = t2.empname group by t1.empname, t2.designation")
     sql(s"refresh datamap datamap30")
     val frame = sql(
@@ -414,6 +441,18 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(frame, sql("select t1.empname, t2.designation, sum(t1.utilization) from fact_table4 t1,fact_table5 t2  " +
                            "where t1.empname = t2.empname and t2.designation='SA' group by t1.empname, t2.designation"))
     sql(s"drop datamap datamap30")
+  }
+
+  test("test create datamap with expression on projection") {
+    sql(s"drop datamap if exists datamap31")
+    sql("create datamap datamap31 using 'mv' as select empname, designation, utilization, projectcode from fact_table1 ")
+    sql(s"refresh datamap datamap31")
+    val frame = sql(
+      "select empname, designation, utilization+projectcode from fact_table1")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap31"))
+    checkAnswer(frame, sql("select empname, designation, utilization+projectcode from fact_table2"))
+    sql(s"drop datamap datamap31")
   }
 
   def verifyMVDataMap(logicalPlan: LogicalPlan, dataMapName: String): Boolean = {

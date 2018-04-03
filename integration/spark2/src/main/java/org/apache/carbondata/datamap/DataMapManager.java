@@ -19,7 +19,6 @@ package org.apache.carbondata.datamap;
 
 import org.apache.carbondata.core.datamap.DataMapProvider;
 import org.apache.carbondata.core.datamap.IndexDataMapProvider;
-import org.apache.carbondata.core.metadata.schema.table.DataMapSchema;
 import org.apache.carbondata.core.metadata.schema.table.DataMapSchemaStorageProvider;
 import org.apache.carbondata.core.metadata.schema.table.DiskBasedDMSchemaStorageProvider;
 import org.apache.carbondata.core.util.CarbonProperties;
@@ -47,14 +46,14 @@ public class DataMapManager {
   /**
    * Return a DataMapClassProvider instance for specified dataMapSchema.
    */
-  public DataMapProvider getDataMapProvider(DataMapSchema dataMapSchema,
+  public DataMapProvider getDataMapProvider(String providerName,
       SparkSession sparkSession) {
     DataMapProvider provider;
-    if (dataMapSchema.getProviderName().equalsIgnoreCase(PREAGGREGATE.toString())) {
+    if (providerName.equalsIgnoreCase(PREAGGREGATE.toString())) {
       provider = new PreAggregateDataMapProvider(sparkSession);
-    } else if (dataMapSchema.getProviderName().equalsIgnoreCase(TIMESERIES.toString())) {
+    } else if (providerName.equalsIgnoreCase(TIMESERIES.toString())) {
       provider = new TimeseriesDataMapProvider(sparkSession);
-    } else if (dataMapSchema.getProviderName().equalsIgnoreCase(MV.toString())) {
+    } else if (providerName.equalsIgnoreCase(MV.toString())) {
       provider = (DataMapProvider) CarbonScalaUtil
           .createDataMapProvider("org.apache.carbondata.mv.datamap.MVDataMapProvider", sparkSession,
               getDataMapSchemaStorageProvider());

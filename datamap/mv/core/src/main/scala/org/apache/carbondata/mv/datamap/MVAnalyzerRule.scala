@@ -25,6 +25,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider
+import org.apache.carbondata.datamap.DataMapManager
 import org.apache.carbondata.mv.rewrite.{SummaryDataset, SummaryDatasetCatalog}
 
 /**
@@ -33,6 +34,9 @@ import org.apache.carbondata.mv.rewrite.{SummaryDataset, SummaryDatasetCatalog}
  * @param sparkSession
  */
 class MVAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
+
+  val dataMapProvider =
+    DataMapManager.get().getDataMapProvider(DataMapClassProvider.MV.getShortName, sparkSession)
 
   override def apply(plan: LogicalPlan): LogicalPlan = {
     var needAnalysis = true
@@ -52,7 +56,7 @@ class MVAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
         needAnalysis = false
         attr
     }
-    val catalog = DataMapStoreManager.getInstance().getDataMapCatalog(
+    val catalog = DataMapStoreManager.getInstance().getDataMapCatalog(dataMapProvider,
       DataMapClassProvider.MV.getShortName).asInstanceOf[SummaryDatasetCatalog]
     if (needAnalysis && catalog != null && isValidPlan(plan, catalog)) {
       val modularPlan = catalog.mVState.rewritePlan(plan).withSummaryData
@@ -62,7 +66,10 @@ class MVAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
           updated = true
       }
       if (updated) {
-        val analyzed = sparkSession.sql(modularPlan.asCompactSQL).queryExecution.analyzed
+        val compactSQL = modularPlan.asCompactSQL
+        // TODO add logger
+        println(compactSQL)
+        val analyzed = sparkSession.sql(compactSQL).queryExecution.analyzed
         analyzed
       } else {
         plan

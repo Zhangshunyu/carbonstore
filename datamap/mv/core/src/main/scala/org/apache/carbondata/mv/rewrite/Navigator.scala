@@ -71,9 +71,9 @@ private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MVState) {
     if (updated) {
       val updatedDataMapTablePlan = rewrittenPlan.transform {
         case s: Select =>
-          MVHelper.updateDataMap(s, updateDirect = true)
+          MVHelper.updateDataMap(s)
         case g: GroupBy =>
-          MVHelper.updateDataMap(g, updateDirect = true)
+          MVHelper.updateDataMap(g)
       }
       updatedDataMapTablePlan.setRewritten()
     } else {

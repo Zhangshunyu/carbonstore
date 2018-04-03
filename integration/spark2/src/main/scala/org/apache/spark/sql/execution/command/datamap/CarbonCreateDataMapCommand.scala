@@ -80,7 +80,8 @@ case class CarbonCreateDataMapCommand(
     }
     dataMapSchema.setProperties(new java.util.HashMap[String, String](
       dmProperties.map(x => (x._1.trim, x._2.trim)).asJava))
-    dataMapProvider = DataMapManager.get().getDataMapProvider(dataMapSchema, sparkSession)
+    dataMapProvider =
+      DataMapManager.get().getDataMapProvider(dataMapSchema.getProviderName, sparkSession)
     dataMapProvider.initMeta(mainTable, dataMapSchema, queryString.orNull)
     DataMapStatusManager.disableDataMap(dataMapName)
     val LOGGER = LogServiceFactory.getLogService(this.getClass.getCanonicalName)

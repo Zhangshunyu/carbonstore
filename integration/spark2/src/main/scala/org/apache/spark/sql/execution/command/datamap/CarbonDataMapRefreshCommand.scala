@@ -35,7 +35,7 @@ case class CarbonDataMapRefreshCommand(
 
   override def processData(sparkSession: SparkSession): Seq[Row] = {
     val schema = DataMapStoreManager.getInstance().getDataMapSchema(dataMapName)
-    val provider = DataMapManager.get().getDataMapProvider(schema, sparkSession)
+    val provider = DataMapManager.get().getDataMapProvider(schema.getProviderName, sparkSession)
     val table = tableIdentifier match {
       case Some(identifier) =>
         CarbonEnv.getCarbonTable(identifier)(sparkSession)

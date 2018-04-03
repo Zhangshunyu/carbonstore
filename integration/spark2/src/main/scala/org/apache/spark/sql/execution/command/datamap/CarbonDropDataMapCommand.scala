@@ -112,7 +112,8 @@ case class CarbonDropDataMapCommand(
                 dbName,
                 tableName))(sparkSession)
             if (dataMapProvider == null) {
-              dataMapProvider = DataMapManager.get.getDataMapProvider(dataMapSchema, sparkSession)
+              dataMapProvider =
+                DataMapManager.get.getDataMapProvider(dataMapSchema.getProviderName, sparkSession)
             }
             dataMapProvider.freeMeta(mainTable, dataMapSchema)
 
@@ -172,7 +173,8 @@ case class CarbonDropDataMapCommand(
     }
     if (dataMapSchema != null) {
       // TODO do a check for existance before dropping
-      dataMapProvider = DataMapManager.get.getDataMapProvider(dataMapSchema, sparkSession)
+      dataMapProvider =
+        DataMapManager.get.getDataMapProvider(dataMapSchema.getProviderName, sparkSession)
       DataMapStatusManager.dropDataMap(dataMapSchema.getDataMapName)
       dataMapProvider.freeMeta(mainTable, dataMapSchema)
     } else if (!ifExistsSet) {

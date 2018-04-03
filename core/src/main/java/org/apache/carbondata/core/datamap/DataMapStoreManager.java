@@ -60,7 +60,7 @@ public final class DataMapStoreManager {
   /**
    * Contains the datamap catalog for each datamap provider.
    */
-  private Map<String, DataMapCatalog> dataMapCatalogs = new ConcurrentHashMap<>();
+  private Map<String, DataMapCatalog> dataMapCatalogs = null;
 
   private Map<String, TableSegmentRefresher> segmentRefreshMap = new ConcurrentHashMap<>();
 
@@ -122,9 +122,8 @@ public final class DataMapStoreManager {
     if (dataMapSchemas != null) {
       for (DataMapSchema dataMapSchema : dataMapSchemas) {
         RelationIdentifier identifier = dataMapSchema.getParentTables().get(0);
-        if (dataMapSchema.isIndexDataMap() && identifier.getTableName()
-            .equals(carbonTable.getTableName()) && identifier.getDatabaseName()
-            .equals(carbonTable.getDatabaseName())) {
+        if (identifier.getTableName().equals(carbonTable.getTableName()) &&
+            identifier.getDatabaseName().equals(carbonTable.getDatabaseName())) {
           dataMaps.add(dataMapSchema);
         }
       }
@@ -161,6 +160,7 @@ public final class DataMapStoreManager {
    */
   public synchronized void registerDataMapCatalog(DataMapProvider dataMapProvider,
       DataMapSchema dataMapSchema) {
+    intializeDataMapCatalogs(dataMapProvider);
     String name = dataMapSchema.getProviderName();
     DataMapCatalog dataMapCatalog = dataMapCatalogs.get(name);
     if (dataMapCatalog == null) {
@@ -179,6 +179,9 @@ public final class DataMapStoreManager {
    * @param dataMapSchema
    */
   public synchronized void unRegisterDataMapCatalog(DataMapSchema dataMapSchema) {
+    if (dataMapCatalogs == null) {
+      return;
+    }
     String name = dataMapSchema.getProviderName();
     DataMapCatalog dataMapCatalog = dataMapCatalogs.get(name);
     if (dataMapCatalog != null) {
@@ -191,8 +194,33 @@ public final class DataMapStoreManager {
    * @param providerName
    * @return
    */
-  public DataMapCatalog getDataMapCatalog(String providerName) {
+  public DataMapCatalog getDataMapCatalog(DataMapProvider dataMapProvider, String providerName) {
+    intializeDataMapCatalogs(dataMapProvider);
     return dataMapCatalogs.get(providerName);
+  }
+
+  /**
+   * Intialize by reading all datamaps from store and re register it
+   * @param dataMapProvider
+   */
+  private void intializeDataMapCatalogs(DataMapProvider dataMapProvider) {
+    if (dataMapCatalogs == null) {
+      dataMapCatalogs = new ConcurrentHashMap<>();
+      List<DataMapSchema> dataMapSchemas = getAllDataMapSchemas();
+      for (DataMapSchema schema : dataMapSchemas) {
+        DataMapCatalog dataMapCatalog = dataMapCatalogs.get(schema.getProviderName());
+        if (dataMapCatalog == null) {
+          dataMapCatalog = dataMapProvider.createDataMapCatalog();
+          dataMapCatalogs.put(schema.getProviderName(), dataMapCatalog);
+        }
+        try {
+          dataMapCatalog.registerSchema(schema);
+        } catch (Exception e) {
+          // Ignore the schema
+          LOGGER.error(e, "Error while registering schema");
+        }
+      }
+    }
   }
 
   /**
