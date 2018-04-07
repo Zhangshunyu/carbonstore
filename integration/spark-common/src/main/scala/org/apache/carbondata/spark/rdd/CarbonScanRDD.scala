@@ -58,6 +58,8 @@ import org.apache.carbondata.hadoop.readsupport.CarbonReadSupport
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
 import org.apache.carbondata.spark.InitInputMetrics
 import org.apache.carbondata.spark.util.{SparkDataTypeConverterImpl, Util}
+import org.apache.carbondata.store.master.Master
+import org.apache.carbondata.store.worker.Worker
 import org.apache.carbondata.streaming.{CarbonStreamInputFormat, CarbonStreamRecordReader}
 
 /**
@@ -383,6 +385,11 @@ class CarbonScanRDD[T: ClassTag](
   }
 
   override def internalCompute(split: Partition, context: TaskContext): Iterator[T] = {
+    if (CarbonProperties.isSearchModeEnabled) {
+      // start searcher service and register to driver by RPC call
+      Worker.getInstance().startService(Worker.SEARCHER_PORT)
+      Worker.getInstance().registerToDriver(Master.DRIVER_HOSTNAME, Master.DRIVER_PORT)
+    }
     val queryStartTime = System.currentTimeMillis
     val carbonPropertiesFilePath = System.getProperty("carbon.properties.filepath", null)
     if (null == carbonPropertiesFilePath) {

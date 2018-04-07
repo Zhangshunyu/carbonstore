@@ -42,10 +42,9 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.TableInfo;
 import org.apache.carbondata.core.mutate.UpdateVO;
 import org.apache.carbondata.core.scan.expression.Expression;
-import org.apache.carbondata.core.scan.filter.SingleTableProvider;
-import org.apache.carbondata.core.scan.filter.TableProvider;
 import org.apache.carbondata.core.scan.filter.resolver.FilterResolverIntf;
 import org.apache.carbondata.core.scan.model.QueryModel;
+import org.apache.carbondata.core.scan.model.QueryModelBuilder;
 import org.apache.carbondata.core.stats.QueryStatistic;
 import org.apache.carbondata.core.stats.QueryStatisticsConstants;
 import org.apache.carbondata.core.stats.QueryStatisticsRecorder;
@@ -411,7 +410,6 @@ public abstract class CarbonInputFormat<T> extends FileInputFormat<Void, T> {
       throws IOException {
     Configuration configuration = taskAttemptContext.getConfiguration();
     CarbonTable carbonTable = getOrCreateCarbonTable(configuration);
-    TableProvider tableProvider = new SingleTableProvider(carbonTable);
 
     // query plan includes projection column
     String projectionString = getColumnProjection(configuration);
@@ -419,19 +417,12 @@ public abstract class CarbonInputFormat<T> extends FileInputFormat<Void, T> {
     if (projectionString != null) {
       projectionColumnNames = projectionString.split(",");
     }
-    QueryModel queryModel = carbonTable
-        .createQueryWithProjection(projectionColumnNames, getDataTypeConverter(configuration));
-
-    // set the filter to the query model in order to filter blocklet before scan
-    Expression filter = getFilterPredicates(configuration);
-    boolean[] isFilterDimensions = new boolean[carbonTable.getDimensionOrdinalMax()];
-    // getAllMeasures returns list of visible and invisible columns
-    boolean[] isFilterMeasures = new boolean[carbonTable.getAllMeasures().size()];
-    carbonTable.processFilterExpression(filter, isFilterDimensions, isFilterMeasures);
-    queryModel.setIsFilterDimensions(isFilterDimensions);
-    queryModel.setIsFilterMeasures(isFilterMeasures);
-    FilterResolverIntf filterIntf = carbonTable.resolveFilter(filter, tableProvider);
-    queryModel.setFilterExpressionResolverTree(filterIntf);
+    QueryModel queryModel =
+        new QueryModelBuilder(carbonTable)
+            .projectColumns(projectionColumnNames)
+            .filterExpression(getFilterPredicates(configuration))
+            .dataConverter(getDataTypeConverter(configuration))
+            .build();
 
     // update the file level index store if there are invalid segment
     if (inputSplit instanceof CarbonMultiBlockSplit) {

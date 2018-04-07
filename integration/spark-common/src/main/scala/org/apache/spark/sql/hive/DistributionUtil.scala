@@ -102,7 +102,7 @@ object DistributionUtil {
   /*
    * This method will remove the first occurance of any of the ips  mentioned in the predicate.
    * Eg: l = List(Master,slave1,Master,slave2,slave3) is the list of nodes where first Master is
-   * the Driver  node.
+   * the Master  node.
    * this method withoutFirst (l)(x=> x == 'Master') will remove the first occurance of Master.
    * The resulting List containt List(slave1,Master,slave2,slave3)
    */

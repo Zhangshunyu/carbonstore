@@ -19,6 +19,7 @@ package org.apache.carbondata.examples.util
 
 import java.io.File
 
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.{SaveMode, SparkSession}
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -52,6 +53,12 @@ object ExampleUtils {
       "local[" + workThreadNum.toString() + "]"
     }
     import org.apache.spark.sql.CarbonSession._
+
+//    val conf = new SparkConf()
+//      .setJars(
+//        Seq("/Users/jacky/.m2/repository/com/google/protobuf/protobuf-java/3.5.1/protobuf-java-3.5.1.jar")
+//      )
+//      .set("spark.network.timeout", "5s")
     val spark = SparkSession
       .builder()
       .master(masterUrl)

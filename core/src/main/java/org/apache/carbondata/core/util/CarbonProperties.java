@@ -1460,4 +1460,18 @@ public final class CarbonProperties {
     return systemLocation + CarbonCommonConstants.FILE_SEPARATOR + "_system";
   }
 
+  /**
+   * Return true if search mode is enabled
+   */
+  public static boolean isSearchModeEnabled() {
+    String value = getInstance().getProperty(
+        CarbonCommonConstants.CARBON_SEARCH_MODE_ENABLE,
+        CarbonCommonConstants.CARBON_SEARCH_MODE_ENABLE_DEFAULT);
+    return Boolean.valueOf(value);
+  }
+
+  public static void enableSearchMode() {
+    getInstance().addProperty(
+        CarbonCommonConstants.CARBON_SEARCH_MODE_ENABLE, "true");
+  }
 }

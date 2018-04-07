@@ -20,17 +20,19 @@ package org.apache.carbondata.examples
 import java.io.File
 
 import org.apache.log4j.PropertyConfigurator
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{CarbonSession, SparkSession}
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
 import org.apache.carbondata.examples.util.ExampleUtils
+import org.apache.carbondata.store.worker.Worker
 
 object CarbonSessionExample {
 
   def main(args: Array[String]) {
+    CarbonProperties.enableSearchMode()
     val spark = ExampleUtils.createCarbonSession("CarbonSessionExample")
-    spark.sparkContext.setLogLevel("INFO")
+    spark.sparkContext.setLogLevel("ERROR")
     exampleBody(spark)
     spark.close()
   }
@@ -45,7 +47,7 @@ object CarbonSessionExample {
       s"$rootPath/examples/spark2/src/main/resources/log4j.properties")
 
     CarbonProperties.getInstance()
-      .addProperty(CarbonCommonConstants.ENABLE_QUERY_STATISTICS, "true")
+      .addProperty(CarbonCommonConstants.ENABLE_QUERY_STATISTICS, "false")
 
     spark.sql("DROP TABLE IF EXISTS carbonsession_table")
 
@@ -81,27 +83,6 @@ object CarbonSessionExample {
 
     spark.sql(
       s"""
-         | SELECT charField, stringField, intField
-         | FROM carbonsession_table
-         | WHERE stringfield = 'spark' AND decimalField > 40
-      """.stripMargin).show()
-
-    spark.sql(
-      s"""
-         | SELECT *
-         | FROM carbonsession_table WHERE length(stringField) = 5
-       """.stripMargin).show()
-
-    spark.sql(
-      s"""
-         | SELECT *
-         | FROM carbonsession_table WHERE date_format(dateField, "yyyy-MM-dd") = "2015-07-23"
-       """.stripMargin).show()
-
-    spark.sql("SELECT count(stringField) FROM carbonsession_table").show()
-
-    spark.sql(
-      s"""
          | SELECT sum(intField), stringField
          | FROM carbonsession_table
          | GROUP BY stringField
@@ -109,29 +90,84 @@ object CarbonSessionExample {
 
     spark.sql(
       s"""
-         | SELECT t1.*, t2.*
-         | FROM carbonsession_table t1, carbonsession_table t2
-         | WHERE t1.stringField = t2.stringField
-      """.stripMargin).show()
-
-    spark.sql(
-      s"""
-         | WITH t1 AS (
-         | SELECT * FROM carbonsession_table
-         | UNION ALL
-         | SELECT * FROM carbonsession_table
-         | )
-         | SELECT t1.*, t2.*
-         | FROM t1, carbonsession_table t2
-         | WHERE t1.stringField = t2.stringField
-      """.stripMargin).show()
-
-    spark.sql(
-      s"""
-         | SELECT *
+         | SELECT charField, stringField, intField
          | FROM carbonsession_table
-         | WHERE stringField = 'spark' and floatField > 2.8
-       """.stripMargin).show()
+         | WHERE stringfield = 'spark' AND decimalField > 40
+      """.stripMargin
+    ).show()
+
+    spark.asInstanceOf[CarbonSession].sparkSql(
+      s"""
+         | SELECT charField, stringField, intField
+         | FROM carbonsession_table
+         | WHERE stringfield = 'spark' AND decimalField > 40
+      """.stripMargin
+    ).show()
+
+    Worker.getInstance().shutdown()
+//    rows.foreach(println)
+
+//    rows = spark.asInstanceOf[CarbonSession].carbonSql(
+//      s"""
+//         | SELECT charField, stringField, intField
+//         | FROM carbonsession_table
+//      """.stripMargin
+//    ).collect()
+//    rows.foreach(println)
+
+//    spark.sql(
+//      s"""
+//         | SELECT charField, stringField, intField
+//         | FROM carbonsession_table
+//         | WHERE stringfield = 'spark' AND decimalField > 40
+//      """.stripMargin).show()
+//
+//    spark.sql(
+//      s"""
+//         | SELECT *
+//         | FROM carbonsession_table WHERE length(stringField) = 5
+//       """.stripMargin).show()
+//
+//    spark.sql(
+//      s"""
+//         | SELECT *
+//         | FROM carbonsession_table WHERE date_format(dateField, "yyyy-MM-dd") = "2015-07-23"
+//       """.stripMargin).show()
+//
+//    spark.sql("SELECT count(stringField) FROM carbonsession_table").show()
+//
+//    spark.asInstanceOf[CarbonSession].carbonSql(
+//      s"""
+//         | SELECT sum(intField), stringField
+//         | FROM carbonsession_table
+//         | GROUP BY stringField
+//       """.stripMargin).show()
+//
+//    spark.sql(
+//      s"""
+//         | SELECT t1.*, t2.*
+//         | FROM carbonsession_table t1, carbonsession_table t2
+//         | WHERE t1.stringField = t2.stringField
+//      """.stripMargin).show()
+//
+//    spark.sql(
+//      s"""
+//         | WITH t1 AS (
+//         | SELECT * FROM carbonsession_table
+//         | UNION ALL
+//         | SELECT * FROM carbonsession_table
+//         | )
+//         | SELECT t1.*, t2.*
+//         | FROM t1, carbonsession_table t2
+//         | WHERE t1.stringField = t2.stringField
+//      """.stripMargin).show()
+//
+//    spark.sql(
+//      s"""
+//         | SELECT *
+//         | FROM carbonsession_table
+//         | WHERE stringField = 'spark' and floatField > 2.8
+//       """.stripMargin).show()
 
     // Drop table
     spark.sql("DROP TABLE IF EXISTS carbonsession_table")

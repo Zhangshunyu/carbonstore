@@ -25,16 +25,23 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
 import org.apache.spark.sql.SparkSession.Builder
+import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
-import org.apache.spark.sql.catalyst.plans.logical.{Command, Union}
+import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.execution.QueryExecution
+import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.hive.execution.command.CarbonSetCommand
 import org.apache.spark.sql.internal.{SessionState, SharedState}
+import org.apache.spark.sql.optimizer.CarbonFilters
 import org.apache.spark.sql.profiler.{Profiler, SQLStart}
 import org.apache.spark.util.{CarbonReflectionUtils, Utils}
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
+import org.apache.carbondata.core.datastore.row.CarbonRow
 import org.apache.carbondata.core.util.{CarbonProperties, CarbonSessionInfo, ThreadLocalSessionInfo}
 import org.apache.carbondata.hadoop.util.CarbonInputFormatUtil
+import org.apache.carbondata.store.master.Master
 import org.apache.carbondata.streaming.CarbonStreamingQueryListener
 
 /**
@@ -77,7 +84,32 @@ class CarbonSession(@transient val sc: SparkContext,
     new CarbonSession(sparkContext, Some(sharedState))
   }
 
+  /**
+   * Run search mode if enabled, otherwise run SparkSQL
+   */
   override def sql(sqlText: String): DataFrame = {
+    withProfiler(
+      sqlText,
+      (qe, sse) => {
+        if (CarbonProperties.isSearchModeEnabled) trySearchMode(qe, sse)
+        else new Dataset[Row](self, qe, RowEncoder(qe.analyzed.schema))
+      }
+    )
+  }
+
+  /**
+   * Run SparkSQL directly
+   */
+  def sparkSql(sqlText: String): DataFrame = {
+    withProfiler(
+      sqlText,
+      (qe, sse) => new Dataset[Row](self, qe, RowEncoder(qe.analyzed.schema))
+    )
+  }
+
+  private def withProfiler(
+      sqlText: String,
+      generateDF: (QueryExecution, SQLStart) => DataFrame): DataFrame = {
     val sse = SQLStart(sqlText, CarbonSession.statementId.getAndIncrement())
     CarbonSession.threadStatementId.set(sse.statementId)
     sse.startTime = System.currentTimeMillis()
@@ -89,16 +121,12 @@ class CarbonSession(@transient val sc: SparkContext,
       val qe = sessionState.executePlan(logicalPlan)
       qe.assertAnalyzed()
       sse.isCommand = qe.analyzed match {
-        case c: Command =>
-          true
-        case u @ Union(children) if children.forall(_.isInstanceOf[Command]) =>
-          true
-        case _ =>
-          false
+        case c: Command => true
+        case u @ Union(children) if children.forall(_.isInstanceOf[Command]) => true
+        case _ => false
       }
       sse.analyzerEnd = System.currentTimeMillis()
-
-      new Dataset[Row](self, qe, RowEncoder(qe.analyzed.schema))
+      generateDF(qe, sse)
     } finally {
       Profiler.invokeIfEnable {
         if (sse.isCommand) {
@@ -108,6 +136,44 @@ class CarbonSession(@transient val sc: SparkContext,
           Profiler.addStatementMessage(sse.statementId, sse)
         }
       }
+    }
+  }
+
+  private def trySearchMode(qe: QueryExecution, sse: SQLStart): DataFrame = {
+    val analyzed = qe.analyzed
+    analyzed match {
+      case _@Project(columns, _@Filter(expr, _@SubqueryAlias(_, l@LogicalRelation(_, _, _))))
+        if l.relation.isInstanceOf[CarbonDatasourceHadoopRelation] =>
+        runSearch(analyzed, columns, expr, l)
+      case _@Project(columns, _@Filter(expr, l@UnresolvedRelation(_)))
+        if analyzed.asInstanceOf[SubqueryAlias].child
+          .asInstanceOf[LogicalRelation].relation.isInstanceOf[CarbonDatasourceHadoopRelation] =>
+        runSearch(analyzed, columns, expr,
+          analyzed.asInstanceOf[SubqueryAlias].child.asInstanceOf[LogicalRelation])
+      case _@Project(columns, _@SubqueryAlias(_, l@LogicalRelation(_, _, _)))
+        if l.relation.isInstanceOf[CarbonDatasourceHadoopRelation] =>
+        runSearch(analyzed, columns, null, l)
+      case _ =>
+        new Dataset[Row](self, qe, RowEncoder(qe.analyzed.schema))
+    }
+  }
+
+  private def runSearch(
+      logicalPlan: LogicalPlan,
+      columns: Seq[NamedExpression],
+      expr: Expression,
+      relation: LogicalRelation): DataFrame = {
+    val rows: Array[CarbonRow] =
+      CarbonEnv.driver.search(
+        relation.relation.asInstanceOf[CarbonDatasourceHadoopRelation].carbonTable,
+        columns.map(_.name).toArray,
+        if (expr != null) CarbonFilters.transformExpression(expr) else null)
+    new UnlazyDataFrame(this, logicalPlan, convertToSparkRow(rows))
+  }
+
+  private def convertToSparkRow(carbonRows: Array[CarbonRow]): Array[Row] = {
+    carbonRows.map { carbonRow =>
+      Row.fromSeq(carbonRow.getData)
     }
   }
 }
