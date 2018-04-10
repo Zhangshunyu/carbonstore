@@ -28,7 +28,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         |  utilization int,salary int)
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
-    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(
       """
         | CREATE TABLE fact_table2 (empname String, designation String, doj Timestamp,
@@ -37,7 +37,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         |  utilization int,salary int)
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
-    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
     sql(
       """
@@ -47,7 +47,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         |  utilization int,salary int)
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
-    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
     sql(
       """
@@ -57,7 +57,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         |  utilization int,salary int)
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
-    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(
       """
         | CREATE TABLE fact_table5 (empname String, designation String, doj Timestamp,
@@ -66,7 +66,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         |  utilization int,salary int)
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
-    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
     sql(
       """
@@ -76,7 +76,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         |  utilization int,salary int)
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
-    sql(s"""LOAD DATA local inpath '$resourcesPath/data.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
   }
 
   test("test create datamap with simple and same projection") {
@@ -296,7 +296,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop datamap datamap19")
   }
 
-  ignore("test create datamap with simple and sub group by with expression and filter on query") {
+  test("test create datamap with simple and sub group by with expression and filter on query") {
     sql("drop datamap if exists datamap20")
     sql("create datamap datamap20 using 'mv' as select empname, sum(CASE WHEN utilization=27 THEN deptno ELSE 0 END) from fact_table1 group by empname")
     sql(s"refresh datamap datamap20")
@@ -454,6 +454,66 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(frame, sql("select empname, designation, utilization+projectcode from fact_table2"))
     sql(s"drop datamap datamap31")
   }
+
+  test("test create datamap with simple and sub group by query and count agg") {
+    sql(s"drop datamap if exists datamap32")
+    sql("create datamap datamap32 using 'mv' as select empname, count(utilization) from fact_table1 group by empname")
+    sql(s"refresh datamap datamap32")
+    val frame = sql("select empname,count(utilization) from fact_table1 where empname='shivani' group by empname")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap32"))
+    checkAnswer(frame, sql("select empname,count(utilization) from fact_table2 where empname='shivani' group by empname"))
+    sql(s"drop datamap datamap32")
+  }
+
+  ignore("test create datamap with simple and sub group by query and avg agg") {
+    sql(s"drop datamap if exists datamap33")
+    sql("create datamap datamap33 using 'mv' as select empname, avg(utilization) from fact_table1 group by empname")
+    sql(s"refresh datamap datamap33")
+    val frame = sql("select empname,avg(utilization) from fact_table1 where empname='shivani' group by empname")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap33"))
+    checkAnswer(frame, sql("select empname,avg(utilization) from fact_table2 where empname='shivani' group by empname"))
+    sql(s"drop datamap datamap33")
+  }
+
+  ignore("test create datamap with left join with group by with filter") {
+    sql("drop datamap if exists datamap34")
+    sql("create datamap datamap34 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  on t1.empname = t2.empname group by t1.empname, t2.designation")
+    sql(s"refresh datamap datamap34")
+    val frame = sql(
+      "select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  " +
+      "on t1.empname = t2.empname where t2.designation='SA' group by t1.empname, t2.designation")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap34"))
+    checkAnswer(frame, sql("select t1.empname, t2.designation, sum(t1.utilization) from fact_table4 t1 left join fact_table5 t2  " +
+                           "on t1.empname = t2.empname where t2.designation='SA' group by t1.empname, t2.designation"))
+    sql(s"drop datamap datamap34")
+  }
+
+  test("test create datamap with simple and group by query with filter on datamap but not on projection") {
+    sql("create datamap datamap35 using 'mv' as select designation, sum(utilization) from fact_table1 where empname='shivani' group by designation")
+    sql(s"refresh datamap datamap35")
+    val frame = sql(
+      "select designation, sum(utilization) from fact_table1 where empname='shivani' group by designation")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap35"))
+    checkAnswer(frame, sql("select designation, sum(utilization) from fact_table2 where empname='shivani' group by designation"))
+    sql(s"drop datamap datamap35")
+  }
+
+  test("test create datamap with simple and sub group by query with filter on datamap but not on projection") {
+    sql("create datamap datamap36 using 'mv' as select designation, sum(utilization) from fact_table1 where empname='shivani' group by designation")
+    sql(s"refresh datamap datamap36")
+    val frame = sql(
+      "select sum(utilization) from fact_table1 where empname='shivani' group by designation")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap36"))
+    checkAnswer(frame, sql("select sum(utilization) from fact_table2 where empname='shivani' group by designation"))
+    sql(s"drop datamap datamap36")
+  }
+
+
 
   def verifyMVDataMap(logicalPlan: LogicalPlan, dataMapName: String): Boolean = {
     val tables = logicalPlan collect {

@@ -33,7 +33,9 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.parser.CarbonSpark2SqlParser
 
 import org.apache.carbondata.core.metadata.schema.table.{DataMapSchema, DataMapSchemaStorageProvider, RelationIdentifier}
+import org.apache.carbondata.mv.plans.modular
 import org.apache.carbondata.mv.plans.modular.{GroupBy, Matchable, ModularPlan, Select}
+import org.apache.carbondata.mv.rewrite.{DefaultMatchMaker, QueryRewrite}
 import org.apache.carbondata.spark.util.CommonUtil
 
 /**
@@ -168,12 +170,14 @@ object MVHelper {
   }
 
   case class AttributeKey(exp: Expression) {
-    override def hashCode(): Int = exp.hashCode()
 
-    override def equals(obj: scala.Any): Boolean = {
-      val otherAttr = obj.asInstanceOf[AttributeKey].exp
-      exp.semanticEquals(otherAttr)
+    override def equals(other: Any): Boolean = other match {
+      case attrKey: AttributeKey =>
+        exp.semanticEquals(attrKey.exp)
+      case _ => false
     }
+
+    override def hashCode: Int = exp.hashCode
 
   }
 
@@ -190,16 +194,6 @@ object MVHelper {
       attrMap: Map[AttributeKey, NamedExpression],
       aliasName: Option[String],
       keepAlias: Boolean = false): Seq[Expression] = {
-
-    def updateAlias(alias: Alias,
-        agg: AggregateExpression,
-        name: String,
-        aggFun: AggregateFunction) = {
-      Alias(agg.copy(aggregateFunction = aggFun), name)(alias.exprId,
-        alias.qualifier,
-        alias.explicitMetadata,
-        alias.isGenerated)
-    }
 
     def getAttribute(exp: Expression) = {
       exp match {
@@ -218,29 +212,12 @@ object MVHelper {
     }
 
     expressions.map {
-        case alias@Alias(agg@AggregateExpression(sum: Sum, _, _, _), name) =>
-          attrMap.get(AttributeKey(alias)).map{exp =>
-            updateAlias(alias, agg, name, sum.copy(child = getAttribute(exp)))
-          }.getOrElse(alias)
-        case alias@Alias(agg@AggregateExpression(max: Max, _, _, _), name) =>
-          attrMap.get(AttributeKey(alias)).map{exp =>
-            updateAlias(alias, agg, name, max.copy(child = getAttribute(exp)))
-          }.getOrElse(alias)
-
-        case alias@Alias(agg@AggregateExpression(min: Min, _, _, _), name) =>
-          attrMap.get(AttributeKey(alias)).map{exp =>
-            updateAlias(alias, agg, name, min.copy(child = getAttribute(exp)))
-          }.getOrElse(alias)
-
-        case alias@Alias(agg@AggregateExpression(count: Count, _, _, _), name) =>
-          attrMap.get(AttributeKey(alias)).map{exp =>
-            updateAlias(alias, agg, name, Sum(getAttribute(exp)))
-          }.getOrElse(alias)
-
-        case alias@Alias(agg@AggregateExpression(avg: Average, _, _, _), name) =>
-          // TODO need to support average in while creating table and quaerying as well
-          attrMap.get(AttributeKey(alias)).map{exp =>
-            updateAlias(alias, agg, name, avg.copy(child = getAttribute(exp)))
+        case alias@Alias(agg: AggregateExpression, name) =>
+          attrMap.get(AttributeKey(alias)).map { exp =>
+            Alias(getAttribute(exp), name)(alias.exprId,
+              alias.qualifier,
+              alias.explicitMetadata,
+              alias.isGenerated)
           }.getOrElse(alias)
 
         case attr: AttributeReference =>
@@ -255,7 +232,7 @@ object MVHelper {
           }.getOrElse(attr)
           uattr
         case expression: Expression =>
-          val uattr = attrMap.get(AttributeKey(expression)).getOrElse(expression)
+          val uattr = attrMap.getOrElse(AttributeKey(expression), expression)
           uattr
     }
   }
@@ -310,13 +287,52 @@ object MVHelper {
    * @param subsumer plan to be updated
    * @return Updated modular plan.
    */
-  def updateDataMap(subsumer: ModularPlan): ModularPlan = {
+  def updateDataMap(subsumer: ModularPlan, rewrite: QueryRewrite): ModularPlan = {
     subsumer match {
-      case select: Select if select.children.nonEmpty && select.dataMapTableRelation.isEmpty =>
+      case s: Select if s.dataMapTableRelation.isDefined =>
+        val relation = s.dataMapTableRelation.get.asInstanceOf[Select]
+        val attrMap = getAttributeMap(relation.outputList, s.outputList)
+        val out =
+          updateSubsumeAttrs(
+            s.outputList,
+            attrMap,
+            Some(relation.aliasMap.values.head)).asInstanceOf[Seq[NamedExpression]]
+        val in = relation.asInstanceOf[Select].outputList
+        s.copy(outputList = out,
+          inputList = in,
+          predicateList = Seq.empty,
+          aliasMap = relation.aliasMap,
+          joinEdges = Seq.empty,
+          children = Seq(relation),
+          dataMapTableRelation = None)
+      case g: GroupBy if g.dataMapTableRelation.isDefined =>
+        val relation = g.dataMapTableRelation.get.asInstanceOf[Select]
+        val attrMap = getAttributeMap(relation.outputList, g.outputList)
+        val out =
+          updateSubsumeAttrs(
+            g.outputList,
+            attrMap,
+            Some(relation.aliasMap.values.head)).asInstanceOf[Seq[NamedExpression]]
+        val in = relation.asInstanceOf[Select].outputList
+        val pred =
+          updateSubsumeAttrs(g.predicateList,
+            attrMap,
+            Some(relation.aliasMap.values.head)).map {
+            case alias: Alias =>
+              alias.child
+            case other => other
+          }
+        g.copy(outputList = out,
+          inputList = in,
+          predicateList = pred,
+          child = relation,
+          dataMapTableRelation = None)
+        relation
+      case select: Select =>
         select.children match {
           case Seq(s: Select) if s.dataMapTableRelation.isDefined =>
             val relation = s.dataMapTableRelation.get.asInstanceOf[Select]
-            val child = updateDataMap(s).asInstanceOf[Select]
+            val child = updateDataMap(s, rewrite).asInstanceOf[Select]
             val aliasMap = getAttributeMap(relation.outputList, s.outputList)
             var outputSel =
               updateOutPutList(select.outputList, relation, aliasMap, keepAlias = true)
@@ -332,90 +348,21 @@ object MVHelper {
 
             val outputSel =
               updateOutPutList(select.outputList, relation, aliasMap, keepAlias = false)
-            val child = updateDataMap(g).asInstanceOf[GroupBy]
+            val child = updateDataMap(g, rewrite).asInstanceOf[Matchable]
             // TODO Remove the unnecessary columns from selection.
             // Only keep columns which are required by parent.
             val inputSel = child.outputList
-            select
+            val wip = select
               .copy(outputList = outputSel,
                 inputList = inputSel,
-                children = Seq(child))
+                children = Seq(child),
+                aliasMap = Seq(0 -> rewrite.newSubsumerName()).toMap)
+
+            DefaultMatchMaker.patterns.head.factorOutSubsumer(wip, child, wip.aliasMap)
 
           case _ => select
         }
-      case group: GroupBy if group.children.nonEmpty && group.dataMapTableRelation.isEmpty =>
-        group.children match {
-          case Seq(s: Select) if s.dataMapTableRelation.isDefined =>
-            val relation = s.dataMapTableRelation.get.asInstanceOf[Select]
-            val child = updateDataMap(s).asInstanceOf[Select]
-            val aliasMap = getAttributeMap(relation.outputList, s.outputList)
-            val outputSel = updateSubsumeAttrs(group.outputList,
-              aliasMap,
-              Some(relation.aliasMap.values.head), true).asInstanceOf[Seq[NamedExpression]]
-            val pred = updateSubsumeAttrs(group.predicateList, aliasMap,
-              Some(relation.aliasMap.values.head), true)
-            group.copy(outputList = outputSel,
-              inputList = child.outputList,
-              predicateList = pred,
-              child = child)
-          case Seq(g: GroupBy) if g.dataMapTableRelation.isDefined =>
-            val relation = g.dataMapTableRelation.get.asInstanceOf[Select]
-            val attrMap = getAttributeMap(relation.outputList, group.outputList)
-            val outputSel =
-              updateSubsumeAttrs(
-                group.outputList,
-                attrMap,
-                Some(relation.aliasMap.values.head)).asInstanceOf[Seq[NamedExpression]]
 
-            val childL = updateDataMap(g).asInstanceOf[GroupBy]
-            // TODO Remove the unnecessary columns from selection.
-            // Only keep columns which are required by parent.
-            val inputSel = childL.outputList
-            group
-              .copy(outputList = outputSel,
-                inputList = inputSel,
-                child = childL)
-
-          case _ => group
-        }
-      case s: Select if s.dataMapTableRelation.isDefined =>
-        val relation = s.dataMapTableRelation.get.asInstanceOf[Select]
-        val attrMap = getAttributeMap(relation.outputList, s.outputList)
-        val out =
-          updateSubsumeAttrs(
-            s.outputList,
-            attrMap,
-            Some(relation.aliasMap.values.head)).asInstanceOf[Seq[NamedExpression]]
-        val in = relation.asInstanceOf[Select].outputList
-        s.copy(outputList = out,
-            inputList = in,
-            predicateList = Seq.empty,
-            aliasMap = relation.aliasMap,
-            joinEdges = Seq.empty,
-            children = Seq(relation),
-            dataMapTableRelation = None)
-      case g: GroupBy if g.dataMapTableRelation.isDefined =>
-        val relation = g.dataMapTableRelation.get.asInstanceOf[Select]
-        val attrMap = getAttributeMap(relation.outputList, g.outputList)
-        val out =
-          updateSubsumeAttrs(
-            g.outputList,
-            attrMap,
-            Some(relation.aliasMap.values.head)).asInstanceOf[Seq[NamedExpression]]
-        val in = relation.asInstanceOf[Select].outputList
-        val pred =
-          updateSubsumeAttrs(g.predicateList,
-            attrMap,
-            Some(relation.aliasMap.values.head)).map {
-          case alias: Alias =>
-            alias.child
-          case other => other
-        }
-        g.copy(outputList = out,
-          inputList = in,
-          predicateList = pred,
-          child = relation,
-          dataMapTableRelation = None)
       case other => other
     }
   }

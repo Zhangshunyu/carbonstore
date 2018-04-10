@@ -92,7 +92,6 @@ object DefaultMatchMaker extends DefaultMatchMaker {
     GroupbyGroupbySelectOnlyChildDelta ::
     GroupbyGroupbyGroupbyChildDelta ::
     SelectSelectSelectChildDelta ::
-    SelectSelectGroupbyChildSelectDelta ::
     SelectSelectGroupbyChildDelta :: Nil
 }
 
@@ -435,7 +434,7 @@ object GroupbyGroupbySelectOnlyChildDelta extends DefaultMatchPattern with Predi
               case s: Select => gb_2a
               case other => other })
 
-          if (needRegrouping && rejoinOutputList.isEmpty) {
+          if (rejoinOutputList.isEmpty) {
             val aliasMap = AttributeMap(gb_2a.outputList.collect {
               case a: Alias => (a.toAttribute, a) })
             Utils.tryMatch(gb_2a, gb_2q, aliasMap).flatMap {
@@ -498,69 +497,6 @@ object SelectSelectSelectChildDelta extends DefaultMatchPattern {
         true) =>
         // TODO: implement me
         Nil
-      case _ => Nil
-    }
-  }
-}
-
-
-object SelectSelectGroupbyChildSelectDelta extends DefaultMatchPattern with PredicateHelper {
-  private def isDerivable(
-      exprE: Expression,
-      exprListR: Seq[Expression],
-      subsumee: ModularPlan,
-      subsumer: ModularPlan,
-      compensation: Option[ModularPlan]) = {
-    Utils.isDerivable(
-      exprE: Expression,
-      exprListR: Seq[Expression],
-      subsumee: ModularPlan,
-      subsumer: ModularPlan,
-      compensation: Option[ModularPlan])
-  }
-
-  def apply(
-      subsumer: ModularPlan,
-      subsumee: ModularPlan,
-      compensation: Option[ModularPlan],
-      rewrite: QueryRewrite): Seq[ModularPlan] = {
-    (subsumer, subsumee, compensation, subsumer.children, subsumee.children) match {
-      case (
-        sel_3a@modular.Select(
-        _, _, Nil, _, _,
-        Seq(gb_2a@modular.GroupBy(_, _, _, _, _, _, _, _)), _, _, _, _),
-        sel_3q@modular.Select(
-        _, _, _, _, _,
-        Seq(gb_2q@modular.GroupBy(_, _, _, _, _, _, _, _)), _, _, _, _),
-        Some(sel_2c@modular.Select(
-        _, _, _, _, _,
-        Seq(gb_2c@modular.GroupBy(_, _, _, _, _, _, _, _)), _, _, _, _)),
-        rchild :: Nil,
-        echild :: Nil) =>
-        // TODO this is only working for having with group by queries. It does not work for
-        // group by with filter queries.
-        var plans = SelectSelectGroupbyChildDelta(subsumer, subsumee, Some(gb_2c), rewrite)
-        if (plans.nonEmpty) {
-          val select = plans.head.asInstanceOf[Select]
-          val updatedPreds = sel_2c.predicateList.map{ exp =>
-           exp transform {
-             case ref: AttributeReference =>
-               AttributeReference(ref.name, ref.dataType)(exprId = ref.exprId, qualifier = None)
-           }
-          }
-          val wip = sel_2c.copy(
-            outputList = select.outputList,
-            children = select.children,
-            predicateList = updatedPreds,
-            aliasMap = select.aliasMap
-          )
-
-          val done = factorOutSubsumer(wip, select, wip.aliasMap)
-          Seq(done)
-        } else {
-          Nil
-        }
-
       case _ => Nil
     }
   }

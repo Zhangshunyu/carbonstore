@@ -23,6 +23,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{Command, DeserializeToObject
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 
+import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider
 import org.apache.carbondata.datamap.DataMapManager
@@ -35,8 +36,10 @@ import org.apache.carbondata.mv.rewrite.{SummaryDataset, SummaryDatasetCatalog}
  */
 class MVAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
 
-  val dataMapProvider =
+  private val dataMapProvider =
     DataMapManager.get().getDataMapProvider(DataMapClassProvider.MV.getShortName, sparkSession)
+
+  private val LOGGER = LogServiceFactory.getLogService(classOf[MVAnalyzerRule].getName)
 
   override def apply(plan: LogicalPlan): LogicalPlan = {
     var needAnalysis = true
@@ -67,8 +70,7 @@ class MVAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
       }
       if (updated) {
         val compactSQL = modularPlan.asCompactSQL
-        // TODO add logger
-        println(compactSQL)
+        LOGGER.audit(compactSQL)
         val analyzed = sparkSession.sql(compactSQL).queryExecution.analyzed
         analyzed
       } else {
