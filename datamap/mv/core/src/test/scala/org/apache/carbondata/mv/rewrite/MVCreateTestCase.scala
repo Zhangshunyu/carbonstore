@@ -86,6 +86,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with simple and same projection") {
+    sql("drop datamap if exists datamap1")
     sql("create datamap datamap1 using 'mv' as select empname, designation from fact_table1")
     sql(s"refresh datamap datamap1")
     val df = sql("select empname,designation from fact_table1")
@@ -211,6 +212,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
   }
 
   test("test create datamap with simple and sub group by query") {
+    sql("drop datamap if exists datamap13")
     sql("create datamap datamap13 using 'mv' as select empname, sum(utilization) from fact_table1 group by empname")
     sql(s"refresh datamap datamap13")
     val frame = sql("select sum(utilization) from fact_table1 group by empname")
@@ -519,6 +521,61 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop datamap datamap36")
   }
 
+  test("test create datamap with agg push join with sub group by ") {
+    sql("drop datamap if exists datamap37")
+    sql("create datamap datamap37 using 'mv' as select empname, designation, sum(utilization) from fact_table1 group by empname, designation")
+    sql(s"refresh datamap datamap37")
+    val frame = sql(
+      "select t1.empname, sum(t1.utilization) from fact_table1 t1,fact_table2 t2  " +
+      "where t1.empname = t2.empname group by t1.empname")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap37"))
+    checkAnswer(frame, sql("select t1.empname, sum(t1.utilization) from fact_table3 t1,fact_table4 t2  " +
+                           "where t1.empname = t2.empname group by t1.empname, t1.designation"))
+    sql(s"drop datamap datamap37")
+  }
+
+  test("test create datamap with agg push join with group by ") {
+    sql("drop datamap if exists datamap38")
+    sql("create datamap datamap38 using 'mv' as select empname, designation, sum(utilization) from fact_table1 group by empname, designation")
+    sql(s"refresh datamap datamap38")
+    val frame = sql(
+      "select t1.empname, t1.designation, sum(t1.utilization) from fact_table1 t1,fact_table2 t2  " +
+      "where t1.empname = t2.empname group by t1.empname,t1.designation")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap38"))
+    checkAnswer(frame, sql("select t1.empname,t1.designation, sum(t1.utilization) from fact_table3 t1,fact_table4 t2  " +
+                           "where t1.empname = t2.empname group by t1.empname, t1.designation"))
+    sql(s"drop datamap datamap38")
+  }
+
+  test("test create datamap with agg push join with group by with filter") {
+    sql("drop datamap if exists datamap39")
+    sql("create datamap datamap39 using 'mv' as select empname, designation, sum(utilization) from fact_table1 group by empname, designation ")
+    sql(s"refresh datamap datamap39")
+    val frame = sql(
+      "select t1.empname, t1.designation, sum(t1.utilization) from fact_table1 t1,fact_table2 t2  " +
+      "where t1.empname = t2.empname and t1.empname='shivani' group by t1.empname,t1.designation")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap39"))
+    checkAnswer(frame, sql("select t1.empname,t1.designation, sum(t1.utilization) from fact_table3 t1,fact_table4 t2  " +
+                           "where t1.empname = t2.empname and t1.empname='shivani' group by t1.empname, t1.designation"))
+    sql(s"drop datamap datamap39")
+  }
+
+  test("test create datamap with more agg push join with group by with filter") {
+    sql("drop datamap if exists datamap40")
+    sql("create datamap datamap40 using 'mv' as select empname, designation, sum(utilization), count(utilization) from fact_table1 group by empname, designation ")
+    sql(s"refresh datamap datamap40")
+    val frame = sql(
+      "select t1.empname, t1.designation, sum(t1.utilization),count(t1.utilization) from fact_table1 t1,fact_table2 t2  " +
+      "where t1.empname = t2.empname and t1.empname='shivani' group by t1.empname,t1.designation")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap40"))
+    checkAnswer(frame, sql("select t1.empname, t1.designation, sum(t1.utilization),count(t1.utilization) from fact_table3 t1,fact_table4 t2  " +
+                           "where t1.empname = t2.empname and t1.empname='shivani' group by t1.empname,t1.designation"))
+    sql(s"drop datamap datamap40")
+  }
 
 
   def verifyMVDataMap(logicalPlan: LogicalPlan, dataMapName: String): Boolean = {

@@ -64,17 +64,20 @@ private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MVState) {
     // In case it is rewritten plan and the datamap table is not updated then update the datamap
     // table in plan.
     if (rewrittenPlan.find(_.rewritten).isDefined) {
-      val updatedDataMapTablePlan = rewrittenPlan.transform {
+      val updatedDataMapTablePlan = rewrittenPlan transform {
         case s: Select =>
           MVHelper.updateDataMap(s, rewrite)
         case g: GroupBy =>
           MVHelper.updateDataMap(g, rewrite)
       }
-      if (rewrittenPlan.rewritten) {
-        updatedDataMapTablePlan.setRewritten()
-      } else {
-        updatedDataMapTablePlan
-      }
+      // TODO Find a better way to set the rewritten flag, it may fail in some conditions.
+      val mapping =
+        rewrittenPlan.collect {case m: ModularPlan => m } zip
+        updatedDataMapTablePlan.collect {case m: ModularPlan => m}
+      mapping.foreach(f => if (f._1.rewritten) f._2.setRewritten())
+
+      updatedDataMapTablePlan
+
     } else {
       rewrittenPlan
     }

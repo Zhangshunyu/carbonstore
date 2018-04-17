@@ -51,8 +51,7 @@ class SQLBuilder private(
 
   private def newSubqueryName(): String = {
     s"${ subqueryPrefix }${
-      nextSubqueryId.getAndIncrement
-      ()
+      nextSubqueryId.getAndIncrement()
     }"
   }
 

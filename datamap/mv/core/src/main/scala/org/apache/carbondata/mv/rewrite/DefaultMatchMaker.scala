@@ -346,7 +346,24 @@ object GroupbyGroupbyNoChildDelta extends DefaultMatchPattern {
           }
 
           if (isOutputEmR) {
-            Seq(gb_2a)
+            // Mappings of output of two plans by checking semantic equals.
+            val mappings = gb_2a.outputList.zipWithIndex.map { case(exp, index) =>
+              (exp, gb_2q.outputList.find {
+                case a: Alias if exp.isInstanceOf[Alias] =>
+                  a.child.semanticEquals(exp.children.head)
+                case a: Alias => a.child.semanticEquals(exp)
+                case other => other.semanticEquals(exp)
+              }.getOrElse(gb_2a.outputList(index)))
+            }
+
+            val oList = for ((out1, out2) <- mappings) yield {
+              if (out1.name != out2.name) out1 match {
+                case alias: Alias => Alias(alias.child, out2.name)(exprId = alias.exprId)
+                case _ => Alias(out1, out2.name)(exprId = out2.exprId)
+              } else out1
+            }
+
+            Seq(gb_2a.copy(outputList = oList))
           } else {
             Nil
           }

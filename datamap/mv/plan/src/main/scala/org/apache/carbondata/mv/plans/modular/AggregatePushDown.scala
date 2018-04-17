@@ -19,7 +19,7 @@ package org.apache.carbondata.mv.plans.modular
 
 import scala.collection._
 
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeMap, Divide, ExprId, Literal, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeMap, Cast, Divide, ExprId, Literal, NamedExpression}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 
 trait AggregatePushDown { // self: ModularPlan =>
@@ -31,10 +31,11 @@ trait AggregatePushDown { // self: ModularPlan =>
     val map = scala.collection.mutable.Map[Int, (NamedExpression, Seq[NamedExpression])]()
     outputList.zipWithIndex.foreach {
       // TODO: find out if the first two case as follows really needed.  Comment out for now.
-      //      case (attr: Attribute, i) if (fact.outputSet.contains(attr)) => pushable = false
-      //      case (alias: Alias, i) if (alias.child.isInstanceOf[Attribute] && fact.outputSet
-      // .contains(alias.child.asInstanceOf[Attribute])) => pushable = false
-      case (alias: Alias, i) if (alias.child.isInstanceOf[AggregateExpression]) =>
+      case (attr: Attribute, i) if !fact.outputSet.contains(attr) => pushable = false
+      case (alias: Alias, i)
+        if alias.child.isInstanceOf[Attribute] &&
+           !fact.outputSet.contains(alias.child.asInstanceOf[Attribute]) => pushable = false
+      case (alias: Alias, i) if alias.child.isInstanceOf[AggregateExpression] =>
         val res = transformAggregate(
           alias.child
             .asInstanceOf[AggregateExpression],
@@ -98,6 +99,19 @@ trait AggregatePushDown { // self: ModularPlan =>
           .asInstanceOf[Attribute]
         if (fact.outputSet.contains(tAttr)) {
           val sum1 = AggregateExpression(Sum(tAttr), sum.mode, false)
+          val alias = Alias(sum1, sum1.toString)()
+          val tSum = AggregateExpression(Sum(alias.toAttribute), sum.mode, false, sum.resultId)
+          val (name, id) = aliasInfo.getOrElse(("", NamedExpression.newExprId))
+          map += (ith -> (Alias(tSum, name)(exprId = id), Seq(alias)))
+        } else {
+          Map.empty[Int, (NamedExpression, Seq[NamedExpression])]
+        }
+      case sum@AggregateExpression(Sum(Cast(expr, dataType, timeZoneId)), _, false, _)
+        if expr.isInstanceOf[Attribute] =>
+        val tAttr = selAliasMap.get(expr.asInstanceOf[Attribute]).getOrElse(expr)
+          .asInstanceOf[Attribute]
+        if (fact.outputSet.contains(tAttr)) {
+          val sum1 = AggregateExpression(Sum(Cast(tAttr, dataType, timeZoneId)), sum.mode, false)
           val alias = Alias(sum1, sum1.toString)()
           val tSum = AggregateExpression(Sum(alias.toAttribute), sum.mode, false, sum.resultId)
           val (name, id) = aliasInfo.getOrElse(("", NamedExpression.newExprId))

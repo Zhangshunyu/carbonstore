@@ -186,12 +186,31 @@ object HarmonizeFactTable extends Rule[ModularPlan] with PredicateHelper with Ag
                 exprId = ref.exprId,
                 qualifier = Some(hFactName))
             }
-          val hOutputList = attrOutputList ++ aggOutputList
-          val hSel = s
-            .copy(
+          val hFactOutputSet = hFact.outputSet
+          // Update the outputlist qualifier
+          val hOutputList = (attrOutputList ++ aggOutputList).map {attr =>
+            attr.transform {
+              case ref: Attribute if hFactOutputSet.contains(ref) =>
+                AttributeReference(ref.name, ref.dataType)(
+                  exprId = ref.exprId,
+                  qualifier = Some(hFactName))
+            }
+          }.asInstanceOf[Seq[NamedExpression]]
+
+          // Update the predicate qualifier
+          val hPredList = s.predicateList.map{ pred =>
+            pred.transform {
+              case ref: Attribute if hFactOutputSet.contains(ref) =>
+                AttributeReference(ref.name, ref.dataType)(
+                  exprId = ref.exprId,
+                  qualifier = Some(hFactName))
+            }
+          }
+          val hSel = s.copy(
               outputList = hOutputList,
               inputList = hInputList,
               aliasMap = hAliasMap,
+              predicateList = hPredList,
               children = hFact :: dims)
           val gOutputList = g.outputList.zipWithIndex
             .map { case (expr, index) =>
@@ -204,7 +223,6 @@ object HarmonizeFactTable extends Rule[ModularPlan] with PredicateHelper with Ag
             }
 
           val wip = g.copy(outputList = gOutputList, inputList = hInputList, child = hSel)
-          val hFactOutputSet = hFact.outputSet
           wip.transformExpressions {
             case ref: Attribute if hFactOutputSet.contains(ref) =>
               AttributeReference(ref.name, ref.dataType)(
