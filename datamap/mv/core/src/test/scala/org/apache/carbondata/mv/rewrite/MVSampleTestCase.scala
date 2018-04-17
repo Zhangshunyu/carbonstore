@@ -154,8 +154,8 @@ class MVSampleTestCase extends QueryTest with BeforeAndAfterAll {
 
 
   def drop(): Unit = {
-//    sql("use default")
-//    sql("drop database if exists sample cascade")
+    sql("use default")
+    sql("drop database if exists sample cascade")
   }
 
   override def afterAll {

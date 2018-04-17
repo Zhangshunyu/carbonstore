@@ -61,21 +61,20 @@ private[mv] class Navigator(catalog: SummaryDatasetCatalog, session: MVState) {
           compensation.map(_.setRewritten).getOrElse(currentFragment)
         }
     }
-    var updated = false
-    rewrittenPlan.collect {
-      case currentFragment if currentFragment.rewritten =>
-        updated = true
-    }
     // In case it is rewritten plan and the datamap table is not updated then update the datamap
     // table in plan.
-    if (updated) {
+    if (rewrittenPlan.find(_.rewritten).isDefined) {
       val updatedDataMapTablePlan = rewrittenPlan.transform {
         case s: Select =>
           MVHelper.updateDataMap(s, rewrite)
         case g: GroupBy =>
           MVHelper.updateDataMap(g, rewrite)
       }
-      updatedDataMapTablePlan.setRewritten()
+      if (rewrittenPlan.rewritten) {
+        updatedDataMapTablePlan.setRewritten()
+      } else {
+        updatedDataMapTablePlan
+      }
     } else {
       rewrittenPlan
     }

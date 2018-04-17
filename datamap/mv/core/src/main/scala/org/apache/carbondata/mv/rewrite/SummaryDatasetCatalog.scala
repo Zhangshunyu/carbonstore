@@ -33,8 +33,7 @@ import org.apache.carbondata.mv.plans.modular.{Flags, ModularPlan, ModularRelati
 import org.apache.carbondata.mv.plans.util.Signature
 
 /** Holds a summary logical plan */
-private[mv] case class SummaryDataset(
-    signature: Option[Signature],
+private[mv] case class SummaryDataset(signature: Option[Signature],
     plan: LogicalPlan,
     dataMapSchema: DataMapSchema,
     relation: ModularPlan)

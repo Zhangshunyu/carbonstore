@@ -29,6 +29,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table1 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(
       """
         | CREATE TABLE fact_table2 (empname String, designation String, doj Timestamp,
@@ -37,6 +38,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         |  utilization int,salary int)
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table2 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
     sql(
@@ -48,6 +50,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table3 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
     sql(
       """
@@ -58,6 +61,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table4 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(
       """
         | CREATE TABLE fact_table5 (empname String, designation String, doj Timestamp,
@@ -66,6 +70,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         |  utilization int,salary int)
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table5 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
 
     sql(
@@ -76,6 +81,7 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
         |  utilization int,salary int)
         | STORED BY 'org.apache.carbondata.format'
       """.stripMargin)
+    sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
     sql(s"""LOAD DATA local inpath '$resourcesPath/data_big.csv' INTO TABLE fact_table6 OPTIONS('DELIMITER'= ',', 'QUOTECHAR'= '"')""")
   }
 

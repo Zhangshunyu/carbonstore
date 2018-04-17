@@ -172,11 +172,18 @@ case class CarbonDropDataMapCommand(
       }
     }
     if (dataMapSchema != null) {
-      // TODO do a check for existance before dropping
-      dataMapProvider =
-        DataMapManager.get.getDataMapProvider(dataMapSchema.getProviderName, sparkSession)
-      DataMapStatusManager.dropDataMap(dataMapSchema.getDataMapName)
-      dataMapProvider.freeMeta(mainTable, dataMapSchema)
+      try {
+        // TODO do a check for existance before dropping
+        dataMapProvider =
+          DataMapManager.get.getDataMapProvider(dataMapSchema.getProviderName, sparkSession)
+        DataMapStatusManager.dropDataMap(dataMapSchema.getDataMapName)
+        dataMapProvider.freeMeta(mainTable, dataMapSchema)
+      } catch {
+        case e: Exception =>
+          if (!ifExistsSet) {
+            throw e
+          }
+      }
     } else if (!ifExistsSet) {
       if (tableName != null) {
         throw new NoSuchDataMapException(dataMapName, tableName)
