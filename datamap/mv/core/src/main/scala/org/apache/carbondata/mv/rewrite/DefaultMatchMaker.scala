@@ -356,7 +356,7 @@ object GroupbyGroupbyNoChildDelta extends DefaultMatchPattern {
               }.getOrElse(gb_2a.outputList(index)))
             }
 
-            val oList = for ((out1, out2) <- mappings) yield {
+            val oList = mappings.map{case (out1, out2) =>
               if (out1.name != out2.name) out1 match {
                 case alias: Alias => Alias(alias.child, out2.name)(exprId = alias.exprId)
                 case _ => Alias(out1, out2.name)(exprId = out2.exprId)

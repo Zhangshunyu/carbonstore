@@ -485,17 +485,17 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop datamap datamap33")
   }
 
-  ignore("test create datamap with left join with group by with filter") {
+  test("test create datamap with left join with group by") {
     sql("drop datamap if exists datamap34")
     sql("create datamap datamap34 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  on t1.empname = t2.empname group by t1.empname, t2.designation")
     sql(s"refresh datamap datamap34")
     val frame = sql(
       "select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  " +
-      "on t1.empname = t2.empname where t2.designation='SA' group by t1.empname, t2.designation")
+      "on t1.empname = t2.empname group by t1.empname, t2.designation")
     val analyzed = frame.queryExecution.analyzed
     assert(verifyMVDataMap(analyzed, "datamap34"))
     checkAnswer(frame, sql("select t1.empname, t2.designation, sum(t1.utilization) from fact_table4 t1 left join fact_table5 t2  " +
-                           "on t1.empname = t2.empname where t2.designation='SA' group by t1.empname, t2.designation"))
+                           "on t1.empname = t2.empname group by t1.empname, t2.designation"))
     sql(s"drop datamap datamap34")
   }
 
@@ -575,6 +575,78 @@ class MVCreateTestCase extends QueryTest with BeforeAndAfterAll {
     checkAnswer(frame, sql("select t1.empname, t1.designation, sum(t1.utilization),count(t1.utilization) from fact_table3 t1,fact_table4 t2  " +
                            "where t1.empname = t2.empname and t1.empname='shivani' group by t1.empname,t1.designation"))
     sql(s"drop datamap datamap40")
+  }
+
+  test("test create datamap with left join with group by with filter") {
+    sql("drop datamap if exists datamap41")
+    sql("create datamap datamap41 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  on t1.empname = t2.empname group by t1.empname, t2.designation")
+    sql(s"refresh datamap datamap41")
+    val frame = sql(
+      "select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  " +
+      "on t1.empname = t2.empname where t1.empname='shivani' group by t1.empname, t2.designation")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap41"))
+    checkAnswer(frame, sql("select t1.empname, t2.designation, sum(t1.utilization) from fact_table4 t1 left join fact_table5 t2  " +
+                           "on t1.empname = t2.empname where t1.empname='shivani' group by t1.empname, t2.designation"))
+    sql(s"drop datamap datamap41")
+  }
+
+  test("test create datamap with left join with sub group by") {
+    sql("drop datamap if exists datamap42")
+    sql("create datamap datamap42 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  on t1.empname = t2.empname group by t1.empname, t2.designation")
+    sql(s"refresh datamap datamap42")
+    val frame = sql(
+      "select t1.empname, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  " +
+      "on t1.empname = t2.empname group by t1.empname")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap42"))
+    checkAnswer(frame, sql("select t1.empname, sum(t1.utilization) from fact_table4 t1 left join fact_table5 t2  " +
+                           "on t1.empname = t2.empname group by t1.empname"))
+    sql(s"drop datamap datamap42")
+  }
+
+  test("test create datamap with left join with sub group by with filter") {
+    sql("drop datamap if exists datamap43")
+    sql("create datamap datamap43 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  on t1.empname = t2.empname group by t1.empname, t2.designation")
+    sql(s"refresh datamap datamap43")
+    val frame = sql(
+      "select t1.empname, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  " +
+      "on t1.empname = t2.empname where t1.empname='shivani' group by t1.empname")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap43"))
+    checkAnswer(frame, sql("select t1.empname, sum(t1.utilization) from fact_table4 t1 left join fact_table5 t2  " +
+                           "on t1.empname = t2.empname where t1.empname='shivani' group by t1.empname"))
+    sql(s"drop datamap datamap43")
+  }
+
+  test("test create datamap with left join with sub group by with filter on mv") {
+    sql("drop datamap if exists datamap44")
+    sql("create datamap datamap44 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  on t1.empname = t2.empname where t1.empname='shivani' group by t1.empname, t2.designation")
+    sql(s"refresh datamap datamap44")
+    val frame = sql(
+      "select t1.empname, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  " +
+      "on t1.empname = t2.empname where t1.empname='shivani' group by t1.empname")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap44"))
+    checkAnswer(frame, sql("select t1.empname, sum(t1.utilization) from fact_table4 t1 left join fact_table5 t2  " +
+                           "on t1.empname = t2.empname where t1.empname='shivani' group by t1.empname"))
+    sql(s"drop datamap datamap44")
+  }
+
+  test("test create datamap with left join on query and equi join on mv with group by with filter") {
+    sql("drop datamap if exists datamap45")
+
+    sql("create datamap datamap45 using 'mv' as select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 join fact_table2 t2  on t1.empname = t2.empname group by t1.empname, t2.designation")
+    sql(s"refresh datamap datamap45")
+    // During spark optimizer it converts the left outer join queries with equi join if any filter present on right side table
+    val frame = sql(
+      "select t1.empname, t2.designation, sum(t1.utilization) from fact_table1 t1 left join fact_table2 t2  " +
+      "on t1.empname = t2.empname where t2.designation='SA' group by t1.empname, t2.designation")
+    val analyzed = frame.queryExecution.analyzed
+    assert(verifyMVDataMap(analyzed, "datamap45"))
+    checkAnswer(frame, sql("select t1.empname, t2.designation, sum(t1.utilization) from fact_table4 t1 left join fact_table5 t2  " +
+                           "on t1.empname = t2.empname where t2.designation='SA' group by t1.empname, t2.designation"))
+    sql(s"drop datamap datamap45")
   }
 
 

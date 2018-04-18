@@ -151,7 +151,7 @@ class MVTpchTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop datamap datamap8")
   }
 
-  ignore("test create datamap with tpch6") {
+  test("test create datamap with tpch6") {
     sql(s"drop datamap if exists datamap9")
     sql("create datamap datamap9 using 'mv' as select sum(l_extendedprice * l_discount) as revenue from lineitem where l_shipdate >= date('1994-01-01') and l_shipdate < date('1995-01-01') and l_discount between 0.05 and 0.07 and l_quantity < 24")
     sql(s"refresh datamap datamap9")
@@ -186,7 +186,7 @@ class MVTpchTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop datamap datamap11")
   }
 
-  ignore("test create datamap with tpch7 part of query2 (core issue)") {
+  test("test create datamap with tpch7 part of query2 (core issue)") {
     sql(s"drop datamap if exists datamap12")
     sql("create datamap datamap12 using 'mv' as select n1.n_name, l_shipdate, l_extendedprice ,l_discount from supplier,lineitem,orders,customer,nation n1 where s_suppkey = l_suppkey and o_orderkey = l_orderkey and c_custkey = o_custkey and s_nationkey = n1.n_nationkey and c_nationkey = n1.n_nationkey")
     sql(s"refresh datamap datamap12")
@@ -197,7 +197,7 @@ class MVTpchTestCase extends QueryTest with BeforeAndAfterAll {
     sql(s"drop datamap datamap12")
   }
 
-  test("test create datamap with tpch7 part of query3 (self join issue)") {
+  ignore("test create datamap with tpch7 part of query3 (self join issue)") {
     sql(s"drop datamap if exists datamap13")
     sql("create datamap datamap13 using 'mv' as select n1.n_name as supp_nation, n2.n_name as cust_nation, l_shipdate, l_extendedprice * (1 - l_discount) as volume from supplier,lineitem,orders,customer,nation n1,nation n2 where s_suppkey = l_suppkey and o_orderkey = l_orderkey and c_custkey = o_custkey and s_nationkey = n1.n_nationkey and c_nationkey = n2.n_nationkey")
     sql(s"refresh datamap datamap13")
