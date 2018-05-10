@@ -100,7 +100,7 @@ object MVHelper {
       CarbonEnv.getTablePath(tableModel.databaseNameOp, tableModel.tableName)(sparkSession)
     }
     CarbonCreateTableCommand(TableNewProcessor(tableModel),
-      tableModel.ifNotExistsSet, Some(tablePath), isVisible = false).run(sparkSession)
+      tableModel.ifNotExistsSet, Some(tablePath), false).run(sparkSession)
 
     dataMapSchema.setCtasQuery(queryString)
     dataMapSchema
@@ -288,90 +288,90 @@ object MVHelper {
    * @param subsumer plan to be updated
    * @return Updated modular plan.
    */
-  def updateDataMap(subsumer: ModularPlan, rewrite: QueryRewrite): ModularPlan = {
-    subsumer match {
-      case s: Select if s.dataMapTableRelation.isDefined =>
-        val relation = s.dataMapTableRelation.get.asInstanceOf[Select]
-        val mappings = s.outputList zip relation.outputList
-        val oList = for ((o1, o2) <- mappings) yield {
-          if (o1.name != o2.name) Alias(o2, o1.name)(exprId = o1.exprId) else o2
-        }
-        relation.copy(outputList = oList).setRewritten()
-      case g: GroupBy if g.dataMapTableRelation.isDefined =>
-        val relation = g.dataMapTableRelation.get.asInstanceOf[Select]
-        val in = relation.asInstanceOf[Select].outputList
-        val mappings = g.outputList zip relation.outputList
-        val oList = for ((left, right) <- mappings) yield {
-          left match {
-            case Alias(agg@AggregateExpression(fun@Sum(child), _, _, _), name) =>
-              val uFun = fun.copy(child = right)
-              Alias(agg.copy(aggregateFunction = uFun), left.name)(exprId = left.exprId)
-            case Alias(agg@AggregateExpression(fun@Max(child), _, _, _), name) =>
-              val uFun = fun.copy(child = right)
-              Alias(agg.copy(aggregateFunction = uFun), left.name)(exprId = left.exprId)
-            case Alias(agg@AggregateExpression(fun@Min(child), _, _, _), name) =>
-              val uFun = fun.copy(child = right)
-              Alias(agg.copy(aggregateFunction = uFun), left.name)(exprId = left.exprId)
-            case Alias(agg@AggregateExpression(fun@Count(Seq(child)), _, _, _), name) =>
-              val uFun = Sum(right)
-              Alias(agg.copy(aggregateFunction = uFun), left.name)(exprId = left.exprId)
-            case _ =>
-              if (left.name != right.name) Alias(right, left.name)(exprId = left.exprId) else right
-          }
-        }
-        val updatedPredicates = g.predicateList.map { f =>
-          mappings.find{ case (k, y) =>
-            k match {
-              case a: Alias if f.isInstanceOf[Alias] =>
-                a.child.semanticEquals(f.children.head)
-              case a: Alias => a.child.semanticEquals(f)
-              case other => other.semanticEquals(f)
-            }
-          } match {
-            case Some(r) => r._2
-            case _ => f
-          }
-        }
-        g.copy(outputList = oList,
-          inputList = in,
-          predicateList = updatedPredicates,
-          child = relation,
-          dataMapTableRelation = None).setRewritten()
-
-      case select: Select =>
-        select.children match {
-          case Seq(s: Select) if s.dataMapTableRelation.isDefined =>
-            val relation = s.dataMapTableRelation.get.asInstanceOf[Select]
-            val child = updateDataMap(s, rewrite).asInstanceOf[Select]
-            val aliasMap = getAttributeMap(relation.outputList, s.outputList)
-            var outputSel =
-              updateOutPutList(select.outputList, relation, aliasMap, keepAlias = true)
-            val pred = updateSelectPredicates(select.predicateList, aliasMap, true)
-            select.copy(outputList = outputSel,
-              inputList = child.outputList,
-              predicateList = pred,
-              children = Seq(child)).setRewritten()
-
-          case Seq(g: GroupBy) if g.dataMapTableRelation.isDefined =>
-            val relation = g.dataMapTableRelation.get.asInstanceOf[Select]
-            val aliasMap = getAttributeMap(relation.outputList, g.outputList)
-
-            val outputSel =
-              updateOutPutList(select.outputList, relation, aliasMap, keepAlias = false)
-            val child = updateDataMap(g, rewrite).asInstanceOf[Matchable]
-            // TODO Remove the unnecessary columns from selection.
-            // Only keep columns which are required by parent.
-            val inputSel = child.outputList
-            select.copy(
-              outputList = outputSel,
-              inputList = inputSel,
-              children = Seq(child)).setRewritten()
-
-          case _ => select
-        }
-
-      case other => other
-    }
-  }
+//  def updateDataMap(subsumer: ModularPlan, rewrite: QueryRewrite): ModularPlan = {
+//    subsumer match {
+//      case s: Select if s.dataMapTableRelation.isDefined =>
+//        val relation = s.dataMapTableRelation.get.asInstanceOf[Select]
+//        val mappings = s.outputList zip relation.outputList
+//        val oList = for ((o1, o2) <- mappings) yield {
+//          if (o1.name != o2.name) Alias(o2, o1.name)(exprId = o1.exprId) else o2
+//        }
+//        relation.copy(outputList = oList).setRewritten()
+//      case g: GroupBy if g.dataMapTableRelation.isDefined =>
+//        val relation = g.dataMapTableRelation.get.asInstanceOf[Select]
+//        val in = relation.asInstanceOf[Select].outputList
+//        val mappings = g.outputList zip relation.outputList
+//        val oList = for ((left, right) <- mappings) yield {
+//          left match {
+//            case Alias(agg@AggregateExpression(fun@Sum(child), _, _, _), name) =>
+//              val uFun = fun.copy(child = right)
+//              Alias(agg.copy(aggregateFunction = uFun), left.name)(exprId = left.exprId)
+//            case Alias(agg@AggregateExpression(fun@Max(child), _, _, _), name) =>
+//              val uFun = fun.copy(child = right)
+//              Alias(agg.copy(aggregateFunction = uFun), left.name)(exprId = left.exprId)
+//            case Alias(agg@AggregateExpression(fun@Min(child), _, _, _), name) =>
+//              val uFun = fun.copy(child = right)
+//              Alias(agg.copy(aggregateFunction = uFun), left.name)(exprId = left.exprId)
+//            case Alias(agg@AggregateExpression(fun@Count(Seq(child)), _, _, _), name) =>
+//              val uFun = Sum(right)
+//              Alias(agg.copy(aggregateFunction = uFun), left.name)(exprId = left.exprId)
+//            case _ =>
+//              if (left.name != right.name) Alias(right, left.name)(exprId = left.exprId) else right
+//          }
+//        }
+//        val updatedPredicates = g.predicateList.map { f =>
+//          mappings.find{ case (k, y) =>
+//            k match {
+//              case a: Alias if f.isInstanceOf[Alias] =>
+//                a.child.semanticEquals(f.children.head)
+//              case a: Alias => a.child.semanticEquals(f)
+//              case other => other.semanticEquals(f)
+//            }
+//          } match {
+//            case Some(r) => r._2
+//            case _ => f
+//          }
+//        }
+//        g.copy(outputList = oList,
+//          inputList = in,
+//          predicateList = updatedPredicates,
+//          child = relation,
+//          dataMapTableRelation = None).setRewritten()
+//
+//      case select: Select =>
+//        select.children match {
+//          case Seq(s: Select) if s.dataMapTableRelation.isDefined =>
+//            val relation = s.dataMapTableRelation.get.asInstanceOf[Select]
+//            val child = updateDataMap(s, rewrite).asInstanceOf[Select]
+//            val aliasMap = getAttributeMap(relation.outputList, s.outputList)
+//            var outputSel =
+//              updateOutPutList(select.outputList, relation, aliasMap, keepAlias = true)
+//            val pred = updateSelectPredicates(select.predicateList, aliasMap, true)
+//            select.copy(outputList = outputSel,
+//              inputList = child.outputList,
+//              predicateList = pred,
+//              children = Seq(child)).setRewritten()
+//
+//          case Seq(g: GroupBy) if g.dataMapTableRelation.isDefined =>
+//            val relation = g.dataMapTableRelation.get.asInstanceOf[Select]
+//            val aliasMap = getAttributeMap(relation.outputList, g.outputList)
+//
+//            val outputSel =
+//              updateOutPutList(select.outputList, relation, aliasMap, keepAlias = false)
+//            val child = updateDataMap(g, rewrite).asInstanceOf[Matchable]
+//            // TODO Remove the unnecessary columns from selection.
+//            // Only keep columns which are required by parent.
+//            val inputSel = child.outputList
+//            select.copy(
+//              outputList = outputSel,
+//              inputList = inputSel,
+//              children = Seq(child)).setRewritten()
+//
+//          case _ => select
+//        }
+//
+//      case other => other
+//    }
+//  }
 }
 

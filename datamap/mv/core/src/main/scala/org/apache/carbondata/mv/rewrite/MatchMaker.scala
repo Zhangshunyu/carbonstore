@@ -1,46 +1,32 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright (c) Huawei Futurewei Technologies, Inc. All Rights Reserved.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package org.apache.carbondata.mv.rewrite
 
-import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.trees.TreeNode
+//import org.apache.spark.sql.catalyst.expressions.AttributeReference
+//import org.apache.spark.sql.catalyst.expressions.Alias
+//import org.apache.spark.sql.catalyst.plans.QueryPlan
+import org.apache.spark.internal.Logging
+//import org.apache.carbondata.mv.plans.modular
+//import org.apache.carbondata.mv.plans.modular.ModularPlan
+//import org.apache.carbondata.mv.plans.util.SQLBuilder
 
 abstract class MatchPattern[MatchingPlan <: TreeNode[MatchingPlan]] extends Logging {
-
-  def apply(
-      subsumer: MatchingPlan,
-      subsumee: MatchingPlan,
-      compensation: Option[MatchingPlan],
-      rewrite: QueryRewrite): Seq[MatchingPlan]
-
+  
+  def apply(subsumer: MatchingPlan,subsumee: MatchingPlan,compensation: Option[MatchingPlan],rewrite: QueryRewrite): Seq[MatchingPlan]
+  
 }
 
 abstract class MatchMaker[MatchingPlan <: TreeNode[MatchingPlan]] {
 
-  /** Define a sequence of rules, to be overridden by the implementation. */
+  /** Define a sequence of rules, to be overridden by the implementation. */ 
   protected val patterns: Seq[MatchPattern[MatchingPlan]]
-
-  def execute(
-      subsumer: MatchingPlan,
-      subsumee: MatchingPlan,
-      compensation: Option[MatchingPlan],
-      rewrite: QueryRewrite): Iterator[MatchingPlan] = {
-    val iter = patterns.view.flatMap(_ (subsumer, subsumee, compensation, rewrite)).toIterator
+  
+  def execute(subsumer: MatchingPlan,subsumee: MatchingPlan,compensation: Option[MatchingPlan],rewrite:QueryRewrite): Iterator[MatchingPlan] = {
+    val iter = patterns.view.flatMap(_(subsumer, subsumee, compensation, rewrite)).toIterator
     iter
 
   }

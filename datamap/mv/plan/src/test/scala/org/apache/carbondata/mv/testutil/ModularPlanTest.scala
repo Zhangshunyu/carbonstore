@@ -17,22 +17,21 @@
 
 package org.apache.carbondata.mv.testutil
 
-import java.io.File
-
+import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.test.util.{PlanTest, QueryTest}
-
-import org.apache.carbondata.mv.plans.modular
 import org.apache.carbondata.mv.plans.modular.{ModularPlan, OneRowTable, Select}
 import org.apache.carbondata.mv.plans.modular.Flags._
+import org.apache.carbondata.mv.dsl.plans._
+import org.apache.spark.internal.Logging
 
 /**
  * Provides helper methods for comparing plans.
  */
-abstract class ModularPlanTest extends QueryTest with PredicateHelper {
+abstract class ModularPlanTest extends SparkFunSuite with PredicateHelper {
 
   /**
    * Since attribute references are given globally unique ids during analysis,
@@ -164,8 +163,8 @@ abstract class ModularPlanTest extends QueryTest with PredicateHelper {
   /** Fails the test if the two expressions do not match */
   protected def compareExpressions(e1: Seq[Expression], e2: Seq[Expression]): Unit = {
     comparePlans(
-      Select(Nil, Nil, e1, Map.empty, Nil, Seq(OneRowTable), NoFlags, Seq.empty, Seq.empty), modular
-        .Select(Nil, Nil, e2, Map.empty, Nil, Seq(OneRowTable), NoFlags, Seq.empty, Seq.empty))
+      Select(Nil, Nil, e1, Map.empty, Nil, Seq(OneRowTable), NoFlags, Seq.empty, Seq.empty),
+        Select(Nil, Nil, e2, Map.empty, Nil, Seq(OneRowTable), NoFlags, Seq.empty, Seq.empty))
   }
 
   protected def compareMessages(msg1: String, msg2: String) {

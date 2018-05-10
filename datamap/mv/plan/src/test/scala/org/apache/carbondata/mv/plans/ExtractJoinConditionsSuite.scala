@@ -21,8 +21,7 @@ import org.apache.spark.sql.catalyst.dsl.expressions._
 import org.apache.spark.sql.catalyst.dsl.plans._
 import org.apache.spark.sql.catalyst.plans.{Inner, _}
 import org.apache.spark.sql.catalyst.plans.logical.LocalRelation
-
-import org.apache.carbondata.mv.dsl._
+import org.apache.carbondata.mv.dsl.plans._
 import org.apache.carbondata.mv.testutil.ModularPlanTest
 
 class ExtractJoinConditionsSuite extends ModularPlanTest {

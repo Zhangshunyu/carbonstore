@@ -18,10 +18,8 @@
 package org.apache.carbondata.mv.plans
 
 import scala.util.{Failure, Success, Try}
-
 import org.apache.spark.sql.SparkSession
 import org.scalatest.BeforeAndAfter
-
 import org.apache.carbondata.mv.dsl._
 import org.apache.carbondata.mv.testutil.ModularPlanTest
 

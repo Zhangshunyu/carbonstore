@@ -31,25 +31,25 @@ private[mv] class MVState(summaryDatasetCatalog: SummaryDatasetCatalog) {
   // Note: These are all lazy vals because they depend on each other (e.g. conf) and we
   // want subclasses to override some of the fields. Otherwise, we would get a lot of NPEs.
 
-  /**
-   * Modular query plan modularizer
-   */
-  lazy val modularizer = SimpleModularizer
+//  /**
+//   * Modular query plan modularizer
+//   */
+//  lazy val modularizer = SimpleModularizer
+//
+//  /**
+//   * Logical query plan optimizer.
+//   */
+//  lazy val optimizer = BirdcageOptimizer
+//
+//  lazy val matcher = DefaultMatchMaker
 
-  /**
-   * Logical query plan optimizer.
-   */
-  lazy val optimizer = BirdcageOptimizer
-
-  lazy val matcher = DefaultMatchMaker
-
-  lazy val navigator: Navigator = new Navigator(summaryDatasetCatalog, this)
+//  lazy val navigator: Navigator = new Navigator(summaryDatasetCatalog, this)
 
   /**
    * Rewrite the logical query plan to MV plan if applicable.
    * @param plan
    * @return
    */
-  def rewritePlan(plan: LogicalPlan): QueryRewrite = new QueryRewrite(this, plan)
+//  def rewritePlan(plan: LogicalPlan): QueryRewrite = new QueryRewrite(this, plan)
 
 }

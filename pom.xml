@@ -97,6 +97,8 @@
   <modules>
     <module>common</module>
     <module>core</module>
+    <module>datamap/mv/plan</module>
+    <module>datamap/mv/core</module>
     <module>processing</module>
     <module>hadoop</module>
     <module>integration/spark-common</module>
@@ -121,6 +123,8 @@
     <suite.name>org.apache.carbondata.cluster.sdv.suite.SDVSuites</suite.name>
     <script.exetension>.sh</script.exetension>
     <carbon.hive.based.metastore>false</carbon.hive.based.metastore>
+
+
   </properties>
 
   <repositories>

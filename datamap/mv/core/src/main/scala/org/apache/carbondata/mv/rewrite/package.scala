@@ -31,30 +31,17 @@ import org.apache.carbondata.mv.plans.util.LogicalPlanSignatureGenerator
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
+import org.apache.spark.sql.execution.QueryExecution
 
 /**
- * A a collection of common abstractions for query plans as well as
- * a base semantic plan representation.
+ * A a collection of common abstractions for query execution. 
  */
-package object plans {
-  @DeveloperApi
-  type Pattern = org.apache.carbondata.mv.plans.modular.ModularPattern
-  
-  implicit class LogicalPlanUtils(val plan: LogicalPlan) {
-    lazy val isSPJG: Boolean = CheckSPJG.isSPJG(plan)
-    lazy val signature: Option[Signature] = LogicalPlanSignatureGenerator.generate(plan)
-  }
-  
-  implicit class MorePredicateHelper(p: PredicateHelper) {
-    def canEvaluate(expr: Expression, plan: ModularPlan): Boolean =
-      expr.references.subsetOf(plan.outputSet)
-      
-    def canEvaluate(expr: Expression, exprList: Seq[Expression]): Boolean =
-      expr.references.subsetOf(AttributeSet(exprList))
-  }
-  
-  def supports(supported: Boolean, message: Any) {
-    if (!supported)
-      throw new UnsupportedOperationException(s"unsupported operation: $message")
+package object rewrite {
+
+  implicit class QueryExecutionUtils(val qe: QueryExecution) {
+    def withCachedAndMVData(catalog: SummaryDatasetCatalog): LogicalPlan = {
+      val plan = qe.withCachedData
+      catalog.useSummaryDataset(plan)
+    }
   }
 }

@@ -1,30 +1,33 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright (c) Huawei Futurewei Technologies, Inc. All Rights Reserved.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
+
 
 package org.apache.carbondata.mv.rewrite
 
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeMap, AttributeReference, AttributeSet, Expression, PredicateHelper, _}
-import org.apache.spark.sql.catalyst.plans.{FullOuter, Inner}
-
-import org.apache.carbondata.mv.datamap.MVHelper
+import org.apache.carbondata.mv.plans.modular.ModularPlan
+import org.apache.carbondata.mv.plans.modular.Matchable
 import org.apache.carbondata.mv.plans.modular
-import org.apache.carbondata.mv.plans.modular._
-import org.apache.carbondata.mv.plans.modular.Flags._
 import org.apache.carbondata.mv.plans.util.SQLBuilder
+import org.apache.spark.sql.catalyst.expressions.PredicateHelper
+import org.apache.spark.sql.catalyst.expressions.AttributeSet
+import org.apache.carbondata.mv.plans.modular.JoinEdge
+import org.apache.spark.sql.catalyst.plans.Inner
+import org.apache.spark.sql.catalyst.plans.FullOuter
+//import org.apache.spark.sql.catalyst._
+import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.expressions.Alias
+import org.apache.spark.sql.catalyst.expressions.AttributeReference
+import org.apache.spark.sql.catalyst.expressions.AttributeMap
+import org.apache.spark.sql.catalyst.expressions.Expression
+//import org.apache.spark.sql.catalyst.analysis.Star
+//import com.huawei.mqo.matching.utils.Utils
+//import org.apache.spark.sql.catalyst.expressions.NamedExpression
+import org.apache.spark.sql.catalyst.expressions.Attribute
+//import org.apache.spark.sql.types.MetadataBuilder
+import org.apache.carbondata.mv.plans.modular.Flags._
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 
 abstract class DefaultMatchMaker extends MatchMaker[ModularPlan]
 
@@ -35,62 +38,40 @@ abstract class DefaultMatchPattern extends MatchPattern[ModularPlan] {
     val className = getClass.getName
     if (className endsWith "$") className.dropRight(1) else className
   }
-
-  def factorOutSubsumer(
-      compensation: ModularPlan,
-      subsumer: Matchable,
-      aliasMapMain: Map[Int, String]): ModularPlan = {
-
-    // Create aliasMap with attribute to alias reference attribute
+  
+  def factorOutSubsumer(compensation: ModularPlan, subsumer: Matchable, subsumerName: Option[String]) = {
     val aliasMap = AttributeMap(
         subsumer.outputList.collect {
-          case a: Alias if a.child.isInstanceOf[Attribute] =>
-            (a.child.asInstanceOf[Attribute], a.toAttribute)
+          case a: Alias if (a.child.isInstanceOf[Attribute]) => (a.child.asInstanceOf[Attribute], a.toAttribute)
           })
 
-    // Check and replace all alias references with subsumer alias map references.
     val compensation1 = compensation.transform {
-      case plan if !plan.skip && plan != subsumer =>
+      case plan if (!plan.skip) =>
         plan.transformExpressions {
-          case a: AttributeReference =>
-            aliasMap
-              .get(a)
-              .map { ref =>
-                AttributeReference(
-                  ref.name, ref.dataType)(
-                  exprId = ref.exprId,
-                  qualifier = a.qualifier)
-              }.getOrElse(a)
+          case a: AttributeReference => 
+            aliasMap.get(a).map(ref => AttributeReference(ref.name, ref.dataType)(exprId = ref.exprId, qualifier = a.qualifier)).getOrElse(a)
           }
-    }
-
+    }    
+    
     val subqueryAttributeSet = SQLBuilder.collectAttributeSet(subsumer.outputList)
-    if (SQLBuilder.collectDuplicateNames(subqueryAttributeSet).nonEmpty) {
-      new UnsupportedOperationException(
-        s"duplicate name(s): ${ subsumer.output.map(_.toString + ", ") }")
-    }
-    if (aliasMapMain.size == 1) {
-      val subsumerName: Option[String] = aliasMapMain.get(0)
-      // Replace all compensation1 attributes with refrences of subsumer attributeset
-      val compensationFinal = compensation1.transformExpressions {
-        case ref: Attribute if subqueryAttributeSet.contains(ref) =>
-          AttributeReference(ref.name, ref.dataType)(exprId = ref.exprId, qualifier = subsumerName)
-        case alias: Alias if subqueryAttributeSet.contains(alias.toAttribute) =>
-          Alias(alias.child, alias.name)(exprId = alias.exprId, qualifier = subsumerName)
-      }
-      compensationFinal
-    } else {
-      compensation1
-    }
+    if (SQLBuilder.collectDuplicateNames(subqueryAttributeSet).nonEmpty)
+      new UnsupportedOperationException(s"duplicate name(s): ${subsumer.output.map(_.toString + ", ")}")
+    val compensationFinal = compensation1.transformExpressions {
+      case ref: Attribute if (subqueryAttributeSet.contains(ref)) =>
+        AttributeReference(ref.name, ref.dataType)(exprId = ref.exprId, qualifier = subsumerName)
+//      case alias: Alias if (subqueryAttributeSet.contains(alias.toAttribute)) =>
+//        Alias(alias.child, alias.name)(exprId = alias.exprId, qualifier = subsumerName)
+    } 
+    compensationFinal
   }
 }
 
 object DefaultMatchMaker extends DefaultMatchMaker {
-  lazy val patterns =
+  lazy val patterns = 
     SelectSelectNoChildDelta ::
     GroupbyGroupbyNoChildDelta ::
     GroupbyGroupbySelectOnlyChildDelta ::
-    GroupbyGroupbyGroupbyChildDelta ::
+    GroupbyGroupbyGroupbyChildDelta :: 
     SelectSelectSelectChildDelta ::
     SelectSelectGroupbyChildDelta :: Nil
 }
@@ -104,392 +85,234 @@ object DefaultMatchMaker extends DefaultMatchMaker {
  */
 
 object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper {
-  private def isDerivable(
-      exprE: Expression,
-      exprListR: Seq[Expression],
-      subsumee: ModularPlan,
-      subsumer: ModularPlan,
-      compensation: Option[ModularPlan]): Boolean = {
-    if (subsumee.asInstanceOf[Select].predicateList.contains(exprE)) {
-      subsumer.asInstanceOf[Select].predicateList.exists(_.semanticEquals(exprE)) ||
-      canEvaluate(exprE, subsumer)
-    } else if (subsumee.asInstanceOf[Select].outputList.contains(exprE)) {
-      exprE match {
-        case a@Alias(_, _) =>
-          exprListR.exists(a1 => a1.isInstanceOf[Alias] &&
-                                 a1.asInstanceOf[Alias].child.semanticEquals(a.child)) ||
-          exprListR.exists(_.semanticEquals(exprE) || canEvaluate(exprE, subsumer))
+  private def isDerivable(exprE: Expression, exprListR: Seq[Expression], subsumee: ModularPlan, subsumer: ModularPlan, compensation: Option[ModularPlan]): Boolean = {
+    if (subsumee.asInstanceOf[modular.Select].predicateList.contains(exprE)) {
+      subsumer.asInstanceOf[modular.Select].predicateList.exists(_.semanticEquals(exprE)) || canEvaluate(exprE, subsumer)
+    } else if (subsumee.asInstanceOf[modular.Select].outputList.contains(exprE)) { exprE match {
+        case a @ Alias(_,_) => exprListR.exists(a1 => a1.isInstanceOf[Alias] && a1.asInstanceOf[Alias].child.semanticEquals(a.child))
         case exp => exprListR.exists(_.semanticEquals(exp) || canEvaluate(exp, subsumer))
       }
-    } else {
-      false
-    }
+    } else false
   }
-
-  def apply(
-      subsumer: ModularPlan,
-      subsumee: ModularPlan,
-      compensation: Option[ModularPlan],
-      rewrite: QueryRewrite): Seq[ModularPlan] = {
+  def apply(subsumer: ModularPlan, subsumee: ModularPlan, compensation: Option[ModularPlan], rewrite: QueryRewrite): Seq[ModularPlan] = {
 
     (subsumer, subsumee, compensation) match {
-      case (
-          sel_1a @ modular.Select(_, _, _, _, _, _, _, _, _, _),
-          sel_1q @ modular.Select(_, _, _, _, _, _, _, _, _, _), None
-        ) if sel_1a.children.forall { _.isInstanceOf[modular.LeafNode] } &&
-             sel_1q.children.forall { _.isInstanceOf[modular.LeafNode] } =>
+      case (sel_1a @ modular.Select(_, _, _, _, _, _, _, _, _), sel_1q @ modular.Select(_, _, _, _, _, _, _, _, _), None) if (sel_1a.children.forall { _.isInstanceOf[modular.LeafNode] } &&
+        sel_1q.children.forall { _.isInstanceOf[modular.LeafNode] }) => {
 
-        // assume children (including harmonized relation) of subsumer and subsumee
-        // are 1-1 correspondence.
-        // Change the following two conditions to more complicated ones if we want to
-        // consider things that combine extrajoin, rejoin, and harmonized relations
+        // assume children (including harmonized relation) of subsumer and subsumee are 1-1 correspondence. 
+        // Change the following two conditions to more complicated ones if we want to consider things 
+        // that combine extrajoin, rejoin, and harmonized relations
         val isUniqueRmE = subsumer.children.filter { x => subsumee.children.count(_ == x) != 1 }
         val isUniqueEmR = subsumee.children.filter { x => subsumer.children.count(_ == x) != 1 }
-
+        
         val extrajoin = sel_1a.children.filterNot { child => sel_1q.children.contains(child) }
         val rejoin = sel_1q.children.filterNot { child => sel_1a.children.contains(child) }
         val rejoinOutputList = rejoin.flatMap(_.output)
 
-        val isPredicateRmE = sel_1a.predicateList.forall(expr =>
-          sel_1q.predicateList.exists(_.semanticEquals(expr)))
-        val isPredicateEmdR = sel_1q.predicateList.forall(expr =>
-          isDerivable(expr, sel_1a.outputList ++ rejoinOutputList, sel_1q, sel_1a, None))
-        val isOutputEdR = sel_1q.outputList.forall(expr =>
-          isDerivable(expr, sel_1a.outputList ++ rejoinOutputList, sel_1q, sel_1a, None))
+        val isPredicateRmE = sel_1a.predicateList.forall(expr => sel_1q.predicateList.exists(_.semanticEquals(expr)))
+        val isPredicateEmdR = sel_1q.predicateList.forall(expr => isDerivable(expr, sel_1a.outputList ++ rejoinOutputList, sel_1q, sel_1a, None))
+        val isOutputEdR = sel_1q.outputList.forall(expr => isDerivable(expr, sel_1a.outputList ++ rejoinOutputList, sel_1q, sel_1a, None))
 
-        if (isUniqueRmE.isEmpty && isUniqueEmR.isEmpty && extrajoin.isEmpty && isPredicateRmE &&
-            isPredicateEmdR && isOutputEdR) {
+        if (isUniqueRmE.isEmpty && isUniqueEmR.isEmpty && extrajoin.isEmpty && isPredicateRmE && isPredicateEmdR && isOutputEdR) {
           val mappings = sel_1a.children.zipWithIndex.map {
-            case (childr, fromIdx) if sel_1q.children.contains(childr) =>
+            case (childr, fromIdx) if sel_1q.children.contains(childr) => {
               val toIndx = sel_1q.children.indexWhere(_ == childr)
               (toIndx -> fromIdx)
-
+            }
           }
           val e2r = mappings.toMap
+
           val r2e = e2r.map(_.swap)
           val r2eJoinsMatch = sel_1a.joinEdges.forall { x =>
+            {
               (r2e.get(x.left), r2e.get(x.right)) match {
-                case (Some(l), Some(r)) =>
+                case (Some(l), Some(r)) => {
                   val mappedEdge = JoinEdge(l, r, x.joinType)
                   val joinTypeEquivalent =
                     if (sel_1q.joinEdges.contains(mappedEdge)) true
                     else {
                       x.joinType match {
-                        case Inner | FullOuter =>
-                          sel_1q.joinEdges.contains(JoinEdge(r, l, x.joinType))
+                        case Inner | FullOuter => sel_1q.joinEdges.contains(JoinEdge(r, l, x.joinType))
                         case _ => false
                       }
                     }
                   if (joinTypeEquivalent) {
-                    val sel_1a_join = sel_1a.extractJoinConditions(
-                      sel_1a.children(x.left),
-                      sel_1a.children(x.right))
-                    val sel_1q_join = sel_1q.extractJoinConditions(
-                      sel_1q.children(mappedEdge.left),
-                      sel_1q.children(mappedEdge.right))
-                    sel_1a_join.forall(e => sel_1q_join.exists(e.semanticEquals(_))) &&
-                    sel_1q_join.forall(e => sel_1a_join.exists(e.semanticEquals(_)))
+                    val sel_1a_join = sel_1a.extractJoinConditions(sel_1a.children(x.left), sel_1a.children(x.right))
+                    val sel_1q_join = sel_1q.extractJoinConditions(sel_1q.children(mappedEdge.left), sel_1q.children(mappedEdge.right))
+                    sel_1a_join.filterNot(e => sel_1q_join.exists(e.semanticEquals(_))).isEmpty &&
+                      sel_1q_join.filterNot(e => sel_1a_join.exists(e.semanticEquals(_))).isEmpty
                   } else false
+                }
                 case _ => false
               }
+            }
           }
 
-          val isPredicateEmR = sel_1q.predicateList.forall(expr =>
-            sel_1a.predicateList.exists(_.semanticEquals(expr)))
-          val isOutputEmR = sel_1q.outputList.forall(expr =>
-            sel_1a.outputList.exists(_.semanticEquals(expr)))
-          val isOutputRmE = sel_1a.outputList.forall(expr =>
-            sel_1q.outputList.exists(_.semanticEquals(expr)))
+          val isPredicateEmR = sel_1q.predicateList.forall(expr => sel_1a.predicateList.exists(_.semanticEquals(expr)))
+          val isOutputEmR = sel_1q.outputList.forall(expr => sel_1a.outputList.exists(_.semanticEquals(expr)))
+          val isOutputRmE = sel_1a.outputList.forall(expr => sel_1q.outputList.exists(_.semanticEquals(expr)))
 
           if (r2eJoinsMatch) {
-            if (isPredicateEmR && isOutputEmR && isOutputRmE && rejoin.isEmpty) {
-              Seq(sel_1a) // no compensation needed
-            } else {
+            if (isPredicateEmR && isOutputEmR && isOutputRmE && rejoin.isEmpty) 
+              Seq(sel_1a) //no compensation needed
+            else {
               val tChildren = new collection.mutable.ArrayBuffer[ModularPlan]()
               val tAliasMap = new collection.mutable.HashMap[Int, String]()
 
-              val updatedOutList: Seq[NamedExpression] = updateDuplicateColumns(sel_1a)
-              val usel_1a = sel_1a.copy(outputList = updatedOutList)
-              tChildren += usel_1a
-              tAliasMap += (tChildren.indexOf(usel_1a) -> rewrite.newSubsumerName())
+              tChildren += sel_1a
+              tAliasMap += (tChildren.indexOf(sel_1a) -> rewrite.newSubsumerName())
 
               sel_1q.children.zipWithIndex.foreach {
-                case (childe, idx) =>
+                case (childe, idx) => {
                   if (e2r.get(idx).isEmpty) {
                     tChildren += childe
                     sel_1q.aliasMap.get(idx).map(x => tAliasMap += (tChildren.indexOf(childe) -> x))
                   }
+                }
               }
 
               val tJoinEdges = sel_1q.joinEdges.collect {
-                case JoinEdge(le, re, joinType) =>
+                case JoinEdge(le, re, joinType) => {
                   (e2r.get(le), e2r.get(re)) match {
-                    case (Some(lr), None) =>
-                      JoinEdge(
-                        0,
-                        tChildren.indexOf(sel_1q.children(re)),
-                        joinType)
-                    case (None, None) =>
-                      JoinEdge(
-                        tChildren.indexOf(sel_1q.children(le)),
-                        tChildren.indexOf(sel_1q.children(re)),
-                        joinType)
-                    case (None, Some(rr)) =>
-                      JoinEdge(
-                        tChildren.indexOf(sel_1q.children(le)),
-                        0,
-                        joinType)
-                    case _ =>
-                      null.asInstanceOf[JoinEdge]
+                    case (Some(lr), None) => JoinEdge(0, tChildren.indexOf(sel_1q.children(re)), joinType)
+                    case (None, None) => JoinEdge(tChildren.indexOf(sel_1q.children(le)),
+                      tChildren.indexOf(sel_1q.children(re)), joinType)
+                    case (None, Some(rr)) => JoinEdge(tChildren.indexOf(sel_1q.children(le)), 0, joinType)
+                    case _ => null.asInstanceOf[JoinEdge]
                   }
+                }
               }
-              val tPredicateList = sel_1q.predicateList.filter { p =>
-                !sel_1a.predicateList.exists(_.semanticEquals(p)) }
-                val wip = sel_1q.copy(
-                  predicateList = tPredicateList,
-                  children = tChildren,
-                  joinEdges = tJoinEdges.filter(_ != null),
-                  aliasMap = tAliasMap.toMap)
-
-                val done = factorOutSubsumer(wip, usel_1a, wip.aliasMap)
-                Seq(done)
+              val tPredicateList = sel_1q.predicateList.filter { p => !sel_1a.predicateList.exists(_.semanticEquals(p)) }
+              val wip = sel_1q.copy(predicateList = tPredicateList, children = tChildren.toSeq, joinEdges = tJoinEdges.filter(_ != null), aliasMap = tAliasMap.toMap)
+              val subsumerName = wip.aliasMap.get(0)
+              val done = factorOutSubsumer(wip, sel_1a, subsumerName)
+              Seq(done)
             }
           } else Nil
         } else Nil
+      }
+      case (sel_3a @ modular.Select(_, _, _, _, _, _, _, _, _), sel_3q @ modular.Select(_, _, _, _, _, _, _, _, _), None) if (sel_3a.children.forall(_.isInstanceOf[modular.GroupBy]) &&
+        sel_3q.children.forall(_.isInstanceOf[modular.GroupBy])) => {
+          val isPredicateRmE = sel_3a.predicateList.isEmpty || sel_3a.predicateList.forall(expr => sel_3q.predicateList.exists(_.semanticEquals(expr)))
+          val isPredicateEmdR = sel_3q.predicateList.isEmpty || sel_3q.predicateList.forall(expr => sel_3a.predicateList.exists(_.semanticEquals(expr)) || isDerivable(expr, sel_3a.outputList, sel_3q, sel_3a, None))
+          val isOutputEdR = sel_3q.outputList.forall(expr => isDerivable(expr, sel_3a.outputList, sel_3q, sel_3a, None))
+          val isSingleChild = sel_3a.children.length == 1 && sel_3q.children.length == 1
 
-      case (
-        sel_3a @ modular.Select(_, _, _, _, _, _, _, _, _, _),
-        sel_3q @ modular.Select(_, _, _, _, _, _, _, _, _, _), None)
-        if sel_3a.children.forall(_.isInstanceOf[GroupBy]) &&
-           sel_3q.children.forall(_.isInstanceOf[GroupBy]) =>
-        val isPredicateRmE = sel_3a.predicateList.isEmpty ||
-                             sel_3a.predicateList.forall(expr =>
-                               sel_3q.predicateList.exists(_.semanticEquals(expr)))
-        val isPredicateEmdR = sel_3q.predicateList.isEmpty ||
-                              sel_3q.predicateList.forall(expr =>
-                                sel_3a.predicateList.exists(_.semanticEquals(expr)) ||
-                                isDerivable(expr, sel_3a.outputList, sel_3q, sel_3a, None))
-        val isOutputEdR = sel_3q.outputList.forall(expr =>
-          isDerivable(expr, sel_3a.outputList, sel_3q, sel_3a, None))
-        val isSingleChild = sel_3a.children.length == 1 && sel_3q.children.length == 1
+          if (isPredicateRmE && isPredicateEmdR && isOutputEdR && isSingleChild) {
+            val isPredicateEmR = sel_3q.predicateList.isEmpty || sel_3q.predicateList.forall(expr => sel_3a.predicateList.exists(_.semanticEquals(expr)))
+            val isOutputRmE = sel_3a.outputList.forall(expr => isDerivable(expr, sel_3q.outputList, sel_3a, sel_3q, None))
+            val isOutputEmR = sel_3q.outputList.forall(expr => isDerivable(expr, sel_3a.outputList, sel_3q, sel_3a, None))
 
-        if (isPredicateRmE && isPredicateEmdR && isOutputEdR && isSingleChild) {
-          val isPredicateEmR = sel_3q.predicateList.isEmpty ||
-                               sel_3q.predicateList.forall(expr =>
-                                 sel_3a.predicateList.exists(_.semanticEquals(expr)))
-          val isOutputRmE = sel_3a.outputList.forall(expr =>
-            isDerivable(expr, sel_3q.outputList, sel_3a, sel_3q, None))
-          val isOutputEmR = sel_3q.outputList.forall(expr =>
-            isDerivable(expr, sel_3a.outputList, sel_3q, sel_3a, None))
-
-          if (isPredicateEmR && isOutputEmR && isOutputRmE) {
-            Seq(sel_3a)
-          } else if (isPredicateEmR && isOutputEmR) {
-            // no compensation needed
-            val sel_3q_exp = sel_3q.transformExpressions({
-              case a: Alias => sel_3a.outputList
-                .find { a1 =>
-                  a1.isInstanceOf[Alias] &&
-                  a1.asInstanceOf[Alias].child.semanticEquals(a.child)
-                }.map(_.toAttribute).get
-            })
-            val wip = sel_3q_exp.copy(
-              children = Seq(sel_3a),
-              aliasMap = Seq(0 -> rewrite.newSubsumerName()).toMap)
-            val done = factorOutSubsumer(wip, sel_3a, wip.aliasMap)
-            Seq(done)
-          } else {
-            Nil
-          }
-        } else Nil
-
+            if (isPredicateEmR && isOutputEmR && isOutputRmE) Seq(sel_3a) // no compensation needed
+            else if (isPredicateEmR && isOutputEmR) {
+              val sel_3q_exp = sel_3q.transformExpressions({
+                case a: Alias => sel_3a.outputList.find {case a1 => a1.isInstanceOf[Alias] && a1.asInstanceOf[Alias].child.semanticEquals(a.child)}.map(_.toAttribute).get
+              })
+              val wip = sel_3q_exp.copy(children = Seq(sel_3a), aliasMap = Seq((0 -> rewrite.newSubsumerName())).toMap)
+              val subsumerName = wip.aliasMap.get(0)
+              val done = factorOutSubsumer(wip, sel_3a, subsumerName)
+              Seq(done)
+            }
+            else Nil
+          } else Nil
+        }
       case _ => Nil
     }
-  }
-
-  private def updateDuplicateColumns(sel_1a: Select) = {
-    val duplicateNameCols = sel_1a.outputList.groupBy(_.name).filter(_._2.length > 1).flatMap(_._2)
-      .toList
-    val updatedOutList = sel_1a.outputList.map { col =>
-      if (duplicateNameCols.contains(col)) {
-        Alias(col, col.qualifiedName)(exprId = col.exprId)
-      } else {
-        col
-      }
-    }
-    updatedOutList
   }
 }
 
 object GroupbyGroupbyNoChildDelta extends DefaultMatchPattern {
-  def apply(
-      subsumer: ModularPlan,
-      subsumee: ModularPlan,
-      compensation: Option[ModularPlan],
-      rewrite: QueryRewrite): Seq[ModularPlan] = {
+  def apply(subsumer: ModularPlan,subsumee: ModularPlan,compensation: Option[ModularPlan], rewrite: QueryRewrite): Seq[ModularPlan] = {
     (subsumer, subsumee, compensation) match {
-      case (
-        gb_2a @ modular.GroupBy(_, _, _, _, _, _, _, _),
-        gb_2q @ modular.GroupBy(_, _, _, _, _, _, _, _),
-        None) =>
-        val isGroupingEmR = gb_2q.predicateList.forall(expr =>
-          gb_2a.predicateList.exists(_.semanticEquals(expr)))
-        val isGroupingRmE = gb_2a.predicateList.forall(expr =>
-          gb_2q.predicateList.exists(_.semanticEquals(expr)))
+      case (gb_2a @ modular.GroupBy(_,_,_,_,_,_,_),gb_2q @ modular.GroupBy(_,_,_,_,_,_,_),None) => {
+        val isGroupingEmR = gb_2q.predicateList.forall(expr => gb_2a.predicateList.exists(_.semanticEquals(expr)))
+        val isGroupingRmE = gb_2a.predicateList.forall(expr => gb_2q.predicateList.exists(_.semanticEquals(expr)))
         if (isGroupingEmR && isGroupingRmE) {
-          val isOutputEmR = gb_2q.outputList.forall {
-            case a @ Alias(_, _) =>
-              gb_2a.outputList.exists{a1 =>
-                a1.isInstanceOf[Alias] && a1.asInstanceOf[Alias].child.semanticEquals(a.child)
-              }
-            case exp => gb_2a.outputList.exists(_.semanticEquals(exp))
-          }
+          val isOutputEmR = gb_2q.outputList.forall{
+            case a @ Alias(_,_) => gb_2a.outputList.exists(a1 => a1.isInstanceOf[Alias] && a1.asInstanceOf[Alias].child.semanticEquals(a.child))
+            case exp => gb_2a.outputList.exists(_.semanticEquals(exp))}
 
-          if (isOutputEmR) {
-            // Mappings of output of two plans by checking semantic equals.
-            val mappings = gb_2a.outputList.zipWithIndex.map { case(exp, index) =>
-              (exp, gb_2q.outputList.find {
-                case a: Alias if exp.isInstanceOf[Alias] =>
-                  a.child.semanticEquals(exp.children.head)
-                case a: Alias => a.child.semanticEquals(exp)
-                case other => other.semanticEquals(exp)
-              }.getOrElse(gb_2a.outputList(index)))
-            }
-
-            val oList = mappings.map{case (out1, out2) =>
-              if (out1.name != out2.name) out1 match {
-                case alias: Alias => Alias(alias.child, out2.name)(exprId = alias.exprId)
-                case _ => Alias(out1, out2.name)(exprId = out2.exprId)
-              } else out1
-            }
-
-            Seq(gb_2a.copy(outputList = oList))
-          } else {
-            Nil
-          }
-        } else {
-          val aliasMap = AttributeMap(gb_2a.outputList.collect { case a: Alias =>
-            (a.toAttribute, a)})
-          if (isGroupingEmR) {
-            Utils.tryMatch(
-              gb_2a, gb_2q, aliasMap).flatMap {
-              case g: GroupBy =>
-                Some(g.copy(child = g.child.withNewChildren(
-                  g.child.children.map {
-                    case modular.Select(_, _, _, _, _, _, _, _, _, _) => gb_2a;
-                    case other => other
-                  })));
-              case _ => None}.map(Seq(_)).getOrElse(Nil)
-          } else {
-            Nil
-          }
+          if (isOutputEmR) 
+            Seq(gb_2a)
+          else Nil
+        } 
+        else {
+          val aliasMap = AttributeMap(gb_2a.outputList.collect { case a: Alias => (a.toAttribute, a)})
+          if (isGroupingEmR) Utils.tryMatch(gb_2a,gb_2q,aliasMap).flatMap{case g: modular.GroupBy => Some(g.copy(child = g.child.withNewChildren(g.child.children.map {_ match {case modular.Select(_,_,_,_,_,_,_,_,_) => gb_2a; case other => other}}))); case _ => None}.map(Seq(_)).getOrElse(Nil)
+          else Nil
         }
-
+      }
       case _ => Nil
     }
   }
 }
 
 object GroupbyGroupbySelectOnlyChildDelta extends DefaultMatchPattern with PredicateHelper {
-  private def isDerivable(
-      exprE: Expression,
-      exprListR: Seq[Expression],
-      subsumee: ModularPlan,
-      subsumer: ModularPlan,
-      compensation: Option[ModularPlan]) = {
-    if (subsumee.asInstanceOf[GroupBy].predicateList.contains(exprE)) {
+  private def isDerivable(exprE: Expression, exprListR: Seq[Expression], subsumee: ModularPlan, subsumer: ModularPlan, compensation: Option[ModularPlan]) = {
+    if (subsumee.asInstanceOf[modular.GroupBy].predicateList.contains(exprE)) {
       if (exprListR.exists(_.semanticEquals(exprE)) || canEvaluate(exprE, exprListR)) true
       else false
-    } else if (compensation.getOrElse(throw new RuntimeException("compensation cannot be None"))
-      .asInstanceOf[Select].predicateList.contains(exprE)) {
+    } else if (compensation.getOrElse(throw new RuntimeException("compensation cannot be None")).asInstanceOf[modular.Select].predicateList.contains(exprE)) {
       if (canEvaluate(exprE, exprListR) || exprListR.exists(_.semanticEquals(exprE))) true
       else false
-    } else {
-      false
-    }
+    } else false
   }
 
-  def apply(
-      subsumer: ModularPlan,
-      subsumee: ModularPlan,
-      compensation: Option[ModularPlan],
-      rewrite: QueryRewrite): Seq[ModularPlan] = {
-    val aggInputEinR = subsumee.expressions
-      .collect { case agg: aggregate.AggregateExpression => AttributeSet(Seq(agg))
-        .subsetOf(subsumer.outputSet)
-      }.forall(identity)
-    val compensationSelectOnly = !compensation.map { _.collect { case n => n.getClass } }
-      .exists(_.contains(modular.GroupBy))
+  def apply(subsumer: ModularPlan, subsumee: ModularPlan, compensation: Option[ModularPlan], rewrite: QueryRewrite): Seq[ModularPlan] = {
+    val aggInputEinR = subsumee.expressions.collect { case agg: aggregate.AggregateExpression => AttributeSet(Seq(agg)).subsetOf(subsumer.outputSet) }.forall(identity)
+    val compensationSelectOnly = !compensation.map { _.collect { case n => n.getClass } }.map { _.contains(modular.GroupBy) }.getOrElse(false)
 
     (subsumer, subsumee, compensation, aggInputEinR, compensationSelectOnly) match {
-      case (
-        gb_2a @ modular.GroupBy(_, _, _, _, _, _, _, _),
-        gb_2q @ modular.GroupBy(_, _, _, _, _, _, _, _),
-        Some(sel_1c1 @ modular.Select(_, _, _, _, _, _, _, _, _, _)),
-        true,
-        true)
-        if !gb_2q.flags.hasFlag(EXPAND) && !gb_2a.flags.hasFlag(EXPAND) =>
-
+      case (gb_2a @ modular.GroupBy(_, _, _, _, _, _, _), gb_2q @ modular.GroupBy(_, _, _, _, _, _, _), Some(sel_1c1 @ modular.Select(_, _, _, _, _, _, _, _, _)), true, true) 
+           if (!gb_2q.flags.hasFlag(EXPAND) && !gb_2a.flags.hasFlag(EXPAND))=> {
         val rejoinOutputList = sel_1c1.children.tail.flatMap(_.output)
-        val isGroupingEdR = gb_2q.predicateList.forall(expr =>
-          isDerivable(expr, gb_2a.predicateList ++ rejoinOutputList, gb_2q, gb_2a, compensation))
-        val needRegrouping = !gb_2a.predicateList.forall(gb_2q.predicateList.contains)
-        val canPullup = sel_1c1.predicateList.forall(expr =>
-          isDerivable(expr, gb_2a.predicateList ++ rejoinOutputList, gb_2q, gb_2a, compensation))
-        val isAggEmR = gb_2q.outputList.collect {
-          case agg: aggregate.AggregateExpression =>
-            gb_2a.outputList.exists(_.semanticEquals(agg))
-        }.forall(identity)
+//        val groupingExpressions = if (gb_2q.flags.hasFlag(EXPAND)) gb_2q.predicateList.dropRight(1) else gb_2q.predicateList
+//        val gbSubsumee = subsumee.asInstanceOf[modular.GroupBy]
+//        val exprIdDownwardMap = AttributeMap(
+//            gbSubsumee.child.asInstanceOf[modular.Select].outputList.collect {
+//              case a: Alias if (a.child.isInstanceOf[Attribute]) => (a.toAttribute, a.child.asInstanceOf[Attribute])
+//              })        
+//        val isGroupingEdR = groupingExpressions.forall(expr => isDerivable(expr.transform {case a: Attribute => exprIdDownwardMap.getOrElse(a, a)}, gb_2a.predicateList ++ rejoinOutputList, gb_2q, gb_2a, compensation))
+        val isGroupingEdR = gb_2q.predicateList.forall(expr => isDerivable(expr, gb_2a.predicateList ++ rejoinOutputList, gb_2q, gb_2a, compensation))
+        val needRegrouping = gb_2a.predicateList.filterNot(gb_2q.predicateList.contains).nonEmpty
+        val canPullup = sel_1c1.predicateList.forall(expr => isDerivable(expr, gb_2a.predicateList ++ rejoinOutputList, gb_2q, gb_2a, compensation))
+        val isAggEmR = gb_2q.outputList.collect { case agg: aggregate.AggregateExpression => gb_2a.outputList.exists(_.semanticEquals(agg)) }.forall(identity)
 
         if (isGroupingEdR && ((!needRegrouping && isAggEmR) || needRegrouping) && canPullup) {
-          // pull up
+          //pull up
           val pullupOutputList = gb_2a.outputList.map(_.toAttribute) ++ rejoinOutputList
-          val sel_2c1 = sel_1c1.copy(
-            outputList = pullupOutputList,
-            inputList = pullupOutputList,
-            children = sel_1c1.children.map {
-              case s: Select => gb_2a
-              case other => other })
+          val myOutputList = gb_2a.outputList.filter{
+            case alias : Alias => gb_2q.outputList.filter(_.isInstanceOf[Alias]).exists(_.asInstanceOf[Alias].child.semanticEquals(alias.child))
+            case attr: Attribute => gb_2q.outputList.exists(_.semanticEquals(attr))}.map(_.toAttribute) ++ rejoinOutputList
+          // TODO: find out if we really need to check needRegrouping or just use myOutputList
+          val sel_2c1 = if (needRegrouping) sel_1c1.copy(outputList = pullupOutputList, inputList = pullupOutputList, children = sel_1c1.children.map { _ match { case s: modular.Select => gb_2a; case other => other } })
+                        else sel_1c1.copy(outputList = myOutputList, inputList = pullupOutputList, children = sel_1c1.children.map { _ match { case s: modular.Select => gb_2a; case other => other } })
+                        // sel_1c1.copy(outputList = pullupOutputList, inputList = pullupOutputList, children = sel_1c1.children.map { _ match { case s: modular.Select => gb_2a; case other => other } })
 
-          if (rejoinOutputList.isEmpty) {
-            val aliasMap = AttributeMap(gb_2a.outputList.collect {
-              case a: Alias => (a.toAttribute, a) })
-            Utils.tryMatch(gb_2a, gb_2q, aliasMap).flatMap {
-              case g: GroupBy => Some(g.copy(child = sel_2c1));
-              case _ => None
-            }.map { wip =>
-              factorOutSubsumer(wip, gb_2a, sel_1c1.aliasMap)
-            }.map(Seq(_))
-             .getOrElse(Nil)
-          }
-          // TODO: implement regrouping with 1:N rejoin (rejoin tables being the "1" side)
-          // via catalog service
+          if (needRegrouping && rejoinOutputList.isEmpty) {
+            val aliasMap = AttributeMap(gb_2a.outputList.collect { case a: Alias => (a.toAttribute, a) })
+            Utils.tryMatch(gb_2a, gb_2q, aliasMap).flatMap { case g: modular.GroupBy => Some(g.copy(child = sel_2c1)); case _ => None }.map{case wip => factorOutSubsumer(wip, gb_2a, sel_1c1.aliasMap.get(0))}.map(Seq(_)).getOrElse(Nil)
+          } // TODO: implement regrouping with 1:N rejoin (rejoin tables being the "1" side) via catalog service 
           else if (!needRegrouping && isAggEmR) {
-            Seq(sel_2c1).map(wip => factorOutSubsumer(wip, gb_2a, sel_1c1.aliasMap))
+            Seq(sel_2c1).map{case wip => factorOutSubsumer(wip, gb_2a, sel_1c1.aliasMap.get(0))}
           } else Nil
         } else Nil
-
+      }
       case _ => Nil
     }
   }
 }
 
 object GroupbyGroupbyGroupbyChildDelta extends DefaultMatchPattern {
-  def apply(
-      subsumer: ModularPlan,
-      subsumee: ModularPlan,
-      compensation: Option[ModularPlan],
-      rewrite: QueryRewrite): Seq[ModularPlan] = {
-    val groupbys = compensation.map { _.collect { case g: GroupBy => g } }.getOrElse(Nil).toSet
-
+  def apply(subsumer: ModularPlan,subsumee: ModularPlan,compensation: Option[ModularPlan], rewrite: QueryRewrite): Seq[ModularPlan] = {
+    val groupbys = compensation.map { _.collect { case g: modular.GroupBy => g } }.getOrElse(Nil).toSet
+    
     (subsumer, subsumee, groupbys.nonEmpty) match {
-      case (
-        modular.Select(_, _, _, _, _, _, _, _, _, _),
-        modular.Select(_, _, _, _, _, _, _, _, _, _),
-        true) =>
-        // TODO: implement me
+      case (modular.Select(_,_,_,_,_,_,_,_,_),modular.Select(_,_,_,_,_,_,_,_,_),true) => {
+        //TODO: implement me
         Nil
-
+      }
       case _ => Nil
     }
   }
@@ -497,151 +320,105 @@ object GroupbyGroupbyGroupbyChildDelta extends DefaultMatchPattern {
 
 
 object SelectSelectSelectChildDelta extends DefaultMatchPattern {
-  def apply(
-      subsumer: ModularPlan,
-      subsumee: ModularPlan,
-      compensation: Option[ModularPlan],
-      rewrite: QueryRewrite): Seq[ModularPlan] = {
-    val compensationSelectOnly =
-      !compensation
-        .map { _.collect { case n => n.getClass } }
-        .exists(_.contains(modular.GroupBy))
-
-    (subsumer, subsumee, compensationSelectOnly) match {
-      case (
-        modular.Select(_, _, _, _, _, _, _, _, _, _),
-        modular.Select(_, _, _, _, _, _, _, _, _, _),
-        true) =>
-        // TODO: implement me
-        Nil
+  private def isDerivable(exprE: Expression, exprListR: Seq[Expression], subsumee: ModularPlan, subsumer: ModularPlan, compensation: Option[ModularPlan]) = {
+    Utils.isDerivable(exprE: Expression, exprListR: Seq[Expression], subsumee: ModularPlan, subsumer: ModularPlan, compensation: Option[ModularPlan])
+  }
+  def apply(subsumer: ModularPlan,subsumee: ModularPlan,compensation: Option[ModularPlan], rewrite: QueryRewrite): Seq[ModularPlan] = {   
+    (subsumer, subsumee, compensation) match {
+      case (sel_3a@modular.Select(_,_,_,_,_,_,_,_,_),sel_3q@modular.Select(_,_,_,_,_,_,_,_,_),Some(sel_2c@modular.Select(_,_,_,_,_,_,_,_,_))) => {
+        //TODO: implement me
+        val tbls_sel_3a = sel_3a.collect{case tbl: modular.LeafNode => tbl}
+        val tbls_sel_3q = sel_3q.collect{case tbl: modular.LeafNode => tbl}
+        
+        val extrajoin = tbls_sel_3a.filterNot(tbls_sel_3q.contains)
+        val rejoin = tbls_sel_3q.filterNot(tbls_sel_3a.contains)
+        val rejoinOutputList = rejoin.flatMap(_.output)
+        
+        val isPredicateRmE = sel_3a.predicateList.forall(expr => sel_3q.predicateList.exists(_.semanticEquals(expr)))
+        val isPredicateEmdR = sel_3q.predicateList.forall(expr => sel_3a.predicateList.exists(_.semanticEquals(expr)) || isDerivable(expr,sel_3a.outputList ++ rejoinOutputList,sel_3q,sel_3a,compensation))
+        val isOutputEdR = sel_3q.outputList.forall(expr => isDerivable(expr,sel_3a.outputList ++ rejoinOutputList,sel_3q,sel_3a,Some(sel_2c.children.head.asInstanceOf[modular.GroupBy])))
+        
+        val canSELPullup = sel_2c.predicateList.forall(expr => sel_3a.predicateList.exists(_.semanticEquals(expr)) || isDerivable(expr, sel_3a.outputList, sel_3q, sel_3a, Some(sel_2c.children.head.asInstanceOf[modular.GroupBy])))
+        
+        if (extrajoin.isEmpty && isPredicateRmE && isPredicateEmdR && isOutputEdR && canSELPullup) {
+          val sel_3q_exp = sel_3q.transformExpressions({
+            case alias: Alias => {
+              sel_2c.children.head.asInstanceOf[modular.GroupBy].outputList.find {
+                case alias2: Alias => alias2.child.semanticEquals(alias.child)
+                case _ => false
+              }.map(alias1 => if (alias.name != alias1.name) Alias(alias1.toAttribute, alias.name)(exprId= alias.exprId) else alias1).getOrElse(alias)
+            }
+            case agg @ AggregateExpression(_,_,_,_) => {
+              sel_2c.children.head.asInstanceOf[modular.GroupBy].outputList.find { 
+                case alias: Alias => alias.child.semanticEquals(agg)
+                case _ => false
+              }.map(_.toAttribute).getOrElse(agg)
+            }
+          })
+          
+          val pList = sel_2c.predicateList ++ sel_3q_exp.predicateList.filterNot(expr => sel_3q_exp.predicateList.exists(_.semanticEquals(expr)))
+          val wip = sel_2c.copy(outputList = sel_3q_exp.outputList, children=sel_3a.setSkip :: Nil, predicateList=pList)
+          Seq(wip).map{case wip => factorOutSubsumer(wip,sel_3a,sel_2c.aliasMap.get(0))}         
+        }
+        else Nil
+      }
       case _ => Nil
     }
   }
 }
 
 object SelectSelectGroupbyChildDelta extends DefaultMatchPattern with PredicateHelper {
-  private def isDerivable(
-      exprE: Expression,
-      exprListR: Seq[Expression],
-      subsumee: ModularPlan,
-      subsumer: ModularPlan,
-      compensation: Option[ModularPlan]) = {
-    Utils.isDerivable(
-      exprE: Expression,
-      exprListR: Seq[Expression],
-      subsumee: ModularPlan,
-      subsumer: ModularPlan,
-      compensation: Option[ModularPlan])
+  private def isDerivable(exprE: Expression, exprListR: Seq[Expression], subsumee: ModularPlan, subsumer: ModularPlan, compensation: Option[ModularPlan]) = {
+    Utils.isDerivable(exprE: Expression, exprListR: Seq[Expression], subsumee: ModularPlan, subsumer: ModularPlan, compensation: Option[ModularPlan])
   }
-
-  def apply(
-      subsumer: ModularPlan,
-      subsumee: ModularPlan,
-      compensation: Option[ModularPlan],
-      rewrite: QueryRewrite): Seq[ModularPlan] = {
+  
+  def apply(subsumer: ModularPlan,subsumee: ModularPlan,compensation: Option[ModularPlan], rewrite: QueryRewrite): Seq[ModularPlan] = 
     (subsumer, subsumee, compensation, subsumer.children, subsumee.children) match {
-      case (
-        sel_3a@modular.Select(
-        _, _, Nil, _, _,
-        Seq(gb_2a@modular.GroupBy(_, _, _, _, _, _, _, _)), _, _, _, _),
-        sel_3q@modular.Select(
-        _, _, _, _, _,
-        Seq(gb_2q@modular.GroupBy(_, _, _, _, _, _, _, _)), _, _, _, _),
-        Some(gb_2c@modular.GroupBy(_, _, _, _, _, _, _, _)),
-        rchild :: Nil,
-        echild :: Nil) =>
-        val tbls_sel_3a = sel_3a.collect { case tbl: modular.LeafNode => tbl }
-        val tbls_sel_3q = sel_3q.collect { case tbl: modular.LeafNode => tbl }
-
+      case (sel_3a@modular.Select(_,_,Nil,_,_,Seq(gb_2a@modular.GroupBy(_,_,_,_,_,_,_)),_,_,_),sel_3q@modular.Select(_,_,_,_,_,Seq(gb_2q@modular.GroupBy(_,_,_,_,_,_,_)),_,_,_),Some(gb_2c@modular.GroupBy(_,_,_,_,_,_,_)),rchild::Nil,echild::Nil) => {
+        val tbls_sel_3a = sel_3a.collect{case tbl: modular.LeafNode => tbl}
+        val tbls_sel_3q = sel_3q.collect{case tbl: modular.LeafNode => tbl}
+        
         val extrajoin = tbls_sel_3a.filterNot(tbls_sel_3q.contains)
         val rejoin = tbls_sel_3q.filterNot(tbls_sel_3a.contains)
         val rejoinOutputList = rejoin.flatMap(_.output)
 
-        val isPredicateRmE = sel_3a.predicateList.forall(expr =>
-          sel_3q.predicateList.exists(_.semanticEquals(expr)) ||
-          gb_2c.predicateList.exists(_.semanticEquals(expr)))
-        val isPredicateEmdR = sel_3q.predicateList
-          .forall(expr =>
-            sel_3a.predicateList.exists(_.semanticEquals(expr)) ||
-            isDerivable(
-              expr,
-              sel_3a.outputList ++ rejoinOutputList,
-              sel_3q,
-              sel_3a,
-              compensation))
-        val isOutputEdR = sel_3q.outputList
-          .forall(expr =>
-            isDerivable(
-              expr,
-              sel_3a.outputList ++ rejoinOutputList,
-              sel_3q,
-              sel_3a,
-              compensation))
-
-        val canSELPullup = gb_2c.child.isInstanceOf[Select] &&
-                           gb_2c.child.asInstanceOf[Select].predicateList
-                             .forall(expr =>
-                               isDerivable(
-                                 expr,
-                                 sel_3a.outputList ++ rejoinOutputList,
-                                 sel_3q,
-                                 sel_3a,
-                                 compensation))
-        val canGBPullup = gb_2c.predicateList
-          .forall(expr =>
-            isDerivable(
-              expr,
-              sel_3a.outputList ++ rejoinOutputList,
-              sel_3q,
-              sel_3a,
-              compensation))
-
-        if (extrajoin.isEmpty && isPredicateRmE &&
-            isPredicateEmdR &&
-            isOutputEdR &&
-            canSELPullup &&
-            canGBPullup) {
+        val isPredicateRmE = sel_3a.predicateList.forall(expr => sel_3q.predicateList.exists(_.semanticEquals(expr)) || gb_2c.predicateList.exists(_.semanticEquals(expr)))
+        val isPredicateEmdR = sel_3q.predicateList.forall(expr => sel_3a.predicateList.exists(_.semanticEquals(expr)) || isDerivable(expr,sel_3a.outputList ++ rejoinOutputList,sel_3q,sel_3a,compensation))
+        val isOutputEdR = sel_3q.outputList.forall(expr => isDerivable(expr,sel_3a.outputList ++ rejoinOutputList,sel_3q,sel_3a,compensation))   
+              
+              
+        val canSELPullup = gb_2c.child.isInstanceOf[modular.Select] && gb_2c.child.asInstanceOf[modular.Select].predicateList.forall(expr => isDerivable(expr,sel_3a.outputList ++ rejoinOutputList,sel_3q,sel_3a,compensation))
+        val canGBPullup = gb_2c.predicateList.forall(expr => isDerivable(expr,sel_3a.outputList ++ rejoinOutputList,sel_3q,sel_3a,compensation))
+        
+        if (extrajoin.isEmpty && isPredicateRmE && isPredicateEmdR && isOutputEdR && canSELPullup && canGBPullup) {
           gb_2c.child match {
-            case s: Select =>
-              val sel_3c1 = s.withNewChildren(
-                s.children.map {
-                  case gb: GroupBy => sel_3a.setSkip()
-                  case other => other })
+            case s: modular.Select => {
+              val sel_3c1 = s.withNewChildren(s.children.map {_ match {case gb : modular.GroupBy => sel_3a.setSkip; case other => other}})
               val gb_3c2 = gb_2c.copy(child = sel_3c1)
-
-              val aliasMap_exp = AttributeMap(
-                gb_2c.outputList.collect {
-                  case a: Alias => (a.toAttribute, a) })
+              
+              val aliasMap_exp = AttributeMap(gb_2c.outputList.collect { case a: Alias => (a.toAttribute, a)})
               val sel_3q_exp = sel_3q.transformExpressions({
                 case attr: Attribute if aliasMap_exp.contains(attr) => aliasMap_exp(attr)
               })
-              // Mappings of output of two plans by checking semantic equals.
-              val mappings = sel_3q_exp.outputList.zipWithIndex.map { case(exp, index) =>
-                (exp, gb_2c.outputList.find {
-                  case a: Alias if exp.isInstanceOf[Alias] =>
-                    a.child.semanticEquals(exp.children.head)
-                  case a: Alias => a.child.semanticEquals(exp)
-                  case other => other.semanticEquals(exp)
-                }.getOrElse(gb_2c.outputList(index)))
-              }
-
-              val oList = for ((o1, o2) <- mappings) yield {
-                if (o1.name != o2.name) Alias(o2, o1.name)(exprId = o1.exprId) else o2
-              }
-
+              
+              val mappings = sel_3q_exp.outputList zip gb_2c.outputList
+              
+              val oList = for ((o1, o2) <- mappings) yield { if (o1.name != o2.name) Alias(o2, o1.name)(exprId = o1.exprId) else o2 }        
+              
+//              val oList = sel_3q_exp.outputList.map{case a: Attribute => Alias(a, a.name)(exprId = a.exprId); case other => other}
               val wip = sel_3q_exp.copy(outputList = oList, children = Seq(gb_3c2))
-              val sel_3c3 = Some(factorOutSubsumer(wip, sel_3a, s.aliasMap))
-              sel_3c3.map(Seq(_)).getOrElse(Nil)
+              
+              val sel_3c3 = Some(factorOutSubsumer(wip, sel_3a, s.aliasMap.get(0)))
 
+              sel_3c3.map(Seq(_)).getOrElse(Nil)
+            }
             case _ => Nil
           }
-        } else {
-          Nil
         }
-
+        else Nil
+      }
       case _ => Nil
     }
-  }
 }
 
 

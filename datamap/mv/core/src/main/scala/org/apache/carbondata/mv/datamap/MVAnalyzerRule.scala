@@ -19,15 +19,22 @@ package org.apache.carbondata.mv.datamap
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{UnresolvedAlias, UnresolvedAttribute}
 import org.apache.spark.sql.catalyst.expressions.{Alias, ScalaUDF}
+import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical.{Command, DeserializeToObject, LogicalPlan}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.execution.QueryExecution
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.core.datamap.DataMapStoreManager
 import org.apache.carbondata.core.metadata.schema.datamap.DataMapClassProvider
 import org.apache.carbondata.datamap.DataMapManager
 import org.apache.carbondata.mv.rewrite.{SummaryDataset, SummaryDatasetCatalog}
+import org.apache.spark.sql.parser.CarbonSpark2SqlParser
+
+import org.apache.carbondata.mv.session.MVSession
+import org.apache.carbondata.mv.session.internal.SharedState
+import org.apache.carbondata.mv.rewrite._
 
 /**
  * Analyzer rule to rewrite the query for MV datamap
@@ -62,18 +69,35 @@ class MVAnalyzerRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
     val catalog = DataMapStoreManager.getInstance().getDataMapCatalog(dataMapProvider,
       DataMapClassProvider.MV.getShortName).asInstanceOf[SummaryDatasetCatalog]
     if (needAnalysis && catalog != null && isValidPlan(plan, catalog)) {
-      val modularPlan = catalog.mVState.rewritePlan(plan).withSummaryData
-      if (modularPlan.find (_.rewritten).isDefined) {
-        val compactSQL = modularPlan.asCompactSQL
-        LOGGER.audit(s"\n$compactSQL\n")
-        val analyzed = sparkSession.sql(compactSQL).queryExecution.analyzed
-        analyzed
-      } else {
-        plan
+      val mvSession = new MVSession(sparkSession,catalog)
+      val compactSQL = mvSession.rewriteToSQL(plan)
+      if (compactSQL.equals("")) plan
+      else {
+        // TODO: this is hack.  need an analyzer without this rule
+        val parser = new CarbonSpark2SqlParser
+        val updatedQuery = parser.addPreAggFunction(compactSQL)
+//        val analyzed = sparkSession.sql(updatedQuery).drop("preAgg").queryExecution.analyzed
+        val test1 = sparkSession.sql(updatedQuery).queryExecution.analyzed
+        val analyzed = sparkSession.sql(updatedQuery).queryExecution.analyzed.
+                       transform { case p @ logical.Project(head::tail, _) if head.isInstanceOf[Alias] && head.name.equals("preAgg")=> p.copy(projectList=tail)
+                                   case a @ logical.Aggregate(_,head::tail,_) if head.isInstanceOf[Alias] && head.name.equals("preAgg")=> a.copy(aggregateExpressions=tail)}
+//        val planWithCache = sparkSession.sharedState.cacheManager.useCachedData(analyzed)
+        val planWithMV = catalog.useSummaryDataset(analyzed)
+        planWithMV
       }
-    } else {
-      plan
-    }
+    } else plan
+//      val modularPlan = catalog.mVState.rewritePlan(plan).withSummaryData
+//      if (modularPlan.find (_.rewritten).isDefined) {
+//        val compactSQL = modularPlan.asCompactSQL
+//        LOGGER.audit(s"\n$compactSQL\n")
+//        val analyzed = sparkSession.sql(compactSQL).queryExecution.analyzed
+//        analyzed
+//      } else {
+//        plan
+//      }
+//    } else {
+//      plan
+//    }
   }
 
   def isValidPlan(plan: LogicalPlan, catalog: SummaryDatasetCatalog): Boolean = {

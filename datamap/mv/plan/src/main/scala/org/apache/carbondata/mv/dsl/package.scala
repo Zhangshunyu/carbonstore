@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) Huawei Futurewei Technologies, Inc. All Rights Reserved.
+ *
+ */
+
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -17,16 +22,18 @@
 
 package org.apache.carbondata.mv
 
+import org.apache.carbondata.mv.plans._
+import org.apache.carbondata.mv.plans.modular._
+import org.apache.carbondata.mv.plans.modular.Flags._
+import org.apache.carbondata.mv.plans.modular.JoinEdge
+import org.apache.carbondata.mv.plans.modular.ModularPlan
+import org.apache.carbondata.mv.plans.util._
+import org.apache.spark.sql.catalyst._
+import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.NamedExpression
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import scala.language.implicitConversions
 
-import org.apache.spark.sql.catalyst._
-import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-
-import org.apache.carbondata.mv.plans._
-import org.apache.carbondata.mv.plans.modular.{JoinEdge, ModularPlan}
-import org.apache.carbondata.mv.plans.modular.Flags._
-import org.apache.carbondata.mv.plans.util._
 
 /**
  * A collection of implicit conversions that create a DSL for constructing data structures
@@ -34,68 +41,25 @@ import org.apache.carbondata.mv.plans.util._
  *
  */
 package object dsl {
-
-  // object plans {
-
+  object plans {  
+    
     implicit class DslModularPlan(val modularPlan: ModularPlan) {
-      def select(outputExprs: NamedExpression*)
-        (inputExprs: Expression*)
-        (predicateExprs: Expression*)
-        (aliasMap: Map[Int, String])
-        (joinEdges: JoinEdge*): ModularPlan = {
-        modular
-          .Select(
-            outputExprs,
-            inputExprs,
-            predicateExprs,
-            aliasMap,
-            joinEdges,
-            Seq(modularPlan),
-            NoFlags,
-            Seq.empty,
-            Seq.empty)
-      }
-
-      def groupBy(outputExprs: NamedExpression*)
-        (inputExprs: Expression*)
-        (predicateExprs: Expression*): ModularPlan = {
-        modular
-          .GroupBy(outputExprs, inputExprs, predicateExprs, None, modularPlan, NoFlags, Seq.empty)
-      }
-
+      def select(outputExprs: NamedExpression*)(inputExprs: Expression*)(predicateExprs: Expression*)(aliasMap: Map[Int,String])(joinEdges: JoinEdge*): ModularPlan = modular.Select(outputExprs,inputExprs,predicateExprs,aliasMap,joinEdges,Seq(modularPlan),NoFlags,Seq.empty,Seq.empty)
+      
+      def groupBy(outputExprs: NamedExpression*)(inputExprs: Expression*)(predicateExprs: Expression*): ModularPlan = modular.GroupBy(outputExprs,inputExprs,predicateExprs,None,modularPlan,NoFlags,Seq.empty)
       def harmonize: ModularPlan = modularPlan.harmonized
     }
-
+    
     implicit class DslModularPlans(val modularPlans: Seq[ModularPlan]) {
-      def select(outputExprs: NamedExpression*)
-        (inputExprs: Expression*)
-        (predicateList: Expression*)
-        (aliasMap: Map[Int, String])
-        (joinEdges: JoinEdge*): ModularPlan = {
-        modular
-          .Select(
-            outputExprs,
-            inputExprs,
-            predicateList,
-            aliasMap,
-            joinEdges,
-            modularPlans,
-            NoFlags,
-            Seq.empty,
-            Seq.empty)
-      }
-
-      def union(): ModularPlan = modular.Union(modularPlans, NoFlags, Seq.empty)
+      def select(outputExprs: NamedExpression*)(inputExprs: Expression*)(predicateList: Expression*)(aliasMap: Map[Int,String])(joinEdges: JoinEdge*): ModularPlan = modular.Select(outputExprs,inputExprs,predicateList,aliasMap,joinEdges,modularPlans,NoFlags,Seq.empty,Seq.empty)
+      
+      def union(): ModularPlan = modular.Union(modularPlans,NoFlags,Seq.empty)
     }
-
+    
     implicit class DslLogical2Modular(val logicalPlan: LogicalPlan) {
       def resolveonly: LogicalPlan = analysis.SimpleAnalyzer.execute(logicalPlan)
-
       def modularize: ModularPlan = modular.SimpleModularizer.modularize(logicalPlan).next
-
       def optimize: LogicalPlan = BirdcageOptimizer.execute(logicalPlan)
     }
-
-  // }
-
+  }
 }
