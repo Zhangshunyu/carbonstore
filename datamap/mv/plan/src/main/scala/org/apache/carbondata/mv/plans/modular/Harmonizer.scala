@@ -14,18 +14,34 @@ abstract class Harmonizer(conf: SQLConf)
   protected val fixedPoint = FixedPoint(conf.optimizerMaxIterations)
       
   def batches: Seq[Batch] = {
-    Batch("Data Harmonizations", fixedPoint,
-        HarmonizeDimensionTable,
-        HarmonizeFactTable) :: Nil
+    Batch("Data Harmonizations", fixedPoint, Seq(
+        HarmonizeDimensionTable) ++
+        extendedOperatorHarmonizationRules: _*) :: Nil
+//        HarmonizeFactTable) :: Nil
   }
+  
+  /**
+   * Override to provide additional rules for the modular operator harmonization batch.
+   */
+  def extendedOperatorHarmonizationRules: Seq[Rule[ModularPlan]] = Nil
 }
   
 /**
- * An default Harmonizer
+ * A full Harmonizer - harmonize both fact and dimension tables
  */
-object DefaultHarmonizer extends DefaultHarmonizer
+object FullHarmonizer extends FullHarmonizer
     
-class DefaultHarmonizer extends Harmonizer(new SQLConf())
+class FullHarmonizer extends Harmonizer(new SQLConf()) {
+  override def extendedOperatorHarmonizationRules: Seq[Rule[ModularPlan]] =
+    super.extendedOperatorHarmonizationRules ++ (HarmonizeFactTable :: Nil)
+}
+
+/**
+ * A semi Harmonizer - harmonize dimension tables only
+ */
+object SemiHarmonizer extends SemiHarmonizer
+    
+class SemiHarmonizer extends Harmonizer(new SQLConf()) 
 
 
 object HarmonizeDimensionTable extends Rule[ModularPlan] with PredicateHelper {
@@ -38,7 +54,7 @@ object HarmonizeDimensionTable extends Rule[ModularPlan] with PredicateHelper {
         val tChildren = fact :: dims.map { 
           case m: modular.ModularRelation => m 
           case h @ GroupBy(_, _, _, _, s1 @ Select(_, _, _, _, _, dim::Nil, NoFlags, Nil, Nil), NoFlags, Nil) if (dim.isInstanceOf[ModularRelation]) => {
-            val rAliasMap = AttributeMap(h.outputList.collect { case a: Alias => (a.child.asInstanceOf[Attribute], a.toAttribute) })
+            val rAliasMap = AttributeMap(h.outputList.collect { case a: Alias if a.child.isInstanceOf[Attribute] => (a.child.asInstanceOf[Attribute], a.toAttribute) })
             val pullUpPredicates = s1.predicateList.map(replaceAlias(_, rAliasMap.asInstanceOf[AttributeMap[Expression]]))
             if (pullUpPredicates.forall(cond => canEvaluate(cond, h))) {
               tPullUpPredicates = tPullUpPredicates ++ pullUpPredicates
@@ -63,7 +79,7 @@ object HarmonizeFactTable extends Rule[ModularPlan] with PredicateHelper with Ag
 
   def apply(plan: ModularPlan): ModularPlan = plan transform {
     case g @ GroupBy(_, _, _, _, s @ Select(_, _, _, aliasm, jedges, fact :: dims, _, _, _), _, _) if s.adjacencyList.keySet.size <= 1 &&
-      jedges.forall(e => e.joinType == Inner || e.joinType == LeftOuter) && // !s.flags.hasFlag(DISTINCT) &&
+      jedges.forall(e => e.joinType == Inner) && // || e.joinType == LeftOuter) && // !s.flags.hasFlag(DISTINCT) &&
       fact.isInstanceOf[modular.ModularRelation] && (fact :: dims).forall(_.isInstanceOf[modular.LeafNode]) && dims.nonEmpty => {
       val selAliasMap = AttributeMap(s.outputList.collect {
         case a: Alias if (a.child.isInstanceOf[Attribute]) => (a.toAttribute, a.child.asInstanceOf[Attribute])

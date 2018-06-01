@@ -44,10 +44,10 @@ class Tpcds_1_4_Suite extends ModularPlanTest with BeforeAndAfter {
 //    val dest = "case_33"
 // case_15 and case_16 need revisit
 
-    val dest = "case_29"   /** to run single case, uncomment out this **/
+    val dest = "case_39"   /** to run single case, uncomment out this **/
     
     tpcds_1_4_testCases.foreach { testcase =>
-//      if (testcase._1 == dest) { /** to run single case, uncomment out this **/
+      if (testcase._1 == dest) { /** to run single case, uncomment out this **/
         val mvSession = new MVSession(testHive.sparkSession) 
         val summaryDF = testHive.sparkSession.sql(testcase._2)
         mvSession.sharedState.registerSummaryDataset(summaryDF)
@@ -74,7 +74,7 @@ class Tpcds_1_4_Suite extends ModularPlanTest with BeforeAndAfter {
           writer.print(s"\n\n==== rewritten query ====\n\n${rewriteSQL}\n")
         }
 
-//        }  /**to run single case, uncomment out this **/
+        }  /**to run single case, uncomment out this **/
     
     }
 

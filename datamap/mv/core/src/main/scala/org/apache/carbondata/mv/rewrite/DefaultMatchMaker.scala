@@ -28,6 +28,8 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 //import org.apache.spark.sql.types.MetadataBuilder
 import org.apache.carbondata.mv.plans.modular.Flags._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.carbondata.mv.plans.modular.HarmonizedRelation
+import org.apache.spark.sql.catalyst.plans.LeftOuter
 
 abstract class DefaultMatchMaker extends MatchMaker[ModularPlan]
 
@@ -94,6 +96,28 @@ object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper
       }
     } else false
   }
+  private def isLeftJoinView(subsumer:ModularPlan): Boolean = {
+    if (subsumer.isInstanceOf[modular.Select]) {
+      val sel = subsumer.asInstanceOf[modular.Select]
+      if (sel.joinEdges.length == 1 && 
+          sel.joinEdges(0).joinType == LeftOuter &&
+          sel.children(1).isInstanceOf[HarmonizedRelation]) {
+        val hDim = sel.children(1).asInstanceOf[HarmonizedRelation]
+        hDim.tag match {
+          case Some(tag) => sel.outputList.contains(tag)
+          case None => false
+        }
+//        hDim.source match {
+//          case g @ modular.GroupBy(Alias(Literal(1,_),_)::tail,_,_,_,_,_,_) => {
+//            if (sel.outputList.contains(g.outputList(0).toAttribute)) true
+//            else false
+//          }
+//          case _ => false          
+//        }
+      }
+      else false
+    } else false
+  }
   def apply(subsumer: ModularPlan, subsumee: ModularPlan, compensation: Option[ModularPlan], rewrite: QueryRewrite): Seq[ModularPlan] = {
 
     (subsumer, subsumee, compensation) match {
@@ -134,6 +158,9 @@ object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper
                     else {
                       x.joinType match {
                         case Inner | FullOuter => sel_1q.joinEdges.contains(JoinEdge(r, l, x.joinType))
+                        case LeftOuter if (isLeftJoinView(sel_1a)) => {
+                          sel_1q.joinEdges.contains(JoinEdge(l,r, Inner)) || 
+                          sel_1q.joinEdges.contains(JoinEdge(r,l,Inner))}
                         case _ => false
                       }
                     }
@@ -152,9 +179,10 @@ object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper
           val isPredicateEmR = sel_1q.predicateList.forall(expr => sel_1a.predicateList.exists(_.semanticEquals(expr)))
           val isOutputEmR = sel_1q.outputList.forall(expr => sel_1a.outputList.exists(_.semanticEquals(expr)))
           val isOutputRmE = sel_1a.outputList.forall(expr => sel_1q.outputList.exists(_.semanticEquals(expr)))
+          val isLOEmLOR = !(isLeftJoinView(sel_1a) && sel_1q.joinEdges(0).joinType == Inner)
 
           if (r2eJoinsMatch) {
-            if (isPredicateEmR && isOutputEmR && isOutputRmE && rejoin.isEmpty) 
+            if (isPredicateEmR && isOutputEmR && isOutputRmE && rejoin.isEmpty && isLOEmLOR) 
               Seq(sel_1a) //no compensation needed
             else {
               val tChildren = new collection.mutable.ArrayBuffer[ModularPlan]()
@@ -183,7 +211,9 @@ object SelectSelectNoChildDelta extends DefaultMatchPattern with PredicateHelper
                   }
                 }
               }
-              val tPredicateList = sel_1q.predicateList.filter { p => !sel_1a.predicateList.exists(_.semanticEquals(p)) }
+              val tPredicateList = sel_1q.predicateList.filter { p => !sel_1a.predicateList.exists(_.semanticEquals(p)) } ++ 
+                                   (if (isLeftJoinView(sel_1a) && sel_1q.joinEdges(0).joinType == Inner) sel_1a.children(1).asInstanceOf[HarmonizedRelation].tag.map(IsNotNull(_)).toSeq 
+                                    else Seq.empty)
               val wip = sel_1q.copy(predicateList = tPredicateList, children = tChildren.toSeq, joinEdges = tJoinEdges.filter(_ != null), aliasMap = tAliasMap.toMap)
               val subsumerName = wip.aliasMap.get(0)
               val done = factorOutSubsumer(wip, sel_1a, subsumerName)

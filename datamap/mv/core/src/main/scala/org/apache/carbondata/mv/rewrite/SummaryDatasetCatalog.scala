@@ -119,7 +119,7 @@ private[mv] class SummaryDatasetCatalog(sparkSession: SparkSession)
     if (lookupSummaryDataset(planToRegister).nonEmpty) {
       sys.error(s"Asked to register already registered.")
     } else {
-      val modularPlan = modularizer.modularize(optimizer.execute(planToRegister)).next()
+      val modularPlan = modularizer.modularize(optimizer.execute(planToRegister)).next().semiHarmonized
       val signature = modularPlan.signature
       val identifier = dataMapSchema.getRelationIdentifier
       val mvRepresentation = new FindDataSourceTable(sparkSession)(sparkSession.sessionState.catalog
@@ -141,6 +141,8 @@ private[mv] class SummaryDatasetCatalog(sparkSession: SparkSession)
   def listAllSchema(): Array[SummaryDataset] = summaryDatasets.toArray
   
   /**
+   * API for test only
+   * 
    * Registers the data produced by the logical representation of the given [[DataFrame]]. Unlike
    * `RDD.cache()`, the default storage level is set to be `MEMORY_AND_DISK` because recomputing
    * the in-memory columnar representation of the underlying table is expensive.
@@ -152,14 +154,18 @@ private[mv] class SummaryDatasetCatalog(sparkSession: SparkSession)
     if (lookupSummaryDataset(planToRegister).nonEmpty) {
       sys.error(s"Asked to register already registered.")
     } else {
-      val modularPlan = modularizer.modularize(optimizer.execute(planToRegister)).next()//.harmonized
+      val modularPlan = modularizer.modularize(optimizer.execute(planToRegister)).next().semiHarmonized
       val signature = modularPlan.signature
       summaryDatasets +=
         SummaryDataset(signature,planToRegister,null,null)
     }
   }
 
-  /** Removes the given [[DataFrame]] from the catalog */
+  /** 
+   *  API for test only
+   *  
+   *  Removes the given [[DataFrame]] from the catalog 
+   **/
   private[mv] def unregisterSummaryDataset(query: DataFrame): Unit = writeLock {
     val planToRegister = query.queryExecution.analyzed
     val dataIndex = summaryDatasets.indexWhere(sd => planToRegister.sameResult(sd.plan))
@@ -167,7 +173,11 @@ private[mv] class SummaryDatasetCatalog(sparkSession: SparkSession)
     summaryDatasets.remove(dataIndex)
   }
 
-  /** Tries to remove the data set for the given [[DataFrame]] from the catalog if it's registered */
+  /** 
+   *  API for test only
+   *  
+   *  Tries to remove the data set for the given [[DataFrame]] from the catalog if it's registered 
+   **/
   private[mv] def tryUnregisterSummaryDataset(
       query: DataFrame, 
       blocking: Boolean = true): Boolean = writeLock {
@@ -199,7 +209,10 @@ private[mv] class SummaryDatasetCatalog(sparkSession: SparkSession)
       statusDetails.exists(_.getDataMapName.equalsIgnoreCase(p.dataMapSchema.getDataMapName))
     }
 
-    val feasible = enabledDataSets.filter { x =>
+//  ****not sure what enabledDataSets is used for ****
+//  can enable/disable datamap move to other place ?
+//    val feasible = enabledDataSets.filter { x =>
+    val feasible = summaryDatasets.filter { x =>
       (x.signature, sig) match {
         case (Some(sig1), Some(sig2)) => {
           if (sig1.groupby && sig2.groupby && sig1.datasets.subsetOf(sig2.datasets)) true
