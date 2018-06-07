@@ -107,8 +107,10 @@ case class HarmonizedRelation(source: ModularPlan) extends LeafNode {
     val rewrites = mapSeq(0)
     val aliasMap = AttributeMap(
         source.asInstanceOf[GroupBy].outputList.collect {
-          case a: Alias if (a.child.isInstanceOf[Attribute]) => (a.child.asInstanceOf[Attribute], a.toAttribute)
-          })
+          case a @ Alias(ar:Attribute,_) => (ar, a.toAttribute)
+          case a @ Alias(AggregateExpression(First(ar:Attribute,_),_,_,_),_) => (ar, a.toAttribute)
+          case a @ Alias(AggregateExpression(Last(ar:Attribute,_),_,_,_),_) => (ar, a.toAttribute)
+        })
     val aStatsIterator = stats.attributeStats.iterator.map{pair => (rewrites(pair._1), pair._2)}      
     val attributeStats = AttributeMap(aStatsIterator.map(pair => ((aliasMap.get(pair._1)).getOrElse(pair._1), pair._2)).toSeq)
     

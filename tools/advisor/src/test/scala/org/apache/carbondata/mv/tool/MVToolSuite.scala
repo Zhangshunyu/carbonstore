@@ -30,8 +30,10 @@ class MVToolSuite extends TestHiveSingleton {
     override def end = {   
       val sdf = new SimpleDateFormat(YML_DEFAULT_DATE_FORMAT)
       sdf.setTimeZone(TimeZone.getTimeZone("UtC"))
-      sdf.parse("2017-11-03").getTime
-    }
+      sdf.parse("2018-06-05").getTime()
+//      sdf.parse("2017-11-03").getTime()
+//      sdf.parse("2017-10-26").getTime()
+      }    
     override def backwardDays = 1
   }
   
@@ -41,7 +43,7 @@ class MVToolSuite extends TestHiveSingleton {
     
     val table2columnset = Map("date_dim" -> Set("d_year", "d_moy", "d_date_sk", "d_date", "d_qoy"),
                               "store_sales" -> Set("ss_sold_date_sk", "ss_item_sk", "ss_customer_sk", "ss_quantity", "ss_sales_price", "ss_store_sk", "ss_ext_sales_price"),
-                              "item" -> Set("i_brand", "i_brand_id", "i_manufact_id", "i_item_sk", "i_item_desc", "i_manager_id", "i_category", "i_item_id", "i_class", "i_current_price"),
+                              "item" -> Set("i_brand", "i_brand_id", "i_manufact_id", "i_item_sk", "i_item_desc", "i_manager_id", "i_category", "i_item_id", "i_class", "i_current_price", "i_product_name", "i_size"),
                               "customer" -> Set("c_customer_sk"),
                               "catalog_sales" -> Set("cs_quantity", "cs_list_price", "cs_sold_date_sk", "cs_item_sk", "cs_bill_customer_sk", "cs_ship_addr_sk", "cs_ext_sales_price", "cs_item_sk"),
                               "web_sales" -> Set("ws_quantity", "ws_list_price", "ws_sold_date_sk", "ws_item_sk", "ws_bill_customer_sk", "ws_ship_customer_sk", "ws_ext_sales_price"),
