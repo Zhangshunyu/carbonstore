@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.service.client;
+package org.apache.carbondata.service;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -28,9 +28,9 @@ import org.apache.carbondata.vision.table.Record;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.PropertyConfigurator;
 
-public class ExampleUtils {
+public class Utils {
 
-  private static LogService LOGGER = LogServiceFactory.getLogService(ExampleUtils.class.getName());
+  private static LogService LOGGER = LogServiceFactory.getLogService(Utils.class.getName());
 
   public static void printRecords(Record[] records) {
     for (Record record : records) {

@@ -29,6 +29,7 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.hadoop.CarbonInputSplit;
 import org.apache.carbondata.hadoop.CarbonMultiBlockSplit;
+import org.apache.carbondata.service.Utils;
 import org.apache.carbondata.service.service.PredictService;
 import org.apache.carbondata.service.service.impl.PredictServiceImpl;
 import org.apache.carbondata.store.LocalCarbonStore;
@@ -52,6 +53,22 @@ public class CarbonServer {
   private VisionConfiguration conf;
 
   private CacheManager cacheManager;
+
+  // vm argument: -Djava.library.path=
+  // /home/david/Documents/code/carbonstore/select/vision-native/build/lib
+  // program args:
+  // /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/server/log4j.properties
+  // .../carbonstore/select/build/carbonselect/conf/server/carbonselect.properties
+  public static void main(String[] args) throws IOException {
+    if (args.length != 2) {
+      System.err.println("Usage: CarbonServerExample <log4j file> <properties file>");
+      return;
+    }
+    Utils.initLog4j(args[0]);
+    VisionConfiguration conf = new VisionConfiguration();
+    conf.load(args[1]);
+    new CarbonServer(conf).start();
+  }
 
   public CarbonServer(VisionConfiguration conf) {
     this.conf = conf;

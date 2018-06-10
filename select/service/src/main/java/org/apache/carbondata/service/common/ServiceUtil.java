@@ -41,7 +41,8 @@ public class ServiceUtil {
       String[] splits = hostWithPort.split(":", -1);
       if (splits.length == 2) {
         int cores = Runtime.getRuntime().availableProcessors();
-        serverInfos.add(new ServerInfo(splits[0].trim(), Integer.parseInt(splits[1].trim()), cores));
+        serverInfos.add(
+            new ServerInfo(splits[0].trim(), Integer.parseInt(splits[1].trim()), cores));
       }
     }
   }

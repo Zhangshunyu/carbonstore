@@ -24,57 +24,57 @@ import java.util.Map;
  * Cache server info, The cache number of different cache level
  */
 public class ServerCacheInfo {
-    /**
-     * The index of cache level and
-     * the cache number of this cache level
-     */
-    Map<Integer, Integer> cacheStat;
+  /**
+   * The index of cache level and
+   * the cache number of this cache level
+   */
+  Map<Integer, Integer> cacheStat;
 
-    /**
-     * constructor, the default value is 0
-     */
-    public ServerCacheInfo() {
-        cacheStat = new HashMap<Integer, Integer>();
-        for (CacheLevel cacheLevel : CacheLevel.values()) {
-            cacheStat.put(cacheLevel.getIndex(), 0);
-        }
+  /**
+   * constructor, the default value is 0
+   */
+  public ServerCacheInfo() {
+    cacheStat = new HashMap<Integer, Integer>();
+    for (CacheLevel cacheLevel : CacheLevel.values()) {
+      cacheStat.put(cacheLevel.getIndex(), 0);
     }
+  }
 
-    /**
-     * increase the number of this cache level
-     *
-     * @param cacheLevel the index of cache level
-     */
-    public void increaseAndSet(int cacheLevel) {
-        cacheStat.put(cacheLevel, 1 + cacheStat.get(cacheLevel));
-    }
+  /**
+   * increase the number of this cache level
+   *
+   * @param cacheLevel the index of cache level
+   */
+  public void increaseAndSet(int cacheLevel) {
+    cacheStat.put(cacheLevel, 1 + cacheStat.get(cacheLevel));
+  }
 
-    /**
-     * get the number of this cache level
-     *
-     * @param cacheLevel the index of cache level
-     * @return the number of this cache level
-     */
-    public Integer getNumber(int cacheLevel) {
-        return cacheStat.get(cacheLevel);
-    }
+  /**
+   * get the number of this cache level
+   *
+   * @param cacheLevel the index of cache level
+   * @return the number of this cache level
+   */
+  public Integer getNumber(int cacheLevel) {
+    return cacheStat.get(cacheLevel);
+  }
 
-    public Map<Integer, Integer> getCacheStat() {
-        return cacheStat;
-    }
+  public Map<Integer, Integer> getCacheStat() {
+    return cacheStat;
+  }
 
-    public void setCacheStat(Map<Integer, Integer> cacheStat) {
-        this.cacheStat = cacheStat;
-    }
+  public void setCacheStat(Map<Integer, Integer> cacheStat) {
+    this.cacheStat = cacheStat;
+  }
 
-    /**
-     * merge the two ServerCacheInfo
-     *
-     * @param serverCacheInfo ServerCacheInfo object
-     */
-    public void merge(ServerCacheInfo serverCacheInfo) {
-        for (int i : serverCacheInfo.cacheStat.keySet()) {
-            this.cacheStat.put(i, this.cacheStat.get(i) + serverCacheInfo.cacheStat.get(i));
-        }
+  /**
+   * merge the two ServerCacheInfo
+   *
+   * @param serverCacheInfo ServerCacheInfo object
+   */
+  public void merge(ServerCacheInfo serverCacheInfo) {
+    for (int i : serverCacheInfo.cacheStat.keySet()) {
+      this.cacheStat.put(i, this.cacheStat.get(i) + serverCacheInfo.cacheStat.get(i));
     }
+  }
 }

@@ -17,7 +17,12 @@
 
 package org.apache.carbondata.service.schedule;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.carbondata.hadoop.CarbonMultiBlockSplit;
@@ -33,6 +38,7 @@ import org.apache.carbondata.vision.model.Model;
 import org.apache.carbondata.vision.predict.PredictContext;
 import org.apache.carbondata.vision.table.Record;
 import org.apache.carbondata.vision.table.Table;
+
 import org.mortbay.log.Log;
 
 public class CarbonScheduler {
@@ -82,7 +88,8 @@ public class CarbonScheduler {
     return model;
   }
 
-  public byte[] cacheTable(Table table, int cacheLevel, boolean allNode, Set<Table> tableSet) throws VisionException {
+  public byte[] cacheTable(Table table, int cacheLevel, boolean allNode, Set<Table> tableSet)
+      throws VisionException {
     List<ServerInfo> serverInfoList = CarbonMaster.serverList();
     int serverCount = serverInfoList.size();
     TableCacheInfo tableCacheInfo = CarbonMaster.getCacheInfo(table);
@@ -174,7 +181,8 @@ public class CarbonScheduler {
     return chooseServerInfo;
   }
 
-  public Record[] search(CarbonMultiBlockSplit split, PredictContext context) throws VisionException {
+  public Record[] search(CarbonMultiBlockSplit split, PredictContext context)
+      throws VisionException {
     ServerInfo chooseServer = chooseSearchServer(CarbonMaster.getCacheInfo(context.getTable()));
     Log.info("Choose search server is " + chooseServer);
     if (chooseServer == null) {

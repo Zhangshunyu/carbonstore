@@ -19,6 +19,7 @@ package org.apache.carbondata.service.master;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
@@ -48,7 +49,7 @@ public class CarbonMaster {
 
   private static final List<ServerInfo> serverList = new ArrayList<ServerInfo>();
 
-  private static final Map<Table, TableCacheInfo> dataCacheMap = new HashMap<Table, TableCacheInfo>();
+  private static final Map<Table, TableCacheInfo> dataCacheMap = new ConcurrentHashMap<>();
 
   public static void init(VisionConfiguration conf) {
     FileFactory.getConfiguration().addResource(new Path(conf.configHadoop()));

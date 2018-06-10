@@ -35,6 +35,12 @@ public class Table implements Serializable, Writable {
   public Table() {
   }
 
+  public Table(String tableName) {
+    this.tableName = tableName;
+    this.database = "default";
+    this.featureVectorName = "feature";
+  }
+
   public Table(String database, String tableName, String featureVectorName) {
     this.database = database;
     this.tableName = tableName;

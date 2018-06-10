@@ -17,85 +17,89 @@
 
 package org.apache.carbondata.service.common;
 
-import org.apache.carbondata.vision.cache.ServerCacheInfo;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import java.util.*;
+import org.apache.carbondata.vision.cache.ServerCacheInfo;
 
 /**
  * table cache info, including server info and server cache info
  */
 public class TableCacheInfo {
-    /**
-     * The  info of all table cache  server
-     */
-    private Map<ServerInfo, ServerCacheInfo> serverCacheMap;
+  /**
+   * The  info of all table cache  server
+   */
+  private Map<ServerInfo, ServerCacheInfo> serverCacheMap;
 
-    public TableCacheInfo() {
-        this.serverCacheMap = new HashMap<>();
-    }
+  public TableCacheInfo() {
+    this.serverCacheMap = new HashMap<>();
+  }
 
-    public TableCacheInfo(List<ServerInfo> serverInfoSet) {
-        serverCacheMap = new HashMap<>();
-        Iterator<ServerInfo> itor = serverInfoSet.iterator();
-        while (itor.hasNext()) {
-            serverCacheMap.put(itor.next(), new ServerCacheInfo());
-        }
+  public TableCacheInfo(List<ServerInfo> serverInfoSet) {
+    serverCacheMap = new HashMap<>();
+    Iterator<ServerInfo> itor = serverInfoSet.iterator();
+    while (itor.hasNext()) {
+      serverCacheMap.put(itor.next(), new ServerCacheInfo());
     }
+  }
 
-    public TableCacheInfo(Set<ServerInfo> serverInfoSet) {
-        serverCacheMap = new HashMap<>();
-        Iterator<ServerInfo> itor = serverInfoSet.iterator();
-        while (itor.hasNext()) {
-            serverCacheMap.put(itor.next(), new ServerCacheInfo());
-        }
+  public TableCacheInfo(Set<ServerInfo> serverInfoSet) {
+    serverCacheMap = new HashMap<>();
+    Iterator<ServerInfo> itor = serverInfoSet.iterator();
+    while (itor.hasNext()) {
+      serverCacheMap.put(itor.next(), new ServerCacheInfo());
     }
+  }
 
-    /**
-     * Add server info and change the number of cache level
-     *
-     * @param serverInfo Server Info
-     * @param cacheLevel the index of cache level
-     */
-    public void add(ServerInfo serverInfo, Integer cacheLevel) {
-        ServerCacheInfo serverCacheInfo = new ServerCacheInfo();
-        serverCacheInfo.increaseAndSet(cacheLevel);
-        serverCacheMap.put(serverInfo, serverCacheInfo);
-    }
+  /**
+   * Add server info and change the number of cache level
+   *
+   * @param serverInfo Server Info
+   * @param cacheLevel the index of cache level
+   */
+  public void add(ServerInfo serverInfo, Integer cacheLevel) {
+    ServerCacheInfo serverCacheInfo = new ServerCacheInfo();
+    serverCacheInfo.increaseAndSet(cacheLevel);
+    serverCacheMap.put(serverInfo, serverCacheInfo);
+  }
 
-    /**
-     * Add server info set
-     *
-     * @param serverInfoSet
-     */
-    //TODO: considerate the cache level
-    public void addAll(Set<ServerInfo> serverInfoSet) {
-        serverInfoSet.addAll(serverInfoSet);
-    }
+  /**
+   * Add server info set
+   *
+   * @param serverInfoSet
+   */
+  //TODO: considerate the cache level
+  public void addAll(Set<ServerInfo> serverInfoSet) {
+    serverInfoSet.addAll(serverInfoSet);
+  }
 
-    /**
-     * get all info of this table cache server
-     *
-     * @return server info set
-     */
-    public Set<ServerInfo> getServerInfoSet() {
-        return serverCacheMap.keySet();
-    }
+  /**
+   * get all info of this table cache server
+   *
+   * @return server info set
+   */
+  public Set<ServerInfo> getServerInfoSet() {
+    return serverCacheMap.keySet();
+  }
 
-    public Map<ServerInfo, ServerCacheInfo> getServerCacheMap() {
-        return serverCacheMap;
-    }
+  public Map<ServerInfo, ServerCacheInfo> getServerCacheMap() {
+    return serverCacheMap;
+  }
 
-    public void setServerCacheMap(Map<ServerInfo, ServerCacheInfo> serverCacheMap) {
-        this.serverCacheMap = serverCacheMap;
-    }
+  public void setServerCacheMap(Map<ServerInfo, ServerCacheInfo> serverCacheMap) {
+    this.serverCacheMap = serverCacheMap;
+  }
 
-    /**
-     * get server cache info by server info
-     *
-     * @param serverInfo server info
-     * @return server cache info
-     */
-    public ServerCacheInfo getServerCacheInfo(ServerInfo serverInfo) {
-        return this.serverCacheMap.get(serverInfo);
-    }
+  /**
+   * get server cache info by server info
+   *
+   * @param serverInfo server info
+   * @return server cache info
+   */
+  public ServerCacheInfo getServerCacheInfo(ServerInfo serverInfo) {
+    return this.serverCacheMap.get(serverInfo);
+  }
 }
