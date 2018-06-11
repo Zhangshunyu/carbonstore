@@ -1,194 +1,291 @@
-2018-06-08 14:44:46,556 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 14:44:47,418 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 14:45:18,646 INFO Retrying connect to server: 172-0-0-1.lightspeed.brhmal.sbcglobal.net/172.0.0.1:7881. Already tried 0 time(s); maxRetries=45
-2018-06-08 14:48:31,933 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 14:48:32,842 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 14:50:39,522 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 14:50:40,426 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 14:54:24,918 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 14:54:25,828 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 14:55:33,622 INFO main Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
-2018-06-08 14:55:33,622 INFO main ------Using Carbon.properties --------
-2018-06-08 14:55:33,622 INFO main {}
-2018-06-08 14:55:33,648 INFO main Carbon Current data file version: V3
-2018-06-08 14:55:33,648 INFO main Blocklet Size Configured value is "64
-2018-06-08 14:55:33,648 WARN main The enable unsafe sort value "null" is invalid. Using the default value "true
-2018-06-08 14:55:33,648 WARN main The enable off heap sort value "null" is invalid. Using the default value "true
-2018-06-08 14:55:33,649 WARN main The custom block distribution value "null" is invalid. Using the default value "false
-2018-06-08 14:55:33,649 WARN main The enable vector reader value "null" is invalid. Using the default value "true
-2018-06-08 14:55:41,085 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 14:55:41,183 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 15:05:50,202 INFO main Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
-2018-06-08 15:05:50,204 INFO main ------Using Carbon.properties --------
-2018-06-08 15:05:50,204 INFO main {}
-2018-06-08 15:05:50,630 INFO main Carbon Current data file version: V3
-2018-06-08 15:05:50,632 INFO main Blocklet Size Configured value is "64
-2018-06-08 15:05:50,633 WARN main The enable unsafe sort value "null" is invalid. Using the default value "true
-2018-06-08 15:05:50,634 WARN main The enable off heap sort value "null" is invalid. Using the default value "true
-2018-06-08 15:05:50,635 WARN main The custom block distribution value "null" is invalid. Using the default value "false
-2018-06-08 15:05:50,636 WARN main The enable vector reader value "null" is invalid. Using the default value "true
-2018-06-08 15:05:54,625 WARN main The carbon task distribution value "null" is invalid. Using the default value "block
-2018-06-08 15:05:54,629 WARN main The enable auto handoff value "null" is invalid. Using the default value "true
-2018-06-08 15:05:54,631 WARN main The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
-2018-06-08 15:06:46,721 INFO main Executor LRU cache size not configured. Initializing with driver LRU cache size.
-2018-06-08 15:06:46,724 INFO main LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
-2018-06-08 15:06:54,264 INFO main Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@3dd1dc90
-2018-06-08 16:09:55,019 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 16:09:55,115 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 16:12:38,772 INFO main Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
-2018-06-08 16:12:38,773 INFO main ------Using Carbon.properties --------
-2018-06-08 16:12:38,773 INFO main {}
-2018-06-08 16:12:38,788 INFO main Carbon Current data file version: V3
-2018-06-08 16:12:38,788 INFO main Blocklet Size Configured value is "64
-2018-06-08 16:12:38,788 WARN main The enable unsafe sort value "null" is invalid. Using the default value "true
-2018-06-08 16:12:38,788 WARN main The enable off heap sort value "null" is invalid. Using the default value "true
-2018-06-08 16:12:38,788 WARN main The custom block distribution value "null" is invalid. Using the default value "false
-2018-06-08 16:12:38,789 WARN main The enable vector reader value "null" is invalid. Using the default value "true
-2018-06-08 16:12:38,812 WARN main The carbon task distribution value "null" is invalid. Using the default value "block
-2018-06-08 16:12:38,813 WARN main The enable auto handoff value "null" is invalid. Using the default value "true
-2018-06-08 16:12:38,814 WARN main The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
-2018-06-08 16:12:38,847 INFO main Executor LRU cache size not configured. Initializing with driver LRU cache size.
-2018-06-08 16:12:38,848 INFO main LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
-2018-06-08 16:12:39,031 INFO main Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@13cf7d52
-2018-06-08 16:12:39,046 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 159176 ms, t1~158897~t2~0~t3~0~t4~86~t5~1~t6~192~t7
-2018-06-08 16:12:39,046 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~44~t2~159183~t3
-2018-06-08 16:12:42,858 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:12:42,880 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 3719 ms, t1~3692~t2~0~t3~0~t4~8~t5~0~t6~19~t7
-2018-06-08 16:12:42,882 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~21~t2~3720~t3
-2018-06-08 16:12:43,033 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table1/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:12:43,038 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 10 ms, t1~4~t2~0~t3~1~t4~1~t5~0~t6~4~t7
-2018-06-08 16:12:43,038 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~28~t2~10~t3
-2018-06-08 16:14:21,329 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 16:14:21,432 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 16:14:24,579 INFO main Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
-2018-06-08 16:14:24,579 INFO main ------Using Carbon.properties --------
-2018-06-08 16:14:24,579 INFO main {}
-2018-06-08 16:14:24,592 INFO main Carbon Current data file version: V3
-2018-06-08 16:14:24,593 INFO main Blocklet Size Configured value is "64
-2018-06-08 16:14:24,593 WARN main The enable unsafe sort value "null" is invalid. Using the default value "true
-2018-06-08 16:14:24,593 WARN main The enable off heap sort value "null" is invalid. Using the default value "true
-2018-06-08 16:14:24,593 WARN main The custom block distribution value "null" is invalid. Using the default value "false
-2018-06-08 16:14:24,593 WARN main The enable vector reader value "null" is invalid. Using the default value "true
-2018-06-08 16:14:24,617 WARN main The carbon task distribution value "null" is invalid. Using the default value "block
-2018-06-08 16:14:24,617 WARN main The enable auto handoff value "null" is invalid. Using the default value "true
-2018-06-08 16:14:24,618 WARN main The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
-2018-06-08 16:14:24,651 INFO main Executor LRU cache size not configured. Initializing with driver LRU cache size.
-2018-06-08 16:14:24,652 INFO main LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
-2018-06-08 16:14:24,846 INFO main Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@13cf7d52
-2018-06-08 16:14:24,858 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 3081 ms, t1~2798~t2~0~t3~0~t4~82~t5~1~t6~200~t7
-2018-06-08 16:14:24,858 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~46~t2~3089~t3
-2018-06-08 16:14:24,884 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:14:24,891 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 11 ms, t1~3~t2~0~t3~0~t4~1~t5~1~t6~6~t7
-2018-06-08 16:14:24,891 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~19~t2~11~t3
-2018-06-08 16:14:24,923 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table1/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:14:24,928 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 8 ms, t1~2~t2~0~t3~0~t4~1~t5~0~t6~5~t7
-2018-06-08 16:14:24,928 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~26~t2~8~t3
-2018-06-08 16:18:04,080 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 138077 ms, t1~138073~t2~1~t3~0~t4~1~t5~0~t6~2~t7
-2018-06-08 16:18:04,081 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~4186~t2~185856~t3
-2018-06-08 16:21:32,759 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 16:21:32,955 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 16:21:33,629 INFO main Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
-2018-06-08 16:21:33,629 INFO main ------Using Carbon.properties --------
-2018-06-08 16:21:33,629 INFO main {}
-2018-06-08 16:21:33,643 INFO main Carbon Current data file version: V3
-2018-06-08 16:21:33,643 INFO main Blocklet Size Configured value is "64
-2018-06-08 16:21:33,643 WARN main The enable unsafe sort value "null" is invalid. Using the default value "true
-2018-06-08 16:21:33,643 WARN main The enable off heap sort value "null" is invalid. Using the default value "true
-2018-06-08 16:21:33,643 WARN main The custom block distribution value "null" is invalid. Using the default value "false
-2018-06-08 16:21:33,643 WARN main The enable vector reader value "null" is invalid. Using the default value "true
-2018-06-08 16:21:33,666 WARN main The carbon task distribution value "null" is invalid. Using the default value "block
-2018-06-08 16:21:33,666 WARN main The enable auto handoff value "null" is invalid. Using the default value "true
-2018-06-08 16:21:33,666 WARN main The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
-2018-06-08 16:21:33,699 INFO main Executor LRU cache size not configured. Initializing with driver LRU cache size.
-2018-06-08 16:21:33,700 INFO main LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
-2018-06-08 16:21:33,917 INFO main Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@3a3e4aff
-2018-06-08 16:21:33,931 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 380 ms, t1~(0ms)~t2~(70ms)~t3~(3ms)~t4~(1ms)~t5~(306ms)~t6
-2018-06-08 16:21:33,932 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(39ms)~t2~(384ms)~t3
-2018-06-08 16:21:33,954 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:21:33,958 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 7 ms, t1~(0ms)~t2~(2ms)~t3~(0ms)~t4~(0ms)~t5~(5ms)~t6
-2018-06-08 16:21:33,959 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(17ms)~t2~(7ms)~t3
-2018-06-08 16:21:33,987 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table1/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:21:33,992 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 7 ms, t1~(0ms)~t2~(1ms)~t3~(1ms)~t4~(0ms)~t5~(5ms)~t6
-2018-06-08 16:21:33,992 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(24ms)~t2~(7ms)~t3
-2018-06-08 16:31:23,419 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 560431 ms, t1~(2906ms)~t2~(1773ms)~t3~(555751ms)~t4~(0ms)~t5~(1ms)~t6
-2018-06-08 16:31:23,419 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(4343ms)~t2~(569785ms)~t3
-2018-06-08 16:31:23,575 AUDIT [X160912][david][Thread-1]Search taken time: 583584 ms, t1~(583428ms)~t2~(156ms)~t3
-2018-06-08 16:37:57,596 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 16:37:57,765 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 16:38:02,553 INFO main Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
-2018-06-08 16:38:02,554 INFO main ------Using Carbon.properties --------
-2018-06-08 16:38:02,554 INFO main {}
-2018-06-08 16:38:02,581 INFO main Carbon Current data file version: V3
-2018-06-08 16:38:02,581 INFO main Blocklet Size Configured value is "64
-2018-06-08 16:38:02,581 WARN main The enable unsafe sort value "null" is invalid. Using the default value "true
-2018-06-08 16:38:02,581 WARN main The enable off heap sort value "null" is invalid. Using the default value "true
-2018-06-08 16:38:02,581 WARN main The custom block distribution value "null" is invalid. Using the default value "false
-2018-06-08 16:38:02,581 WARN main The enable vector reader value "null" is invalid. Using the default value "true
-2018-06-08 16:38:02,603 WARN main The carbon task distribution value "null" is invalid. Using the default value "block
-2018-06-08 16:38:02,603 WARN main The enable auto handoff value "null" is invalid. Using the default value "true
-2018-06-08 16:38:02,604 WARN main The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
-2018-06-08 16:38:02,628 INFO main Executor LRU cache size not configured. Initializing with driver LRU cache size.
-2018-06-08 16:38:02,629 INFO main LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
-2018-06-08 16:38:02,831 INFO main Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@736d6a5c
-2018-06-08 16:38:02,845 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 4447 ms, t1~(0ms)~t2~(75ms)~t3~(4056ms)~t4~(8ms)~t5~(308ms)~t6
-2018-06-08 16:38:02,845 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(52ms)~t2~(4453ms)~t3
-2018-06-08 16:38:02,872 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:38:02,878 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 10 ms, t1~(0ms)~t2~(2ms)~t3~(1ms)~t4~(0ms)~t5~(7ms)~t6
-2018-06-08 16:38:02,878 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(21ms)~t2~(10ms)~t3
-2018-06-08 16:38:02,921 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table1/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:38:02,926 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 8 ms, t1~(0ms)~t2~(2ms)~t3~(0ms)~t4~(0ms)~t5~(6ms)~t6
-2018-06-08 16:38:02,927 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(37ms)~t2~(9ms)~t3
-2018-06-08 16:42:00,453 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 215083 ms, t1~(169311ms)~t2~(45769ms)~t3~(1ms)~t4~(0ms)~t5~(2ms)~t6
-2018-06-08 16:42:00,454 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(4144ms)~t2~(224956ms)~t3
-2018-06-08 16:42:00,506 AUDIT [X160912][david][Thread-1]Search taken time: 233710 ms, t1~(233658ms)~t2~(52ms)~t3
-2018-06-08 16:42:00,540 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 2 ms, t1~(0ms)~t2~(0ms)~t3~(0ms)~t4~(0ms)~t5~(2ms)~t6
-2018-06-08 16:42:00,540 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(29ms)~t2~(4ms)~t3
-2018-06-08 16:42:00,594 AUDIT [X160912][david][Thread-1]Search taken time: 87 ms, t1~(33ms)~t2~(54ms)~t3
-2018-06-08 16:42:00,614 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 2 ms, t1~(0ms)~t2~(0ms)~t3~(1ms)~t4~(0ms)~t5~(1ms)~t6
-2018-06-08 16:42:00,614 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(17ms)~t2~(2ms)~t3
-2018-06-08 16:42:00,665 AUDIT [X160912][david][Thread-1]Search taken time: 70 ms, t1~(19ms)~t2~(51ms)~t3
-2018-06-08 16:42:11,147 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 16:42:11,327 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 16:42:12,204 INFO main Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
-2018-06-08 16:42:12,204 INFO main ------Using Carbon.properties --------
-2018-06-08 16:42:12,204 INFO main {}
-2018-06-08 16:42:12,220 INFO main Carbon Current data file version: V3
-2018-06-08 16:42:12,221 INFO main Blocklet Size Configured value is "64
-2018-06-08 16:42:12,221 WARN main The enable unsafe sort value "null" is invalid. Using the default value "true
-2018-06-08 16:42:12,221 WARN main The enable off heap sort value "null" is invalid. Using the default value "true
-2018-06-08 16:42:12,221 WARN main The custom block distribution value "null" is invalid. Using the default value "false
-2018-06-08 16:42:12,221 WARN main The enable vector reader value "null" is invalid. Using the default value "true
-2018-06-08 16:42:12,241 WARN main The carbon task distribution value "null" is invalid. Using the default value "block
-2018-06-08 16:42:12,241 WARN main The enable auto handoff value "null" is invalid. Using the default value "true
-2018-06-08 16:42:12,242 WARN main The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
-2018-06-08 16:42:12,269 INFO main Executor LRU cache size not configured. Initializing with driver LRU cache size.
-2018-06-08 16:42:12,270 INFO main LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
-2018-06-08 16:42:12,488 INFO main Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@13cf7d52
-2018-06-08 16:42:12,501 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 387 ms, t1~(0ms)~t2~(82ms)~t3~(3ms)~t4~(1ms)~t5~(301ms)~t6
-2018-06-08 16:42:12,502 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(81ms)~t2~(394ms)~t3
-2018-06-08 16:42:12,536 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:42:12,543 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 11 ms, t1~(0ms)~t2~(2ms)~t3~(1ms)~t4~(0ms)~t5~(8ms)~t6
-2018-06-08 16:42:12,543 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(27ms)~t2~(11ms)~t3
-2018-06-08 16:42:12,580 INFO main Removed entry from InMemory lru cache :: /home/david/Documents/code/carbonstore/examples/spark2/target/store/default/frs_table1/Fact/Part0/Segment_0/0_batchno0-0-1528440756992.carbonindex
-2018-06-08 16:42:12,585 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 8 ms, t1~(0ms)~t2~(2ms)~t3~(0ms)~t4~(0ms)~t5~(6ms)~t6
-2018-06-08 16:42:12,585 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(32ms)~t2~(8ms)~t3
-2018-06-08 16:42:49,232 AUDIT [X160912][david][Thread-1]CarbonTableInputFormat.getSplits taken time: 22368 ms, t1~(1745ms)~t2~(850ms)~t3~(19767ms)~t4~(0ms)~t5~(6ms)~t6
-2018-06-08 16:42:49,234 AUDIT [X160912][david][Thread-1]CarbonMaster.getSplit t1~(5420ms)~t2~(25006ms)~t3
-2018-06-08 16:51:44,456 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 16:51:44,631 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 16:52:17,068 AUDIT [X160912][david][Thread-1]SegmentUpdateStatusManager take 26772 ms,t1~(0ms)~t2~(26772ms)~t3~(0ms)~t4
-2018-06-08 16:52:17,084 INFO main Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
-2018-06-08 16:52:17,084 INFO main ------Using Carbon.properties --------
-2018-06-08 16:52:17,084 INFO main {}
-2018-06-08 16:52:17,104 INFO main Carbon Current data file version: V3
-2018-06-08 16:52:17,104 INFO main Blocklet Size Configured value is "64
-2018-06-08 16:52:17,104 WARN main The enable unsafe sort value "null" is invalid. Using the default value "true
-2018-06-08 16:52:17,105 WARN main The enable off heap sort value "null" is invalid. Using the default value "true
-2018-06-08 16:52:17,105 WARN main The custom block distribution value "null" is invalid. Using the default value "false
-2018-06-08 16:52:17,105 WARN main The enable vector reader value "null" is invalid. Using the default value "true
-2018-06-08 16:52:21,422 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2018-06-08 16:52:21,567 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
-2018-06-08 16:53:21,038 AUDIT [X160912][david][Thread-1]SegmentUpdateStatusManager take 58772 ms,t1~(0ms)~t2~(58772ms)~t3~(0ms)~t4
-2018-06-08 16:53:21,060 INFO main Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
-2018-06-08 16:53:21,060 INFO main ------Using Carbon.properties --------
-2018-06-08 16:53:21,060 INFO main {}
+2018-06-11 16:29:29,920 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-06-11 16:29:30,016 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
+2018-06-11 16:29:34,879 INFO Looking for @ControllerAdvice: org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@c86b9e3: startup date [Mon Jun 11 16:29:22 CST 2018]; root of context hierarchy
+2018-06-11 16:29:35,002 INFO Mapped "{[/select],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.select(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:29:35,003 INFO Mapped "{[/cache],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<java.lang.String> org.apache.carbondata.rest.HorizonController.cache(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:29:35,006 INFO Mapped "{[/error],produces=[text/html]}" onto public org.springframework.web.servlet.ModelAndView org.springframework.boot.autoconfigure.web.BasicErrorController.errorHtml(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)
+2018-06-11 16:29:35,007 INFO Mapped "{[/error]}" onto public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)
+2018-06-11 16:29:35,068 INFO Mapped URL path [/webjars/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:29:35,068 INFO Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:29:35,217 INFO Mapped URL path [/**/favicon.ico] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:29:35,600 INFO Registering beans for JMX exposure on startup
+2018-06-11 16:29:35,677 INFO Tomcat started on port(s): 8080 (http)
+2018-06-11 16:29:35,684 INFO Started Horizon in 13.954 seconds (JVM running for 14.8)
+2018-06-11 16:47:37,880 INFO FrameworkServlet 'dispatcherServlet': initialization started
+2018-06-11 16:47:37,904 INFO FrameworkServlet 'dispatcherServlet': initialization completed in 23 ms
+2018-06-11 16:47:38,017 WARN Failed to read HTTP message: org.springframework.http.converter.HttpMessageNotReadableException: Could not read document: No suitable constructor found for type [simple type, class org.apache.carbondata.rest.model.SelectRequest]: can not instantiate from JSON object (missing default constructor or creator, or perhaps need to add/enable type information?)
+ at [Source: java.io.PushbackInputStream@1d59d998; line: 1, column: 2]; nested exception is com.fasterxml.jackson.databind.JsonMappingException: No suitable constructor found for type [simple type, class org.apache.carbondata.rest.model.SelectRequest]: can not instantiate from JSON object (missing default constructor or creator, or perhaps need to add/enable type information?)
+ at [Source: java.io.PushbackInputStream@1d59d998; line: 1, column: 2]
+2018-06-11 16:48:41,146 INFO Closing org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@c86b9e3: startup date [Mon Jun 11 16:29:22 CST 2018]; root of context hierarchy
+2018-06-11 16:48:41,148 INFO Unregistering JMX-exposed beans on shutdown
+2018-06-11 16:48:50,788 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-06-11 16:48:50,917 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
+2018-06-11 16:48:51,611 INFO Looking for @ControllerAdvice: org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@6aaceffd: startup date [Mon Jun 11 16:48:47 CST 2018]; root of context hierarchy
+2018-06-11 16:48:51,740 INFO Mapped "{[/select],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.select(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:48:51,746 INFO Mapped "{[/cache],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<java.lang.String> org.apache.carbondata.rest.HorizonController.cache(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:48:51,751 INFO Mapped "{[/error],produces=[text/html]}" onto public org.springframework.web.servlet.ModelAndView org.springframework.boot.autoconfigure.web.BasicErrorController.errorHtml(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)
+2018-06-11 16:48:51,751 INFO Mapped "{[/error]}" onto public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)
+2018-06-11 16:48:51,845 INFO Mapped URL path [/webjars/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:48:51,845 INFO Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:48:51,934 INFO Mapped URL path [/**/favicon.ico] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:48:52,315 INFO Registering beans for JMX exposure on startup
+2018-06-11 16:48:52,400 INFO Tomcat started on port(s): 8080 (http)
+2018-06-11 16:48:52,408 INFO Started Horizon in 6.569 seconds (JVM running for 7.425)
+2018-06-11 16:51:08,261 INFO Closing org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@6aaceffd: startup date [Mon Jun 11 16:48:47 CST 2018]; root of context hierarchy
+2018-06-11 16:51:08,264 INFO Unregistering JMX-exposed beans on shutdown
+2018-06-11 16:51:17,767 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-06-11 16:51:17,887 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
+2018-06-11 16:51:22,598 INFO Looking for @ControllerAdvice: org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@279fedbd: startup date [Mon Jun 11 16:51:14 CST 2018]; root of context hierarchy
+2018-06-11 16:51:22,703 INFO Mapped "{[/select],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.select(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:51:22,704 INFO Mapped "{[/cache],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.cache(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:51:22,708 INFO Mapped "{[/error],produces=[text/html]}" onto public org.springframework.web.servlet.ModelAndView org.springframework.boot.autoconfigure.web.BasicErrorController.errorHtml(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)
+2018-06-11 16:51:22,708 INFO Mapped "{[/error]}" onto public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)
+2018-06-11 16:51:22,766 INFO Mapped URL path [/webjars/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:51:22,767 INFO Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:51:22,837 INFO Mapped URL path [/**/favicon.ico] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:51:23,206 INFO Registering beans for JMX exposure on startup
+2018-06-11 16:51:23,269 INFO Tomcat started on port(s): 8080 (http)
+2018-06-11 16:51:23,275 INFO Started Horizon in 9.857 seconds (JVM running for 10.664)
+2018-06-11 16:53:34,289 INFO FrameworkServlet 'dispatcherServlet': initialization started
+2018-06-11 16:53:34,310 INFO FrameworkServlet 'dispatcherServlet': initialization completed in 20 ms
+2018-06-11 16:53:34,434 WARN Failed to read HTTP message: org.springframework.http.converter.HttpMessageNotReadableException: Could not read document: No suitable constructor found for type [simple type, class org.apache.carbondata.rest.model.SelectRequest]: can not instantiate from JSON object (missing default constructor or creator, or perhaps need to add/enable type information?)
+ at [Source: java.io.PushbackInputStream@64dd84ce; line: 1, column: 2]; nested exception is com.fasterxml.jackson.databind.JsonMappingException: No suitable constructor found for type [simple type, class org.apache.carbondata.rest.model.SelectRequest]: can not instantiate from JSON object (missing default constructor or creator, or perhaps need to add/enable type information?)
+ at [Source: java.io.PushbackInputStream@64dd84ce; line: 1, column: 2]
+2018-06-11 16:54:47,692 INFO Closing org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@279fedbd: startup date [Mon Jun 11 16:51:14 CST 2018]; root of context hierarchy
+2018-06-11 16:54:47,693 INFO Unregistering JMX-exposed beans on shutdown
+2018-06-11 16:54:59,301 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-06-11 16:54:59,411 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
+2018-06-11 16:54:59,929 INFO Looking for @ControllerAdvice: org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@37271612: startup date [Mon Jun 11 16:54:56 CST 2018]; root of context hierarchy
+2018-06-11 16:55:00,167 INFO Mapped "{[/select],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.select(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:55:00,168 INFO Mapped "{[/cache],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.cache(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:55:00,172 INFO Mapped "{[/error],produces=[text/html]}" onto public org.springframework.web.servlet.ModelAndView org.springframework.boot.autoconfigure.web.BasicErrorController.errorHtml(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)
+2018-06-11 16:55:00,173 INFO Mapped "{[/error]}" onto public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)
+2018-06-11 16:55:00,219 INFO Mapped URL path [/webjars/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:55:00,219 INFO Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:55:00,272 INFO Mapped URL path [/**/favicon.ico] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:55:00,658 INFO Registering beans for JMX exposure on startup
+2018-06-11 16:55:00,729 INFO Tomcat started on port(s): 8080 (http)
+2018-06-11 16:55:00,738 INFO Started Horizon in 5.965 seconds (JVM running for 6.738)
+2018-06-11 16:55:38,824 INFO FrameworkServlet 'dispatcherServlet': initialization started
+2018-06-11 16:55:38,844 INFO FrameworkServlet 'dispatcherServlet': initialization completed in 18 ms
+2018-06-11 16:55:38,984 WARN Failed to read HTTP message: org.springframework.http.converter.HttpMessageNotReadableException: Could not read document: No suitable constructor found for type [simple type, class org.apache.carbondata.rest.model.SelectRequest]: can not instantiate from JSON object (missing default constructor or creator, or perhaps need to add/enable type information?)
+ at [Source: java.io.PushbackInputStream@c5af8a1; line: 1, column: 2]; nested exception is com.fasterxml.jackson.databind.JsonMappingException: No suitable constructor found for type [simple type, class org.apache.carbondata.rest.model.SelectRequest]: can not instantiate from JSON object (missing default constructor or creator, or perhaps need to add/enable type information?)
+ at [Source: java.io.PushbackInputStream@c5af8a1; line: 1, column: 2]
+2018-06-11 16:57:21,579 INFO Closing org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@37271612: startup date [Mon Jun 11 16:54:56 CST 2018]; root of context hierarchy
+2018-06-11 16:57:21,580 INFO Unregistering JMX-exposed beans on shutdown
+2018-06-11 16:57:30,162 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-06-11 16:57:30,266 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
+2018-06-11 16:57:30,880 INFO Looking for @ControllerAdvice: org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@10aa41f2: startup date [Mon Jun 11 16:57:26 CST 2018]; root of context hierarchy
+2018-06-11 16:57:31,002 INFO Mapped "{[/select],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.select(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:57:31,003 INFO Mapped "{[/cache],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.cache(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 16:57:31,006 INFO Mapped "{[/error],produces=[text/html]}" onto public org.springframework.web.servlet.ModelAndView org.springframework.boot.autoconfigure.web.BasicErrorController.errorHtml(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)
+2018-06-11 16:57:31,007 INFO Mapped "{[/error]}" onto public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)
+2018-06-11 16:57:31,078 INFO Mapped URL path [/webjars/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:57:31,078 INFO Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:57:31,142 INFO Mapped URL path [/**/favicon.ico] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 16:57:31,456 INFO Registering beans for JMX exposure on startup
+2018-06-11 16:57:31,516 INFO Tomcat started on port(s): 8080 (http)
+2018-06-11 16:57:31,522 INFO Started Horizon in 5.655 seconds (JVM running for 6.416)
+2018-06-11 16:57:44,459 INFO FrameworkServlet 'dispatcherServlet': initialization started
+2018-06-11 16:57:44,478 INFO FrameworkServlet 'dispatcherServlet': initialization completed in 19 ms
+2018-06-11 16:57:55,685 INFO http-nio-8080-exec-1 Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
+2018-06-11 16:57:55,685 INFO http-nio-8080-exec-1 ------Using Carbon.properties --------
+2018-06-11 16:57:55,685 INFO http-nio-8080-exec-1 {}
+2018-06-11 16:57:55,699 INFO http-nio-8080-exec-1 Carbon Current data file version: V3
+2018-06-11 16:57:55,699 INFO http-nio-8080-exec-1 Blocklet Size Configured value is "64
+2018-06-11 16:57:55,700 WARN http-nio-8080-exec-1 The enable unsafe sort value "null" is invalid. Using the default value "true
+2018-06-11 16:57:55,700 WARN http-nio-8080-exec-1 The enable off heap sort value "null" is invalid. Using the default value "true
+2018-06-11 16:57:55,700 WARN http-nio-8080-exec-1 The custom block distribution value "null" is invalid. Using the default value "false
+2018-06-11 16:57:55,700 WARN http-nio-8080-exec-1 The enable vector reader value "null" is invalid. Using the default value "true
+2018-06-11 16:57:55,730 WARN http-nio-8080-exec-1 The carbon task distribution value "null" is invalid. Using the default value "block
+2018-06-11 16:57:55,730 WARN http-nio-8080-exec-1 The enable auto handoff value "null" is invalid. Using the default value "true
+2018-06-11 16:57:55,731 WARN http-nio-8080-exec-1 The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
+2018-06-11 16:57:55,755 INFO http-nio-8080-exec-1 Executor LRU cache size not configured. Initializing with driver LRU cache size.
+2018-06-11 16:57:55,756 INFO http-nio-8080-exec-1 LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
+2018-06-11 16:57:55,859 INFO http-nio-8080-exec-1 Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@1200d410
+2018-06-11 16:57:55,871 AUDIT [X160912][david][Thread-30]CarbonMaster.getSplit t1~(57ms)~t2~(10864ms)~t3
+2018-06-11 16:59:00,163 AUDIT [X160912][david][Thread-33]CarbonMaster.getSplit t1~(37ms)~t2~(2ms)~t3
+2018-06-11 16:59:00,170 INFO Logging to org.slf4j.impl.Log4jLoggerAdapter(org.mortbay.log) via org.mortbay.log.Slf4jLog
+2018-06-11 16:59:00,170 INFO Search server status:ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}	The available value is 4
+2018-06-11 16:59:00,170 INFO Choose search server is ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}
+2018-06-11 17:00:10,323 AUDIT [X160912][david][Thread-33]Search taken time: 70198 ms, t1~(40ms)~t2~(70158ms)~t3
+2018-06-11 17:00:51,344 INFO Closing org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@10aa41f2: startup date [Mon Jun 11 16:57:26 CST 2018]; root of context hierarchy
+2018-06-11 17:00:51,345 INFO Unregistering JMX-exposed beans on shutdown
+2018-06-11 17:03:52,106 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-06-11 17:03:52,203 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
+2018-06-11 17:03:52,769 INFO Looking for @ControllerAdvice: org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@10aa41f2: startup date [Mon Jun 11 17:03:48 CST 2018]; root of context hierarchy
+2018-06-11 17:03:52,877 INFO Mapped "{[/select],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.select(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 17:03:52,878 INFO Mapped "{[/cache],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.cache(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 17:03:52,881 INFO Mapped "{[/error],produces=[text/html]}" onto public org.springframework.web.servlet.ModelAndView org.springframework.boot.autoconfigure.web.BasicErrorController.errorHtml(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)
+2018-06-11 17:03:52,881 INFO Mapped "{[/error]}" onto public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)
+2018-06-11 17:03:52,930 INFO Mapped URL path [/webjars/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:03:52,930 INFO Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:03:53,010 INFO Mapped URL path [/**/favicon.ico] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:03:53,321 INFO Registering beans for JMX exposure on startup
+2018-06-11 17:03:53,396 INFO Tomcat started on port(s): 8080 (http)
+2018-06-11 17:03:53,405 INFO Started Horizon in 5.845 seconds (JVM running for 6.65)
+2018-06-11 17:04:35,279 INFO FrameworkServlet 'dispatcherServlet': initialization started
+2018-06-11 17:04:35,308 INFO FrameworkServlet 'dispatcherServlet': initialization completed in 24 ms
+2018-06-11 17:04:35,998 INFO http-nio-8080-exec-1 Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
+2018-06-11 17:04:35,998 INFO http-nio-8080-exec-1 ------Using Carbon.properties --------
+2018-06-11 17:04:35,998 INFO http-nio-8080-exec-1 {}
+2018-06-11 17:04:36,012 INFO http-nio-8080-exec-1 Carbon Current data file version: V3
+2018-06-11 17:04:36,012 INFO http-nio-8080-exec-1 Blocklet Size Configured value is "64
+2018-06-11 17:04:36,012 WARN http-nio-8080-exec-1 The enable unsafe sort value "null" is invalid. Using the default value "true
+2018-06-11 17:04:36,012 WARN http-nio-8080-exec-1 The enable off heap sort value "null" is invalid. Using the default value "true
+2018-06-11 17:04:36,012 WARN http-nio-8080-exec-1 The custom block distribution value "null" is invalid. Using the default value "false
+2018-06-11 17:04:36,013 WARN http-nio-8080-exec-1 The enable vector reader value "null" is invalid. Using the default value "true
+2018-06-11 17:04:36,042 WARN http-nio-8080-exec-1 The carbon task distribution value "null" is invalid. Using the default value "block
+2018-06-11 17:04:36,043 WARN http-nio-8080-exec-1 The enable auto handoff value "null" is invalid. Using the default value "true
+2018-06-11 17:04:36,046 WARN http-nio-8080-exec-1 The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
+2018-06-11 17:04:36,098 INFO http-nio-8080-exec-1 Executor LRU cache size not configured. Initializing with driver LRU cache size.
+2018-06-11 17:04:36,099 INFO http-nio-8080-exec-1 LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
+2018-06-11 17:04:36,362 INFO http-nio-8080-exec-1 Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@610259af
+2018-06-11 17:04:36,375 AUDIT [X160912][david][Thread-30]CarbonMaster.getSplit t1~(174ms)~t2~(662ms)~t3
+2018-06-11 17:04:36,489 AUDIT [X160912][david][Thread-32]CarbonMaster.getSplit t1~(29ms)~t2~(1ms)~t3
+2018-06-11 17:04:36,496 INFO Logging to org.slf4j.impl.Log4jLoggerAdapter(org.mortbay.log) via org.mortbay.log.Slf4jLog
+2018-06-11 17:04:36,496 INFO Search server status:ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}	The available value is 4
+2018-06-11 17:04:36,497 INFO Choose search server is ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}
+2018-06-11 17:04:40,991 AUDIT [X160912][david][Thread-32]Search taken time: 4532 ms, t1~(30ms)~t2~(4502ms)~t3
+2018-06-11 17:10:18,669 INFO Closing org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@10aa41f2: startup date [Mon Jun 11 17:03:48 CST 2018]; root of context hierarchy
+2018-06-11 17:10:18,671 INFO Unregistering JMX-exposed beans on shutdown
+2018-06-11 17:10:48,533 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-06-11 17:10:48,630 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
+2018-06-11 17:10:53,202 INFO Looking for @ControllerAdvice: org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@757942a1: startup date [Mon Jun 11 17:10:45 CST 2018]; root of context hierarchy
+2018-06-11 17:10:53,298 INFO Mapped "{[/select],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.select(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 17:10:53,299 INFO Mapped "{[/cache],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.cache(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 17:10:53,302 INFO Mapped "{[/error],produces=[text/html]}" onto public org.springframework.web.servlet.ModelAndView org.springframework.boot.autoconfigure.web.BasicErrorController.errorHtml(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)
+2018-06-11 17:10:53,303 INFO Mapped "{[/error]}" onto public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)
+2018-06-11 17:10:53,335 INFO Mapped URL path [/webjars/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:10:53,335 INFO Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:10:53,382 INFO Mapped URL path [/**/favicon.ico] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:10:53,591 INFO Registering beans for JMX exposure on startup
+2018-06-11 17:10:53,638 INFO Tomcat started on port(s): 8080 (http)
+2018-06-11 17:10:53,643 INFO Started Horizon in 8.83 seconds (JVM running for 9.38)
+2018-06-11 17:11:00,559 INFO FrameworkServlet 'dispatcherServlet': initialization started
+2018-06-11 17:11:00,612 INFO FrameworkServlet 'dispatcherServlet': initialization completed in 52 ms
+2018-06-11 17:11:01,510 INFO http-nio-8080-exec-1 Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
+2018-06-11 17:11:01,510 INFO http-nio-8080-exec-1 ------Using Carbon.properties --------
+2018-06-11 17:11:01,510 INFO http-nio-8080-exec-1 {}
+2018-06-11 17:11:01,625 INFO http-nio-8080-exec-1 Carbon Current data file version: V3
+2018-06-11 17:11:01,625 INFO http-nio-8080-exec-1 Blocklet Size Configured value is "64
+2018-06-11 17:11:01,625 WARN http-nio-8080-exec-1 The enable unsafe sort value "null" is invalid. Using the default value "true
+2018-06-11 17:11:01,625 WARN http-nio-8080-exec-1 The enable off heap sort value "null" is invalid. Using the default value "true
+2018-06-11 17:11:01,626 WARN http-nio-8080-exec-1 The custom block distribution value "null" is invalid. Using the default value "false
+2018-06-11 17:11:01,626 WARN http-nio-8080-exec-1 The enable vector reader value "null" is invalid. Using the default value "true
+2018-06-11 17:11:01,649 WARN http-nio-8080-exec-1 The carbon task distribution value "null" is invalid. Using the default value "block
+2018-06-11 17:11:01,649 WARN http-nio-8080-exec-1 The enable auto handoff value "null" is invalid. Using the default value "true
+2018-06-11 17:11:01,650 WARN http-nio-8080-exec-1 The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
+2018-06-11 17:11:01,679 INFO http-nio-8080-exec-1 Executor LRU cache size not configured. Initializing with driver LRU cache size.
+2018-06-11 17:11:01,680 INFO http-nio-8080-exec-1 LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
+2018-06-11 17:11:01,832 INFO http-nio-8080-exec-1 Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@6b616154
+2018-06-11 17:11:01,844 AUDIT [X160912][david][Thread-28]CarbonMaster.getSplit t1~(103ms)~t2~(389ms)~t3
+2018-06-11 17:11:01,844 AUDIT [X160912][david][Thread-28]cached table: frs_table
+2018-06-11 17:11:01,945 AUDIT [X160912][david][Thread-30]CarbonMaster.getSplit t1~(18ms)~t2~(2ms)~t3
+2018-06-11 17:11:01,951 INFO Logging to org.slf4j.impl.Log4jLoggerAdapter(org.mortbay.log) via org.mortbay.log.Slf4jLog
+2018-06-11 17:11:01,951 INFO Search server status:ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}	The available value is 4
+2018-06-11 17:11:01,951 INFO Choose search server is ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}
+2018-06-11 17:11:02,304 AUDIT [X160912][david][Thread-30]Search taken time: 379 ms, t1~(20ms)~t2~(359ms)~t3
+2018-06-11 17:11:02,305 AUDIT [X160912][david][Thread-30]select table: frs_table, taken time: 381 ms
+2018-06-11 17:12:37,394 INFO Closing org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@757942a1: startup date [Mon Jun 11 17:10:45 CST 2018]; root of context hierarchy
+2018-06-11 17:12:37,396 INFO Unregistering JMX-exposed beans on shutdown
+2018-06-11 17:13:33,851 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-06-11 17:13:33,934 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
+2018-06-11 17:13:38,367 INFO Looking for @ControllerAdvice: org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@757942a1: startup date [Mon Jun 11 17:13:31 CST 2018]; root of context hierarchy
+2018-06-11 17:13:38,481 INFO Mapped "{[/select],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.select(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 17:13:38,482 INFO Mapped "{[/cache],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.cache(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 17:13:38,486 INFO Mapped "{[/error],produces=[text/html]}" onto public org.springframework.web.servlet.ModelAndView org.springframework.boot.autoconfigure.web.BasicErrorController.errorHtml(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)
+2018-06-11 17:13:38,487 INFO Mapped "{[/error]}" onto public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)
+2018-06-11 17:13:38,531 INFO Mapped URL path [/webjars/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:13:38,531 INFO Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:13:38,595 INFO Mapped URL path [/**/favicon.ico] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:13:38,857 INFO Registering beans for JMX exposure on startup
+2018-06-11 17:13:38,914 INFO Tomcat started on port(s): 8080 (http)
+2018-06-11 17:13:38,919 INFO Started Horizon in 8.514 seconds (JVM running for 9.098)
+2018-06-11 17:14:07,296 INFO FrameworkServlet 'dispatcherServlet': initialization started
+2018-06-11 17:14:07,321 INFO FrameworkServlet 'dispatcherServlet': initialization completed in 25 ms
+2018-06-11 17:14:08,264 INFO http-nio-8080-exec-1 Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
+2018-06-11 17:14:08,264 INFO http-nio-8080-exec-1 ------Using Carbon.properties --------
+2018-06-11 17:14:08,264 INFO http-nio-8080-exec-1 {}
+2018-06-11 17:14:08,367 INFO http-nio-8080-exec-1 Carbon Current data file version: V3
+2018-06-11 17:14:08,367 INFO http-nio-8080-exec-1 Blocklet Size Configured value is "64
+2018-06-11 17:14:08,367 WARN http-nio-8080-exec-1 The enable unsafe sort value "null" is invalid. Using the default value "true
+2018-06-11 17:14:08,367 WARN http-nio-8080-exec-1 The enable off heap sort value "null" is invalid. Using the default value "true
+2018-06-11 17:14:08,367 WARN http-nio-8080-exec-1 The custom block distribution value "null" is invalid. Using the default value "false
+2018-06-11 17:14:08,367 WARN http-nio-8080-exec-1 The enable vector reader value "null" is invalid. Using the default value "true
+2018-06-11 17:14:08,389 WARN http-nio-8080-exec-1 The carbon task distribution value "null" is invalid. Using the default value "block
+2018-06-11 17:14:08,389 WARN http-nio-8080-exec-1 The enable auto handoff value "null" is invalid. Using the default value "true
+2018-06-11 17:14:08,390 WARN http-nio-8080-exec-1 The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
+2018-06-11 17:14:08,415 INFO http-nio-8080-exec-1 Executor LRU cache size not configured. Initializing with driver LRU cache size.
+2018-06-11 17:14:08,416 INFO http-nio-8080-exec-1 LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
+2018-06-11 17:14:08,558 INFO http-nio-8080-exec-1 Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@19925728
+2018-06-11 17:14:08,568 AUDIT [X160912][david][Thread-28]CarbonMaster.getSplit t1~(120ms)~t2~(362ms)~t3
+2018-06-11 17:14:08,568 AUDIT [X160912][david][Thread-28]cached table: frs_table
+2018-06-11 17:14:08,660 AUDIT [X160912][david][Thread-30]CarbonMaster.getSplit t1~(20ms)~t2~(1ms)~t3
+2018-06-11 17:14:08,666 INFO Logging to org.slf4j.impl.Log4jLoggerAdapter(org.mortbay.log) via org.mortbay.log.Slf4jLog
+2018-06-11 17:14:08,666 INFO Search server status:ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}	The available value is 4
+2018-06-11 17:14:08,666 INFO Choose search server is ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}
+2018-06-11 17:14:09,028 AUDIT [X160912][david][Thread-30]Search taken time: 389 ms, t1~(22ms)~t2~(367ms)~t3
+2018-06-11 17:14:09,028 AUDIT [X160912][david][Thread-30]select table: frs_table, taken time: 390 ms
+2018-06-11 17:14:09,091 AUDIT [X160912][david][Thread-31]CarbonMaster.getSplit t1~(16ms)~t2~(1ms)~t3
+2018-06-11 17:14:09,091 INFO Search server status:ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}	The available value is 4
+2018-06-11 17:14:09,091 INFO Choose search server is ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}
+2018-06-11 17:14:09,132 AUDIT [X160912][david][Thread-31]Search taken time: 58 ms, t1~(17ms)~t2~(41ms)~t3
+2018-06-11 17:14:09,132 AUDIT [X160912][david][Thread-31]select table: frs_table, taken time: 58 ms
+2018-06-11 17:14:09,188 AUDIT [X160912][david][Thread-32]CarbonMaster.getSplit t1~(18ms)~t2~(1ms)~t3
+2018-06-11 17:14:09,188 INFO Search server status:ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}	The available value is 4
+2018-06-11 17:14:09,188 INFO Choose search server is ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}
+2018-06-11 17:14:09,224 AUDIT [X160912][david][Thread-32]Search taken time: 55 ms, t1~(19ms)~t2~(36ms)~t3
+2018-06-11 17:14:09,224 AUDIT [X160912][david][Thread-32]select table: frs_table, taken time: 55 ms
+2018-06-11 17:17:17,030 INFO Closing org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@757942a1: startup date [Mon Jun 11 17:13:31 CST 2018]; root of context hierarchy
+2018-06-11 17:17:17,046 INFO Unregistering JMX-exposed beans on shutdown
+2018-06-11 17:17:26,187 WARN Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-06-11 17:17:26,297 AUDIT [X160912][david][Thread-1]loaded properties: /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/carbonselect.properties
+2018-06-11 17:17:32,125 INFO Looking for @ControllerAdvice: org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@757942a1: startup date [Mon Jun 11 17:17:23 CST 2018]; root of context hierarchy
+2018-06-11 17:17:32,483 INFO Mapped "{[/select],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.select(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 17:17:32,485 INFO Mapped "{[/cache],produces=[application/json]}" onto public org.springframework.http.ResponseEntity<org.apache.carbondata.rest.model.SelectResponse> org.apache.carbondata.rest.HorizonController.cache(org.apache.carbondata.rest.model.SelectRequest) throws org.apache.carbondata.vision.common.VisionException
+2018-06-11 17:17:32,503 INFO Mapped "{[/error],produces=[text/html]}" onto public org.springframework.web.servlet.ModelAndView org.springframework.boot.autoconfigure.web.BasicErrorController.errorHtml(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)
+2018-06-11 17:17:32,503 INFO Mapped "{[/error]}" onto public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)
+2018-06-11 17:17:32,604 INFO Mapped URL path [/webjars/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:17:32,604 INFO Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:17:32,678 INFO Mapped URL path [/**/favicon.ico] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpRequestHandler]
+2018-06-11 17:17:33,000 INFO Registering beans for JMX exposure on startup
+2018-06-11 17:17:33,066 INFO Tomcat started on port(s): 8080 (http)
+2018-06-11 17:17:33,071 INFO Started Horizon in 10.703 seconds (JVM running for 11.321)
+2018-06-11 17:17:41,287 INFO FrameworkServlet 'dispatcherServlet': initialization started
+2018-06-11 17:17:41,349 INFO FrameworkServlet 'dispatcherServlet': initialization completed in 61 ms
+2018-06-11 17:17:42,221 INFO http-nio-8080-exec-1 Property file path: /home/david/Documents/code/carbonstore/../../../conf/carbon.properties
+2018-06-11 17:17:42,221 INFO http-nio-8080-exec-1 ------Using Carbon.properties --------
+2018-06-11 17:17:42,221 INFO http-nio-8080-exec-1 {}
+2018-06-11 17:17:42,228 INFO http-nio-8080-exec-1 Carbon Current data file version: V3
+2018-06-11 17:17:42,228 INFO http-nio-8080-exec-1 Blocklet Size Configured value is "64
+2018-06-11 17:17:42,228 WARN http-nio-8080-exec-1 The enable unsafe sort value "null" is invalid. Using the default value "true
+2018-06-11 17:17:42,228 WARN http-nio-8080-exec-1 The enable off heap sort value "null" is invalid. Using the default value "true
+2018-06-11 17:17:42,228 WARN http-nio-8080-exec-1 The custom block distribution value "null" is invalid. Using the default value "false
+2018-06-11 17:17:42,228 WARN http-nio-8080-exec-1 The enable vector reader value "null" is invalid. Using the default value "true
+2018-06-11 17:17:42,249 WARN http-nio-8080-exec-1 The carbon task distribution value "null" is invalid. Using the default value "block
+2018-06-11 17:17:42,250 WARN http-nio-8080-exec-1 The enable auto handoff value "null" is invalid. Using the default value "true
+2018-06-11 17:17:42,250 WARN http-nio-8080-exec-1 The specified value for property sort.inmemory.size.inmbis Invalid. Taking the default value.1024
+2018-06-11 17:17:42,367 INFO http-nio-8080-exec-1 Executor LRU cache size not configured. Initializing with driver LRU cache size.
+2018-06-11 17:17:42,370 INFO http-nio-8080-exec-1 LRU cache size not configured. Therefore default behavior will be considered and no LRU based eviction of columns will be done
+2018-06-11 17:17:42,539 INFO http-nio-8080-exec-1 Working Memory manager is created with size 536870912 with org.apache.carbondata.core.memory.UnsafeMemoryAllocator@5b8e8193
+2018-06-11 17:17:42,549 AUDIT [X160912][david][Thread-28]CarbonMaster.getSplit t1~(52ms)~t2~(373ms)~t3
+2018-06-11 17:17:42,549 AUDIT [X160912][david][Thread-28]cached table: frs_table
+2018-06-11 17:17:42,647 AUDIT [X160912][david][Thread-30]CarbonMaster.getSplit t1~(23ms)~t2~(1ms)~t3
+2018-06-11 17:17:42,654 INFO Logging to org.slf4j.impl.Log4jLoggerAdapter(org.mortbay.log) via org.mortbay.log.Slf4jLog
+2018-06-11 17:17:42,654 INFO Search server status:ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}	The available value is 4
+2018-06-11 17:17:42,654 INFO Choose search server is ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}
+2018-06-11 17:17:42,999 AUDIT [X160912][david][Thread-30]Search taken time: 376 ms, t1~(25ms)~t2~(351ms)~t3
+2018-06-11 17:17:42,999 AUDIT [X160912][david][Thread-30]select table: frs_table, taken time: 377 ms
+2018-06-11 17:17:43,057 AUDIT [X160912][david][Thread-31]CarbonMaster.getSplit t1~(15ms)~t2~(0ms)~t3
+2018-06-11 17:17:43,057 INFO Search server status:ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}	The available value is 4
+2018-06-11 17:17:43,057 INFO Choose search server is ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}
+2018-06-11 17:17:43,112 AUDIT [X160912][david][Thread-31]Search taken time: 70 ms, t1~(16ms)~t2~(54ms)~t3
+2018-06-11 17:17:43,112 AUDIT [X160912][david][Thread-31]select table: frs_table, taken time: 71 ms
+2018-06-11 17:17:43,163 AUDIT [X160912][david][Thread-32]CarbonMaster.getSplit t1~(17ms)~t2~(1ms)~t3
+2018-06-11 17:17:43,163 INFO Search server status:ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}	The available value is 4
+2018-06-11 17:17:43,163 INFO Choose search server is ServerInfo{host='127.0.0.1', port=7881, cores=4, workload=0}
+2018-06-11 17:17:43,197 AUDIT [X160912][david][Thread-32]Search taken time: 52 ms, t1~(18ms)~t2~(34ms)~t3
+2018-06-11 17:17:43,197 AUDIT [X160912][david][Thread-32]select table: frs_table, taken time: 52 ms
+2018-06-11 17:41:17,282 INFO Closing org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext@757942a1: startup date [Mon Jun 11 17:17:23 CST 2018]; root of context hierarchy
+2018-06-11 17:41:17,284 INFO Unregistering JMX-exposed beans on shutdown

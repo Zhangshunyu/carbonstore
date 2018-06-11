@@ -61,7 +61,7 @@ public class CarbonServer {
   // .../carbonstore/select/build/carbonselect/conf/server/carbonselect.properties
   public static void main(String[] args) throws IOException {
     if (args.length != 2) {
-      System.err.println("Usage: CarbonServerExample <log4j file> <properties file>");
+      System.err.println("Usage: CarbonServer <log4j file> <properties file>");
       return;
     }
     Utils.initLog4j(args[0]);

@@ -44,7 +44,10 @@ public class Utils {
     int totalSize = 288 * rowCount;
     byte[] bytes = new byte[totalSize];
     int skip = 288 * offset;
-    reader.skip(skip);
+    long len = reader.skip(skip);
+    if (len != skip) {
+      throw new IOException("skip size is not enough, please check");
+    }
     int readSize = reader.read(bytes);
     if (totalSize > readSize) {
       throw new IOException("read size is not enough, please check");

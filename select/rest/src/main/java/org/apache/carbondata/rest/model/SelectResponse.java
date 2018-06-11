@@ -22,6 +22,10 @@ import org.apache.carbondata.vision.table.Record;
 public class SelectResponse {
   private Record[] records;
 
+  public SelectResponse() {
+
+  }
+
   public SelectResponse(Record[] records) {
     this.records = records;
   }

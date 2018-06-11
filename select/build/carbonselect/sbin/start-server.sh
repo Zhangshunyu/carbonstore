@@ -21,6 +21,6 @@ if [ -z "${CARBON_HOME}" ]; then
   export CARBON_HOME="$(cd "`dirname "$0"`/.."; pwd)"
 fi
 
-nohup java -cp "${CARBON_HOME}/jars/*" -Djava.library.path=${CARBON_HOME}/lib/vision org.apache.carbondata.service.server.CarbonServerExample ${CARBON_HOME}/conf/server/log4j.properties ${CARBON_HOME}/conf/server/carbonselect.properties > nohup.out 2>&1 &
+nohup java -cp "${CARBON_HOME}/jars/*" -Djava.library.path=${CARBON_HOME}/lib/vision org.apache.carbondata.service.server.CarbonServer ${CARBON_HOME}/conf/server/log4j.properties ${CARBON_HOME}/conf/server/carbonselect.properties > nohup.out 2>&1 &
 
 echo $(hostname) started

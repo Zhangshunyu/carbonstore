@@ -17,6 +17,10 @@
 # limitations under the License.
 #
 
-ps -ef|grep CarbonServer| grep carbonselect | awk '{print $2}' | xargs kill -9 $1
+if [ -z "${CARBON_HOME}" ]; then
+  export CARBON_HOME="$(cd "`dirname "$0"`/.."; pwd)"
+fi
 
-echo $(hostname) stoped
+nohup java -cp "${CARBON_HOME}/jars/*" -Dcarbonselect.rest.home=${CARBON_HOME} org.apache.carbondata.rest.Horizon > nohup.out 2>&1 &
+
+echo $(hostname) rest started

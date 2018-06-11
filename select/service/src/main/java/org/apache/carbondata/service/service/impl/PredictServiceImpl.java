@@ -42,14 +42,14 @@ import org.apache.hadoop.mapreduce.RecordReader;
 
 public class PredictServiceImpl implements PredictService {
 
+  private static LogService LOGGER =
+      LogServiceFactory.getLogService(PredictServiceImpl.class.getName());
+
   private CarbonServer server;
 
   public PredictServiceImpl(CarbonServer server) {
     this.server = server;
   }
-
-  private static LogService LOGGER =
-      LogServiceFactory.getLogService(PredictServiceImpl.class.getName());
 
   @Override public boolean loadLibrary(String libName) {
     return LibraryManager.loadLibrary(libName);

@@ -145,13 +145,13 @@ public class CarbonScheduler {
         }
       }
     }
-    Set<ServerInfo> serverInfoSet = map.keySet();
     int min = Integer.MAX_VALUE;
-    for (ServerInfo serverInfo : serverInfoSet) {
-      int number = map.get(serverInfo).getNumber(cacheLevel);
+
+    for (Map.Entry<ServerInfo, ServerCacheInfo> entry : map.entrySet()) {
+      int number = entry.getValue().getNumber(cacheLevel);
       if (number < min) {
         min = number;
-        chooseServerInfo = serverInfo;
+        chooseServerInfo = entry.getKey();
       }
     }
     Log.info("Choose Cache Server:" +

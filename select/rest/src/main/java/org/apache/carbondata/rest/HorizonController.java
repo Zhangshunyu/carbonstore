@@ -16,11 +16,13 @@
  */
 package org.apache.carbondata.rest;
 
-import java.io.File;
 import java.io.IOException;
 
+import org.apache.carbondata.common.logging.LogService;
+import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.rest.model.SelectRequest;
 import org.apache.carbondata.rest.model.SelectResponse;
+import org.apache.carbondata.rest.model.validate.RequestValidator;
 import org.apache.carbondata.service.client.LocalStoreProxy;
 import org.apache.carbondata.vision.common.VisionException;
 import org.apache.carbondata.vision.table.Record;
@@ -32,31 +34,41 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController
-public class HorizonController {
+@RestController public class HorizonController {
+
+  private static LogService LOGGER =
+      LogServiceFactory.getLogService(HorizonController.class.getName());
 
   private LocalStoreProxy proxy;
 
-  // We cache following number of tables in the service,
-  // table name is "tableN" where N is [0, numTables)
-  private int numTables = 100;
-
   public HorizonController() throws IOException, VisionException {
-    String conf = new File(".").getAbsolutePath() + "/select/build/carbonselect/conf";
-    proxy = new LocalStoreProxy(conf + "/client/log4j.properties",
-        conf + "/model", conf + "/feature", conf + "/carbonselect.properties");
-    proxy.cacheTables(numTables);
+    String homePath = System.getProperty("carbonselect.rest.home");
+    if (homePath == null || homePath.isEmpty()) {
+      throw new VisionException("can not find carbonselect.rest.home");
+    }
+    proxy = new LocalStoreProxy(homePath + "/conf/client/log4j.properties",
+        homePath + "/lib/third/intellifData", homePath + "/conf/client/carbonselect.properties");
+  }
+
+  @RequestMapping(value = "/cache", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<SelectResponse> cache(@RequestBody SelectRequest request)
+      throws VisionException {
+    RequestValidator.validateForCache(request);
+    proxy.cacheTable(request.getTableName());
+    LOGGER.audit("cached table: " + request.getTableName());
+    return new ResponseEntity<>(new SelectResponse(new Record[0]), HttpStatus.OK);
   }
 
   @RequestMapping(value = "/select", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<SelectResponse> select(@RequestBody SelectRequest request)
       throws VisionException {
-    String tableName = request.getTableName();
-    if (!tableName.startsWith("table")) {
-      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-    }
-    byte[] searchFeature = request.getSearchFeature();
-    Record[] result = proxy.select(tableName, searchFeature);
+    long start = System.currentTimeMillis();
+    RequestValidator.validateForSelect(request);
+    Record[] result = proxy.select(request.getTableName(), request.getSearchFeature());
+    long end = System.currentTimeMillis();
+    LOGGER.audit(
+        "select table: " + request.getTableName() + ", taken time: " + (end - start) + " ms");
     return new ResponseEntity<>(new SelectResponse(result), HttpStatus.OK);
   }
+
 }

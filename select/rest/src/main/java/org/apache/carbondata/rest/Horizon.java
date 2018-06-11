@@ -22,6 +22,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class Horizon {
 
+  // jvm arguments:
+  // -Dcarbonselect.rest.home=/home/david/Documents/code/carbonstore/select/build/carbonselect
   public static void main(String[] args) {
     SpringApplication.run(Horizon.class, args);
   }

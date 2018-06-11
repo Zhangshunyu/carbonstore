@@ -28,7 +28,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.service.Utils;
 import org.apache.carbondata.vision.algorithm.Algorithm;
 import org.apache.carbondata.vision.common.VisionConfiguration;
@@ -41,10 +40,8 @@ import org.apache.carbondata.vision.table.Table;
 public class LocalStoreProxy {
 
   private CarbonClient client;
-  private Table[] tables;
   private Model model;
   private Algorithm algorithm;
-  private byte[] searchFeature;
 
   // program args:
   // /home/david/Documents/code/carbonstore/select/build/carbonselect/conf/client/log4j.properties
@@ -58,15 +55,17 @@ public class LocalStoreProxy {
           "Usage: LocalStoreProxy <log4j> <model path> <result.bin> <properties file>");
       return;
     }
-    LocalStoreProxy proxy = new LocalStoreProxy(args[0], args[1], args[2], args[3]);
-    proxy.cacheTables(3);
-    Record[] result = proxy.select("table0", proxy.searchFeature);
+    LocalStoreProxy proxy = new LocalStoreProxy(args[0], args[1], args[3]);
+    // create PredictContext
+    byte[] searchFeature = Utils.generateFeatureSetExample(args[2], 1, 0);
+    proxy.cacheTable("table0");
+    Record[] result = proxy.select("table0", searchFeature);
     Utils.printRecords(result);
-    proxy.test(10);
+    proxy.test(new Table("table0"),10, searchFeature);
   }
 
   public LocalStoreProxy(String log4jPropertyFilePath, String modelFilePath,
-      String featureSetFilePath, String propertyFilePath) throws VisionException, IOException {
+      String propertyFilePath) throws VisionException, IOException {
 
     Utils.initLog4j(log4jPropertyFilePath);
 
@@ -86,8 +85,6 @@ public class LocalStoreProxy {
     algorithm =
         new Algorithm("org.apache.carbondata.vision.algorithm.impl.KNNSearch", "1.0");
 
-    // create PredictContext
-    searchFeature = Utils.generateFeatureSetExample(featureSetFilePath, 1, 0);
   }
 
   private CarbonClient createClient(String filePath) throws VisionException {
@@ -98,19 +95,9 @@ public class LocalStoreProxy {
     return client;
   }
 
-  public void cacheTables(int numTables) throws VisionException {
-    if (numTables <= 0) {
-      throw new IllegalArgumentException("numTables should be greater than zero");
-    }
-    tables = new Table[numTables];
-    for (int i = 0; i < numTables; i++) {
-      Table table = new Table("table" + i);
-      CarbonTable carbonTable = client.cacheTable(table, true);
-      if (carbonTable == null) {
-        throw new VisionException("can not found the table: " + table.getPresentName());
-      }
-      tables[i] = table;
-    }
+  public void cacheTable(String tableName) throws VisionException {
+    Table table = new Table(tableName);
+    client.cacheTable(table, true);
   }
 
   public Record[] select(String tableName, byte[] searchFeature) throws VisionException {
@@ -129,12 +116,13 @@ public class LocalStoreProxy {
   }
 
   // for testing purpose only
-  private void test(int numThreads) throws InterruptedException, ExecutionException {
+  private void test(Table table, int numThreads, byte[] searchFeature)
+      throws InterruptedException, ExecutionException {
     PredictContext context = PredictContext
         .builder()
         .algorithm(algorithm)
         .model(model)
-        .table(tables[0])
+        .table(table)
         .conf(VisionConfiguration.SELECT_SEARCH_VECTOR, searchFeature)
         .conf(VisionConfiguration.SELECT_TOP_N, 10)
         .conf(VisionConfiguration.SELECT_VECTOR_SIZE, 288)
@@ -157,7 +145,10 @@ public class LocalStoreProxy {
   }
 
   static class QueryTask implements Callable<Record[]>, Serializable {
-    CarbonClient client;
+
+    private static final long serialVersionUID = 1L;
+
+    transient CarbonClient client;
     PredictContext context;
 
     public QueryTask(CarbonClient client, PredictContext context) {

@@ -21,6 +21,14 @@ public class SelectRequest {
   private String tableName;
   private byte[] searchFeature;
 
+  public SelectRequest() {
+
+  }
+
+  public SelectRequest(String tableName) {
+    this.tableName = tableName;
+  }
+
   public SelectRequest(String tableName, byte[] searchFeature) {
     this.tableName = tableName;
     this.searchFeature = searchFeature;

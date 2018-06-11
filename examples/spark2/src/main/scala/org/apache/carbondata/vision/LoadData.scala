@@ -34,7 +34,7 @@ object LoadData {
   val carbon = ExampleUtils.createCarbonSession("FRS", 1)
 
   def main(args: Array[String]): Unit = {
-    val createTable = true
+    val createTable = false
     if (createTable) {
       val filePath = rootPath + "/examples/spark2/src/main/resources/frs.csv"
       generateData(rootPath + "/examples/spark2/src/main/resources/result.bin",
@@ -53,6 +53,7 @@ object LoadData {
         .sql(s"load data local inpath '${ filePath }' into table default.frs_table options" +
              s"('header'='false')")
     }
+    carbon.sql("select count(id) from default.frs_table limit 10").show(false)
     carbon.sql("select * from default.frs_table where id in (100, 100000, 800000)").show(false)
 
     carbon.sql("select * from default.frs_table limit 10").show(false)
