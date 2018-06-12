@@ -44,8 +44,10 @@ public class PushDownUdfResultCollector extends DictionaryBasedResultCollector {
   public List<Object[]> collectResultInRow(BlockletScannedResult scannedResult, int batchSize) {
     List<Object[]> listBaseResult = new ArrayList<>(batchSize);
     try {
+      String selectId = "";
       if (entityRecognition != null) {
         entityRecognition.init(batchSize);
+        selectId = entityRecognition.getSelectId();
       }
 
       long startTime = System.currentTimeMillis();
@@ -83,7 +85,8 @@ public class PushDownUdfResultCollector extends DictionaryBasedResultCollector {
         }
       }
       long endTime = System.currentTimeMillis();
-      LOGGER.audit("collect result taken time: " + (endTime - startTime) + " ms");
+      LOGGER.audit(
+          "[" + selectId + "] collect result taken time: " + (endTime - startTime) + " ms");
       if (entityRecognition != null) {
         return entityRecognition.recognition(listBaseResult, columnCount);
       }

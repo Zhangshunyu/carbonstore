@@ -20,6 +20,7 @@ package org.apache.carbondata.rest.model;
 public class SelectRequest {
   private String tableName;
   private byte[] searchFeature;
+  private String selectId;
 
   public SelectRequest() {
 
@@ -40,5 +41,13 @@ public class SelectRequest {
 
   public byte[] getSearchFeature() {
     return searchFeature;
+  }
+
+  public String getSelectId() {
+    return selectId;
+  }
+
+  public void setSelectId(String selectId) {
+    this.selectId = selectId;
   }
 }

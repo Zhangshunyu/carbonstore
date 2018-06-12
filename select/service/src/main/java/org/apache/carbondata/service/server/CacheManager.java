@@ -34,7 +34,8 @@ import org.apache.hadoop.fs.Path;
 
 public class CacheManager {
 
-  private static LogService LOGGER = LogServiceFactory.getLogService(CacheManager.class.getName());
+  private static LogService LOGGER =
+      LogServiceFactory.getLogService(CacheManager.class.getName());
 
   private Map<Table, Long> memoryCache = new HashMap<Table, Long>();
 
@@ -43,42 +44,52 @@ public class CacheManager {
   public CacheManager() {
   }
 
-  public void cacheTableInMemory(Table table) {
-    if (memoryCache.get(table) == null) {
-      // TODO
-      LOGGER.audit("cached table in memory: " + table);
+  public void cacheTableInMemory(Table table, String sourcePath, String targetPath,
+      Configuration configuration) throws VisionException {
+    if (memoryCache.get(table) != null) {
+      return;
     }
+
+    copyFilesToCache(sourcePath, targetPath, configuration);
+    memoryCache.put(table, System.currentTimeMillis());
+    LOGGER.audit("cached table in memory: " + table);
   }
 
   public void cacheTableToDisk(Table table, String sourcePath, String targetPath,
       Configuration configuration) throws VisionException {
-    if (diskCache.get(table) == null) {
-      try {
-        if (FileFactory.isFileExist(targetPath)) {
-          boolean status = FileFactory.deleteAllFilesOfDir(new File(targetPath));
-          if (!status) {
-            throw new VisionException("Failed to delete the cache table: " + targetPath);
-          }
-        }
-      } catch (IOException e) {
-        String message = "Failed to check whether the cache table is exists or not";
-        LOGGER.error(e);
-        throw new VisionException(message);
-      }
+    if (diskCache.get(table) != null) {
+      return;
+    }
 
-      FileSystem fs = null;
-      try {
-        Path source = new Path(sourcePath);
-        fs = source.getFileSystem(configuration);
-        fs.copyToLocalFile(false, source, new Path(targetPath), false);
-      } catch (Exception e) {
-        String message = "Failed to copy the table to local cache store " + sourcePath + " -> " +
-            targetPath;
-        LOGGER.error(e);
-        throw new VisionException(message);
+    copyFilesToCache(sourcePath, targetPath, configuration);
+    diskCache.put(table, System.currentTimeMillis());
+    LOGGER.audit("cached table in disk: " + table);
+  }
+
+  private void copyFilesToCache(String sourcePath, String targetPath, Configuration configuration)
+      throws VisionException {
+    try {
+      if (FileFactory.isFileExist(targetPath)) {
+        boolean status = FileFactory.deleteAllFilesOfDir(new File(targetPath));
+        if (!status) {
+          throw new VisionException("Failed to delete the cache table: " + targetPath);
+        }
       }
-      diskCache.put(table, System.currentTimeMillis());
-      LOGGER.audit("cached table in disk: " + table);
+    } catch (IOException e) {
+      String message = "Failed to check whether the cache table is exists or not";
+      LOGGER.error(e);
+      throw new VisionException(message);
+    }
+
+    try {
+      Path source = new Path(sourcePath);
+      FileSystem fs = source.getFileSystem(configuration);
+      fs.copyToLocalFile(false, source, new Path(targetPath), false);
+    } catch (IOException e) {
+      String message =
+          "Failed to copy the table to local cache store " + sourcePath + " -> " + targetPath;
+      LOGGER.error(e);
+      throw new VisionException(message);
     }
   }
 

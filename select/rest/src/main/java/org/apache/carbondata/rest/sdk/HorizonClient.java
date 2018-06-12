@@ -18,11 +18,11 @@
 package org.apache.carbondata.rest.sdk;
 
 import java.io.IOException;
+import java.util.UUID;
 
 import org.apache.carbondata.rest.model.SelectRequest;
 import org.apache.carbondata.rest.model.SelectResponse;
 import org.apache.carbondata.service.Utils;
-import org.apache.carbondata.vision.common.VisionUtil;
 import org.apache.carbondata.vision.table.Record;
 
 import org.springframework.web.client.RestTemplate;
@@ -48,19 +48,24 @@ public class HorizonClient {
     client.cache(tableName);
 
     long t1 = System.currentTimeMillis();
-    Record[] records = client.select(tableName, searchFeature);
+    String selectId1 = UUID.randomUUID().toString();
+    Record[] records = client.select(tableName, searchFeature, selectId1);
     Utils.printRecords(records);
 
     long t2 = System.currentTimeMillis();
-    records = client.select(tableName, searchFeature);
+    String selectId2 = UUID.randomUUID().toString();
+    records = client.select(tableName, searchFeature, selectId2);
     Utils.printRecords(records);
 
     long t3 = System.currentTimeMillis();
-    records = client.select(tableName, searchFeature);
+    String selectId3 = UUID.randomUUID().toString();
+    records = client.select(tableName, searchFeature, selectId3);
     Utils.printRecords(records);
 
     long t4 = System.currentTimeMillis();
-    System.out.println(VisionUtil.printlnTime(t1, t2, t3, t4));
+    System.out.println("[" + selectId1 + "] end to end taken time: " + (t2 - t1) + " ms");
+    System.out.println("[" + selectId2 + "] end to end taken time: " + (t3 - t2) + " ms");
+    System.out.println("[" + selectId3 + "] end to end taken time: " + (t4 - t3) + " ms");
   }
 
   public HorizonClient(String serviceUri) {
@@ -73,8 +78,9 @@ public class HorizonClient {
     restTemplate.postForObject(serviceUri + "/cache", request, SelectResponse.class);
   }
 
-  public Record[] select(String tableName, byte[] searchFeature) {
+  public Record[] select(String tableName, byte[] searchFeature, String selectId) {
     SelectRequest request = new SelectRequest(tableName, searchFeature);
+    request.setSelectId(selectId);
     RestTemplate restTemplate = new RestTemplate();
     SelectResponse response =
         restTemplate.postForObject(serviceUri + "/select", request, SelectResponse.class);

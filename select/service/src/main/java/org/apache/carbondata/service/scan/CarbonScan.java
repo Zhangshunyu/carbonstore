@@ -42,6 +42,7 @@ public class CarbonScan {
 
   public static RecordReader<Void, Object> createRecordReader(CarbonMultiBlockSplit split,
       PredictContext context, CarbonTable carbonTable) throws VisionException {
+    String selectId = context.getConf().selectId();
     String[] projection = context.getConf().projection();
     String[] projectionWithFeature = new String[projection.length + 1];
     System.arraycopy(projection,0, projectionWithFeature, 0, projection.length);
@@ -58,7 +59,9 @@ public class CarbonScan {
     queryModel.setVectorReader(false);
     queryModel.setForcedDetailRawQuery(false);
     queryModel.setRequiredRowId(false);
-    queryModel.setPredictContext(context);
+    if (context.getConf().searchVector() != null) {
+      queryModel.setPredictContext(context);
+    }
 
     int batchSize = context.getConf().batchSize();
     if (batchSize > 0) {
@@ -72,13 +75,13 @@ public class CarbonScan {
       long t1 = System.currentTimeMillis();
       reader.initialize(split, null);
       long t2 = System.currentTimeMillis();
-      LOGGER.audit("CarbonScan initialize taken time: " + (t2 - t1) + " ms");
+      LOGGER.audit("[" + selectId + "] CarbonScan initialize taken time: " + (t2 - t1) + " ms");
     } catch (InterruptedException e) {
-      String message = "Interrupted RecordReader initialization";
+      String message = "[" + selectId + "] Interrupted RecordReader initialization";
       LOGGER.error(e, message);
       throw new VisionException(message);
     } catch (IOException e) {
-      String message = "Failed to initialize RecordReader";
+      String message = "[" + selectId + "] Failed to initialize RecordReader";
       LOGGER.error(e, message);
       throw new VisionException(message);
     }

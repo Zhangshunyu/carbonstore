@@ -20,3 +20,4 @@ thirdlib/
 cmake-build-debug/
 *.so
 *.bin
+*.log

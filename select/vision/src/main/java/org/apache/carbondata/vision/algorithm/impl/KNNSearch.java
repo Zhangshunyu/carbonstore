@@ -30,13 +30,13 @@ public class KNNSearch implements AlgorithmExecutor<float[]> {
 
   private static LogService LOGGER = LogServiceFactory.getLogService(KNNSearch.class.getName());
 
-  private String executionId;
+  private String selectId;
   private Feature searchFeature;
   private String modelPath;
   private boolean useOffHeap;
 
   public KNNSearch(PredictContext context) {
-    executionId = context.getConf().executionId();
+    selectId = context.getConf().selectId();
     searchFeature = new FeatureBytes();
     searchFeature.setValue(context.getConf().searchVector());
     modelPath = context.getModel().getModelFilePath();
@@ -51,14 +51,14 @@ public class KNNSearch implements AlgorithmExecutor<float[]> {
     if (useOffHeap) {
       long searchAddress = searchFeature.getAddress();
       long featureSetAddress = featureSet.getAddress();
-      LOGGER.audit("[" + executionId + "]KNNSearch call calcDistanceSetNative");
+      LOGGER.audit("[" + selectId + "] KNNSearch call calcDistanceSetNative");
       calcDistanceSetNative(searchAddress, featureSetAddress, distances, modelPath);
-      LOGGER.audit("[" + executionId + "]KNNSearch finished.");
+      LOGGER.audit("[" + selectId + "] KNNSearch finished.");
       OffHeapAllocator.freeMemory(searchAddress);
     } else {
-      LOGGER.audit("[" + executionId + "]KNNSearch call calcDistanceSet");
+      LOGGER.audit("[" + selectId + "] KNNSearch call calcDistanceSet");
       calcDistanceSet(searchFeature.getBytes(), featureSet.getBytes(), distances, modelPath);
-      LOGGER.audit("[" + executionId + "]KNNSearch finished.");
+      LOGGER.audit("[" + selectId + "] KNNSearch finished.");
     }
     return distances;
   }

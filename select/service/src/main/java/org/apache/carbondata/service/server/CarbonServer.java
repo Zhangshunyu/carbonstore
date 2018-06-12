@@ -20,35 +20,45 @@ package org.apache.carbondata.service.server;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
+import org.apache.carbondata.core.metadata.converter.SchemaConverter;
+import org.apache.carbondata.core.metadata.converter.ThriftWrapperSchemaConverterImpl;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
+import org.apache.carbondata.core.metadata.schema.table.TableInfo;
+import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.hadoop.CarbonInputSplit;
 import org.apache.carbondata.hadoop.CarbonMultiBlockSplit;
 import org.apache.carbondata.service.Utils;
+import org.apache.carbondata.service.scan.CarbonScan;
 import org.apache.carbondata.service.service.PredictService;
 import org.apache.carbondata.service.service.impl.PredictServiceImpl;
-import org.apache.carbondata.store.LocalCarbonStore;
-import org.apache.carbondata.store.MetaCachedCarbonStore;
 import org.apache.carbondata.vision.cache.CacheLevel;
 import org.apache.carbondata.vision.common.VisionConfiguration;
 import org.apache.carbondata.vision.common.VisionException;
+import org.apache.carbondata.vision.predict.PredictContext;
+import org.apache.carbondata.vision.table.Record;
 import org.apache.carbondata.vision.table.Table;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.RecordReader;
 
 public class CarbonServer {
 
   private static LogService LOGGER = LogServiceFactory.getLogService(CarbonServer.class.getName());
 
-  private MetaCachedCarbonStore store;
+  private Map<Table, byte[]> serializedTables = new HashMap<>();
+
+  private Map<Table, CarbonTable> tables = new HashMap<>();
 
   private VisionConfiguration conf;
 
@@ -72,16 +82,26 @@ public class CarbonServer {
 
   public CarbonServer(VisionConfiguration conf) {
     this.conf = conf;
-    store = new LocalCarbonStore();
     cacheManager = new CacheManager();
   }
 
-  public CarbonTable getTable(Table table) throws VisionException {
+  public byte[] getTable(Table table) throws VisionException {
+    byte[] serializedTable = serializedTables.get(table);
+    if (serializedTable != null) {
+      return serializedTable;
+    }
+
     String tablePath = getTableFolder(table);
     try {
-      return store.getTable(tablePath);
+      org.apache.carbondata.format.TableInfo tableInfo =
+          CarbonUtil.readSchemaFile(CarbonTablePath.getSchemaFilePath(tablePath));
+      SchemaConverter schemaConverter = new ThriftWrapperSchemaConverterImpl();
+      TableInfo tableInfo1 =
+          schemaConverter.fromExternalToWrapperTableInfo(tableInfo, "", "", "");
+      tableInfo1.setTablePath(tablePath);
+      return tableInfo1.serialize();
     } catch (IOException e) {
-      String message = "Failed to get table from CarbonServer store";
+      String message = "Failed to get table from " + tablePath;
       LOGGER.error(e, message);
       throw new VisionException(message);
     }
@@ -92,46 +112,69 @@ public class CarbonServer {
         table.getTableName();
   }
 
-  public String getCacheFolder(Table table) {
-    return conf.cacheLocation() + File.separator + table.getDatabase() + File.separator +
+  public String getMemoryFolder(Table table) {
+    return conf.memoryLocation() + File.separator + table.getDatabase() + File.separator +
         table.getTableName();
   }
 
-  public void cacheTable(Table table, CacheLevel level) throws VisionException {
+  public String getDiskFolder(Table table) {
+    return conf.diskLocation() + File.separator + table.getDatabase() + File.separator +
+        table.getTableName();
+  }
+
+  public CarbonTable cacheMeta(Table table) throws VisionException {
+    CarbonTable carbonTable = tables.get(table);
+    if (carbonTable != null) {
+      return carbonTable;
+    }
+
+    try {
+      byte[] bytes = getTable(table);
+      carbonTable = CarbonTable.buildFromTableInfo(TableInfo.deserialize(bytes));
+      tables.put(table, carbonTable);
+      return carbonTable;
+    } catch (IOException e) {
+      String message = "Failed to cache meta: " + table.getPresentName();
+      LOGGER.error(e, message);
+      throw new VisionException(message);
+    }
+  }
+
+  public void cacheData(Table table, CacheLevel level) throws VisionException {
     if (CacheLevel.Memory == level) {
-      cacheManager.cacheTableInMemory(table);
+      cacheManager.cacheTableInMemory(table, getTableFolder(table), getMemoryFolder(table),
+          FileFactory.getConfiguration());
     } else if (CacheLevel.Disk == level) {
-      cacheManager.cacheTableToDisk(table, getTableFolder(table), getCacheFolder(table),
+      cacheManager.cacheTableToDisk(table, getTableFolder(table), getDiskFolder(table),
           FileFactory.getConfiguration());
     }
   }
 
-  public CarbonMultiBlockSplit useCacheTable(Table table,
-      CarbonMultiBlockSplit multiBlockSplit) {
-    if (cacheManager.getMemoryCache(table) != null) {
-      // TODO
-      return multiBlockSplit;
-    } else if (cacheManager.getDiskCache(table) != null) {
+  // update file path to cache path
+  private CarbonMultiBlockSplit useCacheTable(Table table, CarbonMultiBlockSplit multiBlockSplit,
+      String selectId) {
+    boolean useMemory = cacheManager.getMemoryCache(table) != null;
+    boolean useDisk = cacheManager.getDiskCache(table) != null;
+
+    if (useMemory || useDisk) {
       List<CarbonInputSplit> splits = multiBlockSplit.getAllSplits();
       List<InputSplit> cachedSplits = new ArrayList<>(splits.size());
       try {
-        for (CarbonInputSplit split: splits) {
-          String fileName =
-              CarbonTablePath.DataFileUtil.getFileName(split.getPath().toString());
-          String cacheTablePath = getCacheFolder(table);
+        for (CarbonInputSplit split : splits) {
+          String fileName = CarbonTablePath.DataFileUtil.getFileName(split.getPath().toString());
+          String cacheTablePath = null;
+          if (useMemory) {
+            cacheTablePath = getMemoryFolder(table);
+          } else if (useDisk) {
+            cacheTablePath = getDiskFolder(table);
+          }
           String segmentPath =
               CarbonTablePath.getSegmentPath(cacheTablePath, split.getSegmentId());
           String cacheFilePath = segmentPath + File.separator + fileName;
           CarbonInputSplit cachedSplit =
-              new CarbonInputSplit(
-                  split.getSegmentId(),
-                  split.getBlockletId(),
-                  new Path(cacheFilePath),
-                  split.getStart(),
-                  split.getLength(),
-                  split.getLocations(),
-                  split.getVersion(),
-                  split.getDeleteDeltaFiles(),
+              new CarbonInputSplit(split.getSegmentId(), split.getBlockletId(),
+                  new Path(cacheFilePath), split.getStart(), split.getLength(),
+                  split.getLocations(), split.getVersion(), split.getDeleteDeltaFiles(),
                   split.getDataMapWritePath());
           cachedSplit.setDetailInfo(split.getDetailInfo());
           cachedSplits.add(cachedSplit);
@@ -139,9 +182,47 @@ public class CarbonServer {
       } catch (IOException e) {
         LOGGER.error(e);
       }
+      LOGGER.audit("[" + selectId + "] table " + table.getPresentName() + " is using " +
+          (useMemory ? "memory" : "disk") + "cache");
       return new CarbonMultiBlockSplit(cachedSplits);
     }
+
+    LOGGER.audit("[" + selectId + "] table " + table.getPresentName() + " doesn't hit cache");
     return multiBlockSplit;
+  }
+
+  public Record[] search(CarbonMultiBlockSplit split, PredictContext context)
+      throws VisionException {
+    long startTime = System.currentTimeMillis();
+    String selectId = context.getConf().selectId();
+    try {
+      CarbonTable carbonTable = tables.get(context.getTable());
+      if (carbonTable == null) {
+        LOGGER.audit("[" + selectId + "] CarbonServer cache meta during search.");
+        carbonTable = cacheMeta(context.getTable());
+      }
+      CarbonMultiBlockSplit cachedSplit = useCacheTable(context.getTable(), split, selectId);
+      RecordReader<Void, Object> reader =
+          CarbonScan.createRecordReader(cachedSplit, context, carbonTable);
+      List<Object> result = new ArrayList<>();
+      while (reader.nextKeyValue()) {
+        result.add(reader.getCurrentValue());
+      }
+      Record[] records = new Record[result.size()];
+      for (int i = 0; i < records.length; i++) {
+        records[i] = new Record((Object[]) result.get(i));
+      }
+      return records;
+    } catch (Exception e) {
+      String message = "[" + selectId + "] Failed to search feature on table: " +
+          context.getTable().getPresentName();
+      LOGGER.error(e, message);
+      throw new VisionException(message);
+    } finally {
+      long endTime = System.currentTimeMillis();
+      LOGGER.audit("[" + selectId + "] CarbonServer search table: " +
+          context.getTable().getPresentName() + " ,taken time: " + (endTime - startTime) + " ms");
+    }
   }
 
   public void start() throws IOException {

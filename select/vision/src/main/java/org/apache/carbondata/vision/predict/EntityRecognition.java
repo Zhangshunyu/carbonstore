@@ -19,13 +19,11 @@ package org.apache.carbondata.vision.predict;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.vision.algorithm.AlgorithmExecutor;
 import org.apache.carbondata.vision.algorithm.AlgorithmExecutorFactory;
-import org.apache.carbondata.vision.common.VisionConfiguration;
 import org.apache.carbondata.vision.common.VisionUtil;
 import org.apache.carbondata.vision.feature.FeatureSet;
 import org.apache.carbondata.vision.feature.FeatureSetFactory;
@@ -35,20 +33,18 @@ public class EntityRecognition {
   private static LogService LOGGER =
       LogServiceFactory.getLogService(EntityRecognition.class.getName());
 
-  private String executionId;
   private boolean useOffHeap = true;
   private AlgorithmExecutor<float[]> algorithm;
   private int topN;
   private int featureVectorSize;
   private FeatureSet featureSet;
+  private String selectId;
 
   public EntityRecognition(PredictContext context) {
     topN = context.getConf().topN();
     featureVectorSize = context.getConf().vectorSize();
-
-    executionId = UUID.randomUUID().toString();
-    context.getConf().conf(VisionConfiguration.SELECT_EXECUTION_ID, executionId);
     algorithm = AlgorithmExecutorFactory.getAlgorithmExecutor(context);
+    selectId = context.getConf().selectId();
   }
 
   public void init(int batchSize) {
@@ -56,7 +52,7 @@ public class EntityRecognition {
       featureSet = FeatureSetFactory.createFeatureSet(useOffHeap);
       featureSet.init(((long) batchSize) * featureVectorSize);
       algorithm.init(useOffHeap);
-      LOGGER.audit("[" + executionId + "] EntityRecognition batchSize: " + batchSize);
+      LOGGER.audit("[" + selectId + "] EntityRecognition batchSize: " + batchSize);
     }
   }
 
@@ -70,7 +66,7 @@ public class EntityRecognition {
     long t2 = System.currentTimeMillis();
     List<Object[]> topRows = getTopN(result, rows, columnCount);
     long t3 = System.currentTimeMillis();
-    LOGGER.audit("recognition taken time: " + (t3 - t1) + " ms, detail: " +
+    LOGGER.audit("[" + selectId + "] recognition taken time: " + (t3 - t1) + " ms, detail: " +
         "t1~(" + (t2 - t1) + ")~t2~(" + (t3 - t2) + ")~t3");
     return topRows;
   }
@@ -102,5 +98,9 @@ public class EntityRecognition {
     if (featureSet != null) {
       featureSet.finish();
     }
+  }
+
+  public String getSelectId() {
+    return selectId;
   }
 }

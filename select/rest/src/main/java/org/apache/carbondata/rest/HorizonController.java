@@ -17,6 +17,7 @@
 package org.apache.carbondata.rest;
 
 import java.io.IOException;
+import java.util.UUID;
 
 import org.apache.carbondata.common.logging.LogService;
 import org.apache.carbondata.common.logging.LogServiceFactory;
@@ -47,7 +48,8 @@ import org.springframework.web.bind.annotation.RestController;
       throw new VisionException("can not find carbonselect.rest.home");
     }
     proxy = new LocalStoreProxy(homePath + "/conf/client/log4j.properties",
-        homePath + "/lib/third/intellifData", homePath + "/conf/client/carbonselect.properties");
+        homePath + "/lib/third/intellifData",
+        homePath + "/conf/client/carbonselect.properties");
   }
 
   @RequestMapping(value = "/cache", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -55,7 +57,7 @@ import org.springframework.web.bind.annotation.RestController;
       throws VisionException {
     RequestValidator.validateForCache(request);
     proxy.cacheTable(request.getTableName());
-    LOGGER.audit("cached table: " + request.getTableName());
+    LOGGER.audit("HorizonController cached table: " + request.getTableName());
     return new ResponseEntity<>(new SelectResponse(new Record[0]), HttpStatus.OK);
   }
 
@@ -64,10 +66,14 @@ import org.springframework.web.bind.annotation.RestController;
       throws VisionException {
     long start = System.currentTimeMillis();
     RequestValidator.validateForSelect(request);
-    Record[] result = proxy.select(request.getTableName(), request.getSearchFeature());
+    String selectId = request.getSelectId();
+    if (selectId == null || selectId.isEmpty()) {
+      selectId = UUID.randomUUID().toString();
+    }
+    Record[] result = proxy.select(request.getTableName(), request.getSearchFeature(), selectId);
     long end = System.currentTimeMillis();
-    LOGGER.audit(
-        "select table: " + request.getTableName() + ", taken time: " + (end - start) + " ms");
+    LOGGER.audit("[" + selectId +  "] HorizonController select table: " + request.getTableName() +
+        ", take time: " + (end - start) + " ms");
     return new ResponseEntity<>(new SelectResponse(result), HttpStatus.OK);
   }
 

@@ -34,7 +34,9 @@ public interface PredictService extends VersionedProtocol {
 
   Model loadModel(String modelPath) throws VisionException;
 
-  byte[] cacheTable(Table table, int cacheLevel) throws VisionException;
+  byte[] getTable(Table table) throws VisionException;
+
+  void cacheTable(Table table, int cacheLevel) throws VisionException;
 
   Record[] search(CarbonMultiBlockSplit split, PredictContext context) throws VisionException;
 }

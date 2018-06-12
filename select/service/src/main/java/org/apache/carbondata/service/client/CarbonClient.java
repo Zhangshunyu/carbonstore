@@ -67,39 +67,53 @@ public class CarbonClient {
     return scheduler.loadModel(modelPath);
   }
 
-  public CarbonTable cacheTable(Table table, boolean allNode) throws VisionException {
+  private CarbonTable getTable(Table table, String selectId) throws VisionException {
     try {
-      // CacheLevel Disk
-      TableInfo tableInfo = TableInfo.deserialize(
-          scheduler.cacheTable(table, CacheLevel.Disk.getIndex(), allNode, cache.keySet()));
+      TableInfo tableInfo = TableInfo.deserialize(scheduler.getTable(table));
       CarbonTable carbonTable = CarbonTable.buildFromTableInfo(tableInfo);
       // cache metadata and index
-      CarbonMaster.getSplit(carbonTable, null);
+      CarbonMaster.getSplit(carbonTable, null, selectId);
       cache.put(table, carbonTable);
       return carbonTable;
     } catch (IOException e) {
-      String message = "Failed to cache table: " + table.getPresentName();
+      String message = "Failed to deserialize table: " + table.getPresentName();
       LOGGER.error(e, message);
       throw new VisionException(message);
     }
   }
 
+  public CarbonTable cacheTable(Table table) throws VisionException {
+    // one memory, two disk
+    scheduler.cacheTable(table, CacheLevel.Memory);
+    scheduler.cacheTable(table, CacheLevel.Disk);
+    scheduler.cacheTable(table, CacheLevel.Disk);
+
+    return getTable(table, "");
+  }
+
   public Record[] search(PredictContext context) throws VisionException {
     long t1 = System.currentTimeMillis();
+    String selectId = context.getConf().selectId();
     CarbonTable carbonTable = cache.get(context.getTable());
     if (carbonTable == null) {
-      LOGGER.audit("need cache table at first");
-      carbonTable = cacheTable(context.getTable(), false);
+      carbonTable = getTable(context.getTable(), selectId);
     }
-    List<InputSplit> splits = CarbonMaster.getSplit(carbonTable, null);
+    List<InputSplit> splits = CarbonMaster.getSplit(carbonTable, null, selectId);
 
     long t2 = System.currentTimeMillis();
     Record[] result = scheduler.search(new CarbonMultiBlockSplit(splits), context);
+
     ServiceUtil.sortRecords(result, context.getConf().projection().length);
+    int topN = context.getConf().topN();
+    if (result.length > topN) {
+      Record[] tmp = new Record[topN];
+      System.arraycopy(result, 0, tmp, 0, topN);
+      result = tmp;
+    }
 
     long t3 = System.currentTimeMillis();
-    LOGGER.audit("Search taken time: " + (t3 - t1) + " ms, " +
-        VisionUtil.printlnTime(t1, t2, t3));
+    LOGGER.audit("[" + selectId + "] CarbonClient search taken time: " +
+        (t3 - t1) + " ms, " + VisionUtil.printlnTime(t1, t2, t3));
     return result;
   }
 

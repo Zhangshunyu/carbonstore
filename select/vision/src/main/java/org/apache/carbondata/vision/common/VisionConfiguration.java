@@ -35,8 +35,8 @@ public class VisionConfiguration implements Serializable, Writable {
   public static final String SELECT_SEARCH_VECTOR = "carbon.select.search.vector";
   public static final String SELECT_TOP_N = "carbon.select.algorithm.top.n";
   public static final String SELECT_VECTOR_SIZE = "carbon.select.algorithm.vector.size";
-  public static final String SELECT_EXECUTION_ID = "carbon.select.execution.id";
   public static final String SELECT_BATCH_SIZE = "carbon.select.store.batch.size";
+  public static final String SELECT_ID = "carbon.select.id";
 
   public static final String SCHEDULE_CORE_NUM = "carbon.schedule.core.num";
 
@@ -46,7 +46,8 @@ public class VisionConfiguration implements Serializable, Writable {
   public static final String SERVER_CORE_NUM = "carbon.server.core.num";
 
   public static final String STORE_LOCATION = "carbon.store.location";
-  public static final String STORE_CACHE = "carbon.store.cache.location";
+  public static final String STORE_DISK_CACHE = "carbon.store.disk.cache.location";
+  public static final String STORE_MEMORY_CACHE = "carbon.store.memory.cache.location";
 
   public static final String CONFIG_HADOOP = "carbon.hadoop.configuration";
 
@@ -89,10 +90,6 @@ public class VisionConfiguration implements Serializable, Writable {
     return intValue(SELECT_VECTOR_SIZE);
   }
 
-  public String executionId() {
-    return stringValue(SELECT_EXECUTION_ID);
-  }
-
   public String serverHost() {
     return stringValue(SERVER_HOST);
   }
@@ -113,8 +110,12 @@ public class VisionConfiguration implements Serializable, Writable {
     return stringValue(STORE_LOCATION);
   }
 
-  public String cacheLocation() {
-    return stringValue(STORE_CACHE);
+  public String diskLocation() {
+    return stringValue(STORE_DISK_CACHE);
+  }
+
+  public String memoryLocation() {
+    return stringValue(STORE_MEMORY_CACHE);
   }
 
   public int scheduleCoreNum() {
@@ -123,6 +124,10 @@ public class VisionConfiguration implements Serializable, Writable {
 
   public String configHadoop() {
     return stringValue(CONFIG_HADOOP);
+  }
+
+  public String selectId() {
+    return stringValue(SELECT_ID);
   }
 
   private String stringValue(String key) {
