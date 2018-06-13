@@ -98,11 +98,8 @@ public class CarbonScheduler {
 
   public void cacheTable(Table table, CacheLevel cacheLevel) throws VisionException {
     List<ServerInfo> serverList = CarbonMaster.serverList();
-    Set<ServerInfo> cachedServers = CarbonMaster.getCacheInfo(table, cacheLevel);
-    Collection<ServerInfo> candidates = serverList;
-    if (cachedServers != null) {
-      candidates = CollectionUtils.intersection(serverList, cachedServers);
-    }
+    Collection<ServerInfo> cachedServers = CarbonMaster.getCacheInfo(table);
+    Collection<ServerInfo> candidates = CollectionUtils.removeAll(serverList, cachedServers);
     if (!candidates.isEmpty()) {
       ServerInfo server = chooseCacheServer(candidates, cacheLevel);
       serviceMap.get(server).get().cacheTable(table, cacheLevel.getIndex());

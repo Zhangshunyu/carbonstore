@@ -7,4 +7,24 @@
 
 <configuration>
 
+<property>
+  <name>fs.s3a.endpoint</name>
+  <value>obs.cn-north-1.myhwclouds.com</value>
+</property>
+
+<property>
+  <name>fs.s3a.access.key</name>
+  <value>H9IW3GRX7RCEUDZPA7EG</value>
+</property>
+
+<property>
+  <name>fs.s3a.secret.key</name>
+  <value>PLGNC8vjCClKvpI7TigbMZgGul8YhIFUvVa0VidJ</value>
+</property>
+
+<property>
+  <name>fs.s3a.impl</name>
+  <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+</property>
+
 </configuration>

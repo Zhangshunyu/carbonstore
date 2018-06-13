@@ -18,11 +18,7 @@
 package org.apache.carbondata.service.master;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.carbondata.common.logging.LogService;
@@ -41,6 +37,7 @@ import org.apache.carbondata.vision.common.VisionException;
 import org.apache.carbondata.vision.common.VisionUtil;
 import org.apache.carbondata.vision.table.Table;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -132,5 +129,17 @@ public class CarbonMaster {
       default:
     }
     return serverInfos;
+  }
+
+  public static Collection<ServerInfo> getCacheInfo(Table table) {
+    Set<ServerInfo> memoryServers = memoryCacheMap.get(table);
+    Set<ServerInfo> diskServers = diskCacheMap.get(table);
+    if (memoryServers == null) {
+      memoryServers = new HashSet<>(0);
+    }
+    if (diskServers == null) {
+      diskServers = new HashSet<>(0);
+    }
+    return CollectionUtils.union(memoryServers, diskServers);
   }
 }

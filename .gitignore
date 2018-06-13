@@ -12,6 +12,7 @@
 .settings
 .cache
 target/
+select/build/carbonselect/lib/
 .project
 .classpath
 metastore_db/
