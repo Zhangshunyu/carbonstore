@@ -103,9 +103,9 @@ public class CarbonClient {
     long t2 = System.currentTimeMillis();
     Record[] result = scheduler.search(new CarbonMultiBlockSplit(splits), context);
 
-    ServiceUtil.sortRecords(result, context.getConf().projection().length);
     int topN = context.getConf().topN();
     if (result.length > topN) {
+      ServiceUtil.sortRecords(result, context.getConf().projection().length);
       Record[] tmp = new Record[topN];
       System.arraycopy(result, 0, tmp, 0, topN);
       result = tmp;

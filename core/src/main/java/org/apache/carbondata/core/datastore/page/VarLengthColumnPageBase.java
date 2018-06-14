@@ -272,7 +272,7 @@ public abstract class VarLengthColumnPageBase extends ColumnPage {
     int length;
     int offset;
     int lvEncodedOffset = start;
-
+    len = lvEncodedOffset + len;
     // extract Length field in input and calculate total length
     for (offset = 0; lvEncodedOffset < len; offset += length) {
       length = ByteUtil.toInt(lvEncodedBytes, lvEncodedOffset);

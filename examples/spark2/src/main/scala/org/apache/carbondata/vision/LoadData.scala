@@ -34,8 +34,8 @@ object LoadData {
   val carbon = ExampleUtils.createCarbonSession("FRS", 1)
 
   def main(args: Array[String]): Unit = {
-    val createTable = true
-    val tableName = "frs20_table"
+    val createTable = false
+    val tableName = "demo_table"
     if (createTable) {
       val filePath = rootPath + s"/examples/spark2/src/main/resources/${ tableName }.csv"
       generateData(rootPath + "/select/build/carbonselect/test/result_20w.bin",
@@ -48,18 +48,18 @@ object LoadData {
       carbon.sql(s"drop table if exists default.${ tableName }")
       carbon
         .sql(
-          s"create table default.${ tableName }(id int, feature binary) stored by " +
+          s"create table default.${ tableName }(id int, name string, feature binary) stored by " +
           s"'carbondata' " +
           "tblproperties('TABLE_BLOCKSIZE'='512')")
       carbon
         .sql(s"load data local inpath '${ filePath }' into table default.${ tableName } options" +
              s"('header'='false')")
     }
-    carbon.sql(s"select count(id) from default.${ tableName } limit 10").show(false)
-    carbon.sql(s"select * from default.${ tableName } where id in (100, 100000, 800000)")
-      .show(false)
-
-    carbon.sql(s"select * from default.${ tableName } limit 10").show(false)
+    carbon.sql(s"select count(feature) from default.${ tableName }").show(false)
+//    carbon.sql(s"select * from default.${ tableName } where id in (100, 100000, 800000)")
+//      .show(false)
+//
+//    carbon.sql(s"select * from default.${ tableName } limit 10").show(false)
   }
 
   val alphabet = "abcdefghijklmnopqrstuvwxyz0123456789".toCharArray
@@ -95,8 +95,8 @@ object LoadData {
             }
             builder.append(index)
               .append(",")
-            // generateString(builder)
-            // builder.append(",")
+            generateString(builder)
+            builder.append(",")
               .append(Hex.encodeHex(bytes))
             fileWriter.write(builder.toString)
           }

@@ -36,6 +36,7 @@ import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.hadoop.CarbonInputSplit;
 import org.apache.carbondata.hadoop.CarbonMultiBlockSplit;
 import org.apache.carbondata.service.Utils;
+import org.apache.carbondata.service.common.ServiceUtil;
 import org.apache.carbondata.service.scan.CarbonScan;
 import org.apache.carbondata.service.service.PredictService;
 import org.apache.carbondata.service.service.impl.PredictServiceImpl;
@@ -212,6 +213,15 @@ public class CarbonServer {
       for (int i = 0; i < records.length; i++) {
         records[i] = new Record((Object[]) result.get(i));
       }
+
+      ServiceUtil.sortRecords(records, context.getConf().projection().length);
+      int topN = context.getConf().topN();
+      if (records.length > topN) {
+        Record[] tmp = new Record[topN];
+        System.arraycopy(result, 0, tmp, 0, topN);
+        records = tmp;
+      }
+
       return records;
     } catch (Exception e) {
       String message = "[" + selectId + "] Failed to search feature on table: " +
