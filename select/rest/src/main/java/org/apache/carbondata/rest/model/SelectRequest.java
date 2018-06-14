@@ -17,6 +17,8 @@
 
 package org.apache.carbondata.rest.model;
 
+import java.util.Arrays;
+
 public class SelectRequest {
   private String tableName;
   private byte[] searchFeature;
@@ -49,5 +51,14 @@ public class SelectRequest {
 
   public void setSelectId(String selectId) {
     this.selectId = selectId;
+  }
+
+  @Override
+  public String toString() {
+    return "SelectRequest{" +
+        "tableName='" + tableName + '\'' +
+        ", searchFeature=" + Arrays.toString(searchFeature) +
+        ", selectId='" + selectId + '\'' +
+        '}';
   }
 }

@@ -46,16 +46,16 @@ public class HorizonClientConcurrent {
       InterruptedException, ExecutionException {
     if (args.length < 3) {
       System.err.println("HorizonClient <rest uri> <table name> <result.bin> " +
-          "[numThreads] [restAppNum] [requestNum] [cache]");
+          "[numThreads] [restAppNum] [requestNum] [cache] [tableNum]");
       return;
     }
     HorizonClientConcurrent client = new HorizonClientConcurrent(args[0]);
     String tableNamePrefix = args[1];
 
-
     int numThreads = 8;
     int restAppNum = 20;
     int requestNum = 10;
+    int tableNum = 2;
     int randomLength = 10000;
     Boolean cache = true;
 
@@ -71,20 +71,30 @@ public class HorizonClientConcurrent {
     if (args.length > 6) {
       cache = Boolean.parseBoolean(args[6]);
     }
+    if (args.length > 7) {
+      tableNum = Integer.parseInt(args[7]);
+    }
 
     ArrayList<Callable<Results>> tasks = new ArrayList<Callable<Results>>();
     RestApplication[] restApplications = new RestApplication[restAppNum];
-    for (int i = 0; i < restAppNum; i++) {
-      LOGGER.info("Init " + (i + 1) + " rest application: ");
-      String tableName = tableNamePrefix + i;
-      if (cache) {
+    if (cache) {
+      for (int i = 0; i < tableNum; i++) {
+        String tableName = tableNamePrefix + i;
+        LOGGER.info("Cache table " + tableName);
         client.cache(tableName);
       }
+    }
+    for (int i = 0; i < restAppNum; i++) {
+      LOGGER.info("Init " + (i + 1) + " rest application: ");
+      String tableName = tableNamePrefix + i % tableNum;
       Random random = new Random();
-      byte[] searchFeature = Utils
-          .generateFeatureSetExample(args[2], 1, random.nextInt(randomLength));
-      restApplications[i] = client.createRestApp(tableName, searchFeature);
+
+      RestTemplate restTemplate = new RestTemplate();
       for (int j = 0; j < requestNum; j++) {
+        byte[] searchFeature = Utils
+            .generateFeatureSetExample(args[2], 1, random.nextInt(randomLength));
+        SelectRequest request = new SelectRequest(tableName, searchFeature);
+        restApplications[i] = client.createRestApp(restTemplate, request);
         tasks.add(new QueryTask(restApplications[i]));
       }
     }
@@ -139,8 +149,10 @@ public class HorizonClientConcurrent {
 
     // the time of 90 percent sql are finished
     int time90 = (int) ((timeArray.size()) * 0.9) - 1;
+    time90 = time90 < 0 ? 0 : time90;
     // the time of 99 percent sql are finished
     int time99 = (int) ((timeArray.size()) * 0.99) - 1;
+    time99 = time99 < 0 ? 0 : time99;
     Double sum = 0.0;
     int avgCount = 0;
     for (int i = 0; i < timeArray.size(); i++) {
@@ -157,14 +169,7 @@ public class HorizonClientConcurrent {
     System.out.println(output.toString());
   }
 
-
-  public RestApplication createRestApp(String tableName, byte[] searchFeature) {
-    SelectRequest request = new SelectRequest(tableName, searchFeature);
-
-    // Long startTime = System.currentTimeMillis();
-    RestTemplate restTemplate = new RestTemplate();
-    // Long endTime = System.currentTimeMillis();
-    // System.out.println("Create Rest App:" + (endTime - startTime) + " ms");
+  public RestApplication createRestApp(RestTemplate restTemplate, SelectRequest request) {
     return new RestApplication(restTemplate, request, serviceUri);
   }
 
@@ -194,10 +199,10 @@ public class HorizonClientConcurrent {
 }
 
 class Results {
-  Record[] records;
-  double startTime;
-  double endTime;
-  double time;
+  private Record[] records;
+  private double startTime;
+  private double endTime;
+  private double time;
 
   public Results(Record[] records, long startTime, long endTime) {
     this.records = records;
@@ -224,9 +229,14 @@ class Results {
 }
 
 class RestApplication {
-  RestTemplate restTemplate;
-  SelectRequest request;
-  String serviceUri;
+  private RestTemplate restTemplate;
+  private SelectRequest request;
+  private String serviceUri;
+
+  public RestApplication(RestTemplate restTemplate, String serviceUri) {
+    this.restTemplate = restTemplate;
+    this.serviceUri = serviceUri;
+  }
 
   public RestApplication(RestTemplate restTemplate, SelectRequest request, String serviceUri) {
     this.restTemplate = restTemplate;
@@ -244,5 +254,9 @@ class RestApplication {
 
   public String getServiceUri() {
     return serviceUri;
+  }
+
+  public void setRequest(SelectRequest request) {
+    this.request = request;
   }
 }
