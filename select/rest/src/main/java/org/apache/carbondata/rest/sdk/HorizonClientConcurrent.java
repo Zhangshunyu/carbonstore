@@ -161,10 +161,10 @@ public class HorizonClientConcurrent {
   public RestApplication createRestApp(String tableName, byte[] searchFeature) {
     SelectRequest request = new SelectRequest(tableName, searchFeature);
 
-    Long startTime = System.currentTimeMillis();
+    // Long startTime = System.currentTimeMillis();
     RestTemplate restTemplate = new RestTemplate();
-    Long endTime = System.currentTimeMillis();
-    //    System.out.println("Create Rest App:" + (endTime - startTime) + " ms");
+    // Long endTime = System.currentTimeMillis();
+    // System.out.println("Create Rest App:" + (endTime - startTime) + " ms");
     return new RestApplication(restTemplate, request, serviceUri);
   }
 

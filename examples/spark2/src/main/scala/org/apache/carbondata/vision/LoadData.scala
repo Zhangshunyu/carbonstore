@@ -34,29 +34,42 @@ object LoadData {
   val carbon = ExampleUtils.createCarbonSession("FRS", 1)
 
   def main(args: Array[String]): Unit = {
-    val createTable = false
+    val createTable = true
+    val tableName = "frs20_table"
     if (createTable) {
-      val filePath = rootPath + "/examples/spark2/src/main/resources/frs.csv"
-      generateData(rootPath + "/examples/spark2/src/main/resources/result.bin",
+      val filePath = rootPath + s"/examples/spark2/src/main/resources/${ tableName }.csv"
+      generateData(rootPath + "/select/build/carbonselect/test/result_20w.bin",
         filePath,
-        10000,
+        200000,
         1)
 
       CarbonProperties.getInstance().addProperty(CarbonCommonConstants.BLOCKLET_SIZE, "128")
 
-      carbon.sql("drop table if exists default.frs_table")
+      carbon.sql(s"drop table if exists default.${ tableName }")
       carbon
         .sql(
-          "create table default.frs_table(id int, feature binary) stored by 'carbondata' " +
+          s"create table default.${ tableName }(id int, feature binary) stored by " +
+          s"'carbondata' " +
           "tblproperties('TABLE_BLOCKSIZE'='512')")
       carbon
-        .sql(s"load data local inpath '${ filePath }' into table default.frs_table options" +
+        .sql(s"load data local inpath '${ filePath }' into table default.${ tableName } options" +
              s"('header'='false')")
     }
-    carbon.sql("select count(id) from default.frs_table limit 10").show(false)
-    carbon.sql("select * from default.frs_table where id in (100, 100000, 800000)").show(false)
+    carbon.sql(s"select count(id) from default.${ tableName } limit 10").show(false)
+    carbon.sql(s"select * from default.${ tableName } where id in (100, 100000, 800000)")
+      .show(false)
 
-    carbon.sql("select * from default.frs_table limit 10").show(false)
+    carbon.sql(s"select * from default.${ tableName } limit 10").show(false)
+  }
+
+  val alphabet = "abcdefghijklmnopqrstuvwxyz0123456789".toCharArray
+  val random = new Random()
+
+
+  def generateString(builder: java.lang.StringBuilder): Unit = {
+    (0 until 10).foreach { x =>
+      builder.append(alphabet(random.nextInt(alphabet.length)))
+    }
   }
 
   def generateData(binFilePath: String, filePath: String, length: Int, loop: Int): Unit = {
@@ -82,6 +95,8 @@ object LoadData {
             }
             builder.append(index)
               .append(",")
+            // generateString(builder)
+            // builder.append(",")
               .append(Hex.encodeHex(bytes))
             fileWriter.write(builder.toString)
           }
@@ -126,7 +141,11 @@ object LoadData {
           if (index > 1) {
             builder.append("\n")
           }
-          builder.append(index)
+          builder
+            .append(index)
+            .append(",")
+          generateString(builder)
+          builder
             .append(",")
             .append(Hex.encodeHex(bytes))
           fileWriter.write(builder.toString)

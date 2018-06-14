@@ -195,6 +195,7 @@ public class CarbonServer {
       throws VisionException {
     long startTime = System.currentTimeMillis();
     String selectId = context.getConf().selectId();
+    RecordReader<Void, Object> reader = null;
     try {
       CarbonTable carbonTable = tables.get(context.getTable());
       if (carbonTable == null) {
@@ -202,8 +203,7 @@ public class CarbonServer {
         carbonTable = cacheMeta(context.getTable());
       }
       CarbonMultiBlockSplit cachedSplit = useCacheTable(context.getTable(), split, selectId);
-      RecordReader<Void, Object> reader =
-          CarbonScan.createRecordReader(cachedSplit, context, carbonTable);
+      reader = CarbonScan.createRecordReader(cachedSplit, context, carbonTable);
       List<Object> result = new ArrayList<>();
       while (reader.nextKeyValue()) {
         result.add(reader.getCurrentValue());
@@ -219,6 +219,13 @@ public class CarbonServer {
       LOGGER.error(e, message);
       throw new VisionException(message);
     } finally {
+      if (reader != null) {
+        try {
+          reader.close();
+        } catch (IOException e) {
+          LOGGER.audit("[" + selectId + "] Failed to close RecordReader");
+        }
+      }
       long endTime = System.currentTimeMillis();
       LOGGER.audit("[" + selectId + "] CarbonServer search table: " +
           context.getTable().getPresentName() + " ,taken time: " + (endTime - startTime) + " ms");
