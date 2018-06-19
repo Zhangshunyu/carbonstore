@@ -94,6 +94,8 @@ public class HorizonClientConcurrent {
         byte[] searchFeature = Utils
             .generateFeatureSetExample(args[2], 1, random.nextInt(randomLength));
         SelectRequest request = new SelectRequest(tableName, searchFeature);
+        String selectId = UUID.randomUUID().toString();
+        request.setSelectId(selectId);
         restApplications[i] = client.createRestApp(restTemplate, request);
         tasks.add(new QueryTask(restApplications[i]));
       }
@@ -185,8 +187,6 @@ public class HorizonClientConcurrent {
     @Override
     public Results call() throws Exception {
       Long startTime = System.nanoTime();
-      String selectId = UUID.randomUUID().toString();
-      restApplication.getRequest().setSelectId(selectId);
       Record[] result = restApplication
           .getRestTemplate()
           .postForObject(restApplication.getServiceUri() + "/select",
@@ -233,11 +233,6 @@ class RestApplication {
   private SelectRequest request;
   private String serviceUri;
 
-  public RestApplication(RestTemplate restTemplate, String serviceUri) {
-    this.restTemplate = restTemplate;
-    this.serviceUri = serviceUri;
-  }
-
   public RestApplication(RestTemplate restTemplate, SelectRequest request, String serviceUri) {
     this.restTemplate = restTemplate;
     this.request = request;
@@ -254,9 +249,5 @@ class RestApplication {
 
   public String getServiceUri() {
     return serviceUri;
-  }
-
-  public void setRequest(SelectRequest request) {
-    this.request = request;
   }
 }

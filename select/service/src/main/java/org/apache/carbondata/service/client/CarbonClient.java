@@ -96,7 +96,12 @@ public class CarbonClient {
     String selectId = context.getConf().selectId();
     CarbonTable carbonTable = cache.get(context.getTable());
     if (carbonTable == null) {
+      LOGGER.info("Can't find the table " + context.getTable().getTableName()
+          + " from cache");
       carbonTable = getTable(context.getTable(), selectId);
+    } else {
+      LOGGER.info("Find the table " + context.getTable().getTableName()
+          + " from cache");
     }
     List<InputSplit> splits = CarbonMaster.getSplit(carbonTable, null, selectId);
 

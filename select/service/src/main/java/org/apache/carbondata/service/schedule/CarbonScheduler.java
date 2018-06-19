@@ -158,11 +158,13 @@ public class CarbonScheduler {
     if (chooseServerInfo == null) {
       max = 0;
       Set<ServerInfo> diskCache = CarbonMaster.getCacheInfo(table, CacheLevel.Disk);
-      for (ServerInfo serverInfo : diskCache) {
-        int value = serverInfo.getCores() - serverInfo.workload();
-        if (max < value) {
-          max = value;
-          chooseServerInfo = serverInfo;
+      if (diskCache != null && diskCache.size() > 0) {
+        for (ServerInfo serverInfo : diskCache) {
+          int value = serverInfo.getCores() - serverInfo.workload();
+          if (max < value) {
+            max = value;
+            chooseServerInfo = serverInfo;
+          }
         }
       }
     }
