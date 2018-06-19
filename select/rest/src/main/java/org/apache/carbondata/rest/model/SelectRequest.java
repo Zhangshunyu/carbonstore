@@ -17,10 +17,23 @@
 
 package org.apache.carbondata.rest.model;
 
+import org.apache.carbondata.rest.model.deserialize.VisionConfigurationDeserializer;
+import org.apache.carbondata.rest.model.serialize.VisionConfigurationSerializer;
+import org.apache.carbondata.vision.common.VisionConfiguration;
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 public class SelectRequest {
+
   private String tableName;
-  private byte[] searchFeature;
-  private String selectId;
+  private String[] projection;
+  private String filter;
+  private int limit;
+
+  @JsonSerialize(using = VisionConfigurationSerializer.class)
+  @JsonDeserialize(using = VisionConfigurationDeserializer.class)
+  private VisionConfiguration configuration;
 
   public SelectRequest() {
 
@@ -30,25 +43,52 @@ public class SelectRequest {
     this.tableName = tableName;
   }
 
-  public SelectRequest(String tableName, byte[] searchFeature) {
+  public SelectRequest(String tableName, String[] projection, String filter, int limit,
+      VisionConfiguration configuration) {
     this.tableName = tableName;
-    this.searchFeature = searchFeature;
+    this.projection = projection;
+    this.filter = filter;
+    this.limit = limit;
+    this.configuration = configuration;
   }
 
   public String getTableName() {
     return tableName;
   }
 
-  public byte[] getSearchFeature() {
-    return searchFeature;
+  public void setTableName(String tableName) {
+    this.tableName = tableName;
   }
 
-  public String getSelectId() {
-    return selectId;
+  public String[] getProjection() {
+    return projection;
   }
 
-  public void setSelectId(String selectId) {
-    this.selectId = selectId;
+  public void setProjection(String[] projection) {
+    this.projection = projection;
   }
 
+  public String getFilter() {
+    return filter;
+  }
+
+  public void setFilter(String filter) {
+    this.filter = filter;
+  }
+
+  public int getLimit() {
+    return limit;
+  }
+
+  public void setLimit(int limit) {
+    this.limit = limit;
+  }
+
+  public VisionConfiguration getConfiguration() {
+    return configuration;
+  }
+
+  public void setConfiguration(VisionConfiguration configuration) {
+    this.configuration = configuration;
+  }
 }

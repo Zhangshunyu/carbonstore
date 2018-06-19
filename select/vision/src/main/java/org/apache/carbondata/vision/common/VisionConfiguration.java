@@ -32,6 +32,7 @@ public class VisionConfiguration implements Serializable, Writable {
 
   public static final String SELECT_PROJECTION = "carbon.select.projection";
   public static final String SELECT_FILTER = "carbon.select.filter";
+  public static final String SELECT_SEARCH_COLUMN = "carbon.select.search.column";
   public static final String SELECT_SEARCH_VECTOR = "carbon.select.search.vector";
   public static final String SELECT_TOP_N = "carbon.select.algorithm.top.n";
   public static final String SELECT_VECTOR_SIZE = "carbon.select.algorithm.vector.size";
@@ -66,6 +67,10 @@ public class VisionConfiguration implements Serializable, Writable {
     VisionUtil.loadProperties(file, this);
   }
 
+  public void conf(VisionConfiguration vconf) {
+    conf.putAll(vconf.conf);
+  }
+
   public Object conf(String key) {
     return conf.get(key);
   }
@@ -80,6 +85,10 @@ public class VisionConfiguration implements Serializable, Writable {
 
   public byte[] searchVector() {
     return byteArrayValue(SELECT_SEARCH_VECTOR);
+  }
+
+  public String searchColumn() {
+    return stringValue(SELECT_SEARCH_COLUMN);
   }
 
   public int topN() {

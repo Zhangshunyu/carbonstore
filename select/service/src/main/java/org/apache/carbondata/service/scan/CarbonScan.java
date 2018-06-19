@@ -46,7 +46,7 @@ public class CarbonScan {
     String[] projection = context.getConf().projection();
     String[] projectionWithFeature = new String[projection.length + 1];
     System.arraycopy(projection,0, projectionWithFeature, 0, projection.length);
-    projectionWithFeature[projection.length] = context.getTable().getFeatureVectorName();
+    projectionWithFeature[projection.length] = context.getConf().searchColumn();
 
     Object filter = context.getConf().conf(VisionConfiguration.SELECT_FILTER);
 

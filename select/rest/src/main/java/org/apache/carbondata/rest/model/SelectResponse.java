@@ -20,17 +20,27 @@ package org.apache.carbondata.rest.model;
 import org.apache.carbondata.vision.table.Record;
 
 public class SelectResponse {
+  private String selectId;
   private Record[] records;
 
   public SelectResponse() {
 
   }
 
-  public SelectResponse(Record[] records) {
+  public SelectResponse(String selectId, Record[] records) {
+    this.selectId = selectId;
     this.records = records;
   }
 
   public Record[] getRecords() {
     return records;
+  }
+
+  public String getSelectId() {
+    return selectId;
+  }
+
+  public void setSelectId(String selectId) {
+    this.selectId = selectId;
   }
 }

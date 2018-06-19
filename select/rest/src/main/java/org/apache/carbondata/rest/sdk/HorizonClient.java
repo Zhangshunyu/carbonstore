@@ -18,12 +18,11 @@
 package org.apache.carbondata.rest.sdk;
 
 import java.io.IOException;
-import java.util.UUID;
 
 import org.apache.carbondata.rest.model.SelectRequest;
 import org.apache.carbondata.rest.model.SelectResponse;
 import org.apache.carbondata.service.Utils;
-import org.apache.carbondata.vision.table.Record;
+import org.apache.carbondata.vision.common.VisionConfiguration;
 
 import org.springframework.web.client.RestTemplate;
 
@@ -48,19 +47,25 @@ public class HorizonClient {
     client.cache(tableName);
 
     long t1 = System.currentTimeMillis();
-    String selectId1 = UUID.randomUUID().toString();
-    Record[] records = client.select(tableName, searchFeature, selectId1);
-    Utils.printRecords(records);
+    SelectResponse response =
+        client.select(tableName, new String[] {"id"}, null, 10, "feature", searchFeature);
+    String selectId1 = response.getSelectId();
+    Utils.printRecords(response.getRecords());
+    System.out.println();
 
     long t2 = System.currentTimeMillis();
-    String selectId2 = UUID.randomUUID().toString();
-    records = client.select(tableName, searchFeature, selectId2);
-    Utils.printRecords(records);
+    response =
+        client.select(tableName, new String[] {"id"}, null, 10, "feature", searchFeature);
+    String selectId2 = response.getSelectId();
+    Utils.printRecords(response.getRecords());
+    System.out.println();
 
     long t3 = System.currentTimeMillis();
-    String selectId3 = UUID.randomUUID().toString();
-    records = client.select(tableName, searchFeature, selectId3);
-    Utils.printRecords(records);
+    response =
+        client.select(tableName, new String[] {"id"}, null, 10, "feature", searchFeature);
+    String selectId3 = response.getSelectId();
+    Utils.printRecords(response.getRecords());
+    System.out.println();
 
     long t4 = System.currentTimeMillis();
     System.out.println("[" + selectId1 + "] end to end taken time: " + (t2 - t1) + " ms");
@@ -73,17 +78,28 @@ public class HorizonClient {
   }
 
   public void cache(String tableName) {
-    SelectRequest request = new SelectRequest(tableName, null);
+    SelectRequest request = new SelectRequest(tableName);
     RestTemplate restTemplate = new RestTemplate();
     restTemplate.postForObject(serviceUri + "/cache", request, SelectResponse.class);
   }
 
-  public Record[] select(String tableName, byte[] searchFeature, String selectId) {
-    SelectRequest request = new SelectRequest(tableName, searchFeature);
-    request.setSelectId(selectId);
+  public SelectResponse select(
+      String tableName,
+      String[] projection,
+      String filter,
+      int topN,
+      String searchColumnName,
+      byte[] searchFeature) {
+    VisionConfiguration configuration = new VisionConfiguration();
+    configuration
+        .conf(VisionConfiguration.SELECT_FILTER, filter)
+        .conf(VisionConfiguration.SELECT_SEARCH_COLUMN, searchColumnName)
+        .conf(VisionConfiguration.SELECT_SEARCH_VECTOR, searchFeature)
+        .conf(VisionConfiguration.SELECT_BATCH_SIZE, 100000)
+        .conf(VisionConfiguration.SELECT_VECTOR_SIZE, 288);
+
+    SelectRequest request = new SelectRequest(tableName, projection, filter, topN, configuration);
     RestTemplate restTemplate = new RestTemplate();
-    SelectResponse response =
-        restTemplate.postForObject(serviceUri + "/select", request, SelectResponse.class);
-    return response.getRecords();
+    return restTemplate.postForObject(serviceUri + "/select", request, SelectResponse.class);
   }
 }

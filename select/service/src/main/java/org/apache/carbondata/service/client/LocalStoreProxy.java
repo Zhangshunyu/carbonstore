@@ -59,7 +59,10 @@ public class LocalStoreProxy {
     // create PredictContext
     byte[] searchFeature = Utils.generateFeatureSetExample(args[2], 1, 0);
     proxy.cacheTable("table0");
-    Record[] result = proxy.select("table0", searchFeature, "table0");
+    VisionConfiguration configuration = new VisionConfiguration();
+    configuration.conf(VisionConfiguration.SELECT_SEARCH_VECTOR, searchFeature);
+    Record[] result =
+        proxy.select("table0", new String[] {"id"}, null,  10, configuration);
     Utils.printRecords(result);
     proxy.test(new Table("table0"),10, searchFeature);
   }
@@ -100,19 +103,17 @@ public class LocalStoreProxy {
     client.cacheTable(table);
   }
 
-  public Record[] select(String tableName, byte[] searchFeature, String selectId)
+  public Record[] select(String tableName, String[] projection, String filter, int limit,
+      VisionConfiguration configuration)
       throws VisionException {
     PredictContext context = PredictContext
         .builder()
         .algorithm(algorithm)
         .model(model)
         .table(new Table(tableName))
-        .conf(VisionConfiguration.SELECT_SEARCH_VECTOR, searchFeature)
-        .conf(VisionConfiguration.SELECT_TOP_N, 10)
-        .conf(VisionConfiguration.SELECT_VECTOR_SIZE, 288)
-        .conf(VisionConfiguration.SELECT_PROJECTION, new String[] { "id" })
-        .conf(VisionConfiguration.SELECT_BATCH_SIZE, 100000)
-        .conf(VisionConfiguration.SELECT_ID, selectId)
+        .conf(VisionConfiguration.SELECT_TOP_N, limit)
+        .conf(VisionConfiguration.SELECT_PROJECTION, projection)
+        .conf(configuration)
         .create();
     return client.search(context);
   }

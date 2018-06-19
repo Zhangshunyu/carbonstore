@@ -132,6 +132,11 @@ public class PredictContext implements Serializable, Writable {
       return this;
     }
 
+    public Builder conf(VisionConfiguration conf) {
+      this.conf.conf(conf);
+      return this;
+    }
+
     public PredictContext create() {
       return new PredictContext(algorithm, model, table, conf);
     }

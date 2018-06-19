@@ -30,7 +30,6 @@ public class Table implements Serializable, Writable {
 
   private String database;
   private String tableName;
-  private String featureVectorName;
 
   public Table() {
   }
@@ -38,13 +37,11 @@ public class Table implements Serializable, Writable {
   public Table(String tableName) {
     this.tableName = tableName;
     this.database = "default";
-    this.featureVectorName = "feature";
   }
 
-  public Table(String database, String tableName, String featureVectorName) {
+  public Table(String database, String tableName) {
     this.database = database;
     this.tableName = tableName;
-    this.featureVectorName = featureVectorName;
   }
 
   public String getDatabase() {
@@ -63,24 +60,14 @@ public class Table implements Serializable, Writable {
     this.tableName = tableName;
   }
 
-  public String getFeatureVectorName() {
-    return featureVectorName;
-  }
-
-  public void setFeatureVectorName(String featureVectorName) {
-    this.featureVectorName = featureVectorName;
-  }
-
   @Override public void write(DataOutput out) throws IOException {
     WritableUtils.writeString(out, database);
     WritableUtils.writeString(out, tableName);
-    WritableUtils.writeString(out, featureVectorName);
   }
 
   @Override public void readFields(DataInput in) throws IOException {
     database = WritableUtils.readString(in);
     tableName = WritableUtils.readString(in);
-    featureVectorName = WritableUtils.readString(in);
   }
 
   @Override public boolean equals(Object o) {

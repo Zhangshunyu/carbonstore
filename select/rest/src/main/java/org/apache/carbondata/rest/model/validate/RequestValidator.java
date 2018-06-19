@@ -29,8 +29,17 @@ public class RequestValidator {
     if (request.getTableName() == null || request.getTableName().isEmpty()) {
       throw new VisionException("tableName is invalid");
     }
-    if (request.getSearchFeature() == null || request.getSearchFeature().length != 288) {
+
+    if (request.getConfiguration() == null) {
+      throw new VisionException("configuration is invalid");
+    }
+
+    if (request.getConfiguration().searchVector() == null ||
+        request.getConfiguration().searchVector().length != 288) {
       throw new VisionException("searchFeature is invalid");
+    }
+    if (request.getProjection() == null || request.getProjection().length == 0) {
+      throw new VisionException("projection is invalid");
     }
   }
 

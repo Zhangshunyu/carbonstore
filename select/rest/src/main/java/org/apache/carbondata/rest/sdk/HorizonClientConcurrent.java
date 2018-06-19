@@ -26,6 +26,7 @@ import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.rest.model.SelectRequest;
 import org.apache.carbondata.rest.model.SelectResponse;
 import org.apache.carbondata.service.Utils;
+import org.apache.carbondata.vision.common.VisionConfiguration;
 import org.apache.carbondata.vision.table.Record;
 
 import org.springframework.web.client.RestTemplate;
@@ -93,9 +94,11 @@ public class HorizonClientConcurrent {
       for (int j = 0; j < requestNum; j++) {
         byte[] searchFeature = Utils
             .generateFeatureSetExample(args[2], 1, random.nextInt(randomLength));
-        SelectRequest request = new SelectRequest(tableName, searchFeature);
-        String selectId = UUID.randomUUID().toString();
-        request.setSelectId(selectId);
+        VisionConfiguration conf = new VisionConfiguration();
+        conf.conf(VisionConfiguration.SELECT_SEARCH_COLUMN, "feature");
+        conf.conf(VisionConfiguration.SELECT_SEARCH_VECTOR, searchFeature);
+        SelectRequest request =
+            new SelectRequest(tableName, new String[] {"id"}, null, 10,  conf);
         restApplications[i] = client.createRestApp(restTemplate, request);
         tasks.add(new QueryTask(restApplications[i]));
       }
@@ -130,7 +133,7 @@ public class HorizonClientConcurrent {
   }
 
   public void cache(String tableName) {
-    SelectRequest request = new SelectRequest(tableName, null);
+    SelectRequest request = new SelectRequest(tableName);
     RestTemplate restTemplate = new RestTemplate();
     restTemplate.postForObject(serviceUri + "/cache", request, SelectResponse.class);
   }

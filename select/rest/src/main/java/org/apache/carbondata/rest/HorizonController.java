@@ -25,6 +25,7 @@ import org.apache.carbondata.rest.model.SelectRequest;
 import org.apache.carbondata.rest.model.SelectResponse;
 import org.apache.carbondata.rest.model.validate.RequestValidator;
 import org.apache.carbondata.service.client.LocalStoreProxy;
+import org.apache.carbondata.vision.common.VisionConfiguration;
 import org.apache.carbondata.vision.common.VisionException;
 import org.apache.carbondata.vision.table.Record;
 
@@ -56,9 +57,10 @@ import org.springframework.web.bind.annotation.RestController;
   public ResponseEntity<SelectResponse> cache(@RequestBody SelectRequest request)
       throws VisionException {
     RequestValidator.validateForCache(request);
+    String selectId = UUID.randomUUID().toString();
     proxy.cacheTable(request.getTableName());
     LOGGER.audit("HorizonController cached table: " + request.getTableName());
-    return new ResponseEntity<>(new SelectResponse(new Record[0]), HttpStatus.OK);
+    return new ResponseEntity<>(new SelectResponse(selectId, new Record[0]), HttpStatus.OK);
   }
 
   @RequestMapping(value = "/select", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -66,15 +68,19 @@ import org.springframework.web.bind.annotation.RestController;
       throws VisionException {
     long start = System.currentTimeMillis();
     RequestValidator.validateForSelect(request);
-    String selectId = request.getSelectId();
-    if (selectId == null || selectId.isEmpty()) {
-      selectId = UUID.randomUUID().toString();
-    }
-    Record[] result = proxy.select(request.getTableName(), request.getSearchFeature(), selectId);
+    String selectId = UUID.randomUUID().toString();
+    VisionConfiguration configuration = request.getConfiguration();
+    configuration.conf(VisionConfiguration.SELECT_ID, selectId);
+    Record[] result = proxy.select(
+        request.getTableName(),
+        request.getProjection(),
+        request.getFilter(),
+        request.getLimit(),
+        configuration);
     long end = System.currentTimeMillis();
     LOGGER.audit("[" + selectId +  "] HorizonController select table: " + request.getTableName() +
         ", take time: " + (end - start) + " ms");
-    return new ResponseEntity<>(new SelectResponse(result), HttpStatus.OK);
+    return new ResponseEntity<>(new SelectResponse(selectId, result), HttpStatus.OK);
   }
 
 }
