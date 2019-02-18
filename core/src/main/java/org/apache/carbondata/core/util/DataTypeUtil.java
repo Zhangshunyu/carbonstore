@@ -541,7 +541,8 @@ public final class DataTypeUtil {
    */
   public static Object getDataBasedOnDataTypeForNoDictionaryColumn(byte[] dataInBytes,
       DataType actualDataType) {
-    return getDataBasedOnDataTypeForNoDictionaryColumn(dataInBytes, actualDataType, true);
+    return getDataBasedOnDataTypeForNoDictionaryColumn(dataInBytes, actualDataType, true,
+        getDataTypeConverter());
   }
 
   /**
@@ -554,7 +555,7 @@ public final class DataTypeUtil {
    * @return actual data after conversion
    */
   public static Object getDataBasedOnDataTypeForNoDictionaryColumn(byte[] dataInBytes,
-      DataType actualDataType, boolean isTimeStampConversion) {
+      DataType actualDataType, boolean isTimeStampConversion, DataTypeConverter converter) {
     if (null == dataInBytes || Arrays
         .equals(CarbonCommonConstants.MEMBER_DEFAULT_VAL_ARRAY, dataInBytes)) {
       return null;
@@ -604,7 +605,7 @@ public final class DataTypeUtil {
         if (isEmptyByteArray(dataInBytes)) {
           return null;
         }
-        return getDataTypeConverter().convertFromBigDecimalToDecimal(byteToBigDecimal(dataInBytes));
+        return converter.convertFromBigDecimalToDecimal(byteToBigDecimal(dataInBytes));
       } else if (actualDataType == DataTypes.BINARY) {
         if (isEmptyByteArray(dataInBytes)) {
           return null;
@@ -612,7 +613,7 @@ public final class DataTypeUtil {
         return dataInBytes;
       } else {
         // Default action for String/Varchar
-        return getDataTypeConverter().convertFromByteToUTF8String(dataInBytes);
+        return converter.convertFromByteToUTF8String(dataInBytes);
       }
     } catch (Throwable ex) {
       String data = new String(dataInBytes, CarbonCommonConstants.DEFAULT_CHARSET_CLASS);

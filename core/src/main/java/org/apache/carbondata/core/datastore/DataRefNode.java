@@ -18,6 +18,7 @@ package org.apache.carbondata.core.datastore;
 
 import java.io.IOException;
 
+import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.datastore.chunk.impl.DimensionRawColumnChunk;
 import org.apache.carbondata.core.datastore.chunk.impl.MeasureRawColumnChunk;
 import org.apache.carbondata.core.util.BitSetGroup;
@@ -133,4 +134,10 @@ public interface DataRefNode {
    * @return min max flag for each column
    */
   boolean[] minMaxFlagArray();
+
+  /**
+   * Get the block info of this node.
+   * @return path
+   */
+  TableBlockInfo getBlockInfo();
 }

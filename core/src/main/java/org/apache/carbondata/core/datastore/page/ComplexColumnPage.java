@@ -161,7 +161,8 @@ public class ComplexColumnPage {
         } else {
           columnPages[depth].putData(positionNumber, DataTypeUtil
               .getDataBasedOnDataTypeForNoDictionaryColumn(value,
-                  columnPages[depth].getColumnSpec().getSchemaDataType(), false));
+                  columnPages[depth].getColumnSpec().getSchemaDataType(), false,
+                  DataTypeUtil.getDataTypeConverter()));
         }
       } else {
         columnPages[depth].putData(positionNumber, value);

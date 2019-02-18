@@ -248,6 +248,34 @@ public class DictionaryBasedVectorResultCollector extends AbstractScannedResultC
     }
   }
 
+  /**
+   * Fill the vector during the page decoding.
+   */
+  private void collectResultInRowBatch(BlockletScannedResult scannedResult,
+      CarbonColumnarBatch columnarBatch) {
+    int numberOfPages = scannedResult.numberOfpages();
+    while (scannedResult.getCurrentPageCounter() < numberOfPages) {
+      int currentPageRowCount = scannedResult.getCurrentPageRowCount();
+      if (currentPageRowCount == 0) {
+        scannedResult.incrementPageCounter(null);
+        continue;
+      }
+      DeleteDeltaVo deltaVo = scannedResult.getCurrentDeleteDeltaVo();
+      BitSet bitSet = null;
+      int deletedRows = 0;
+      if (deltaVo != null) {
+        bitSet = deltaVo.getBitSet();
+        deletedRows = bitSet.cardinality();
+      }
+      fillColumnVectorDetails(columnarBatch, bitSet);
+      fillResultToColumnarBatch(scannedResult);
+      columnarBatch.setActualSize(currentPageRowCount - deletedRows);
+      scannedResult.setRowCounter(currentPageRowCount - deletedRows);
+      scannedResult.incrementPageCounter(null);
+      return;
+    }
+  }
+
   private void fillResultToColumnarBatch(BlockletScannedResult scannedResult) {
     scannedResult.fillDataChunks(dictionaryInfo, noDictionaryInfo, measureColumnInfo,
         measureInfo.getMeasureOrdinals());

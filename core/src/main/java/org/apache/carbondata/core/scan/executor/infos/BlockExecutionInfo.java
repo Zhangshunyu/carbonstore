@@ -226,6 +226,9 @@ public class BlockExecutionInfo {
 
   private ReusableDataBuffer[] measureResusableDataBuffer;
 
+  private boolean[] isFilterDimensions;
+  private boolean[] isFilterMeasures;
+
   /**
    * @param blockIndex the tableBlock to set
    */
@@ -247,33 +250,6 @@ public class BlockExecutionInfo {
     this.measureInfo = measureInfo;
   }
 
-  /**
-   * @return the startKey
-   */
-  public IndexKey getStartKey() {
-    return startKey;
-  }
-
-  /**
-   * @param startKey the startKey to set
-   */
-  public void setStartKey(IndexKey startKey) {
-    this.startKey = startKey;
-  }
-
-  /**
-   * @return the endKey
-   */
-  public IndexKey getEndKey() {
-    return endKey;
-  }
-
-  /**
-   * @param endKey the endKey to set
-   */
-  public void setEndKey(IndexKey endKey) {
-    this.endKey = endKey;
-  }
 
   /**
    * @return the totalNumberDimensionToRead
@@ -658,5 +634,21 @@ public class BlockExecutionInfo {
 
   public void setMeasureResusableDataBuffer(ReusableDataBuffer[] measureResusableDataBuffer) {
     this.measureResusableDataBuffer = measureResusableDataBuffer;
+  }
+
+  public boolean[] getIsFilterDimensions() {
+    return isFilterDimensions;
+  }
+
+  public void setIsFilterDimensions(boolean[] isFilterDimensions) {
+    this.isFilterDimensions = isFilterDimensions;
+  }
+
+  public boolean[] getIsFilterMeasures() {
+    return isFilterMeasures;
+  }
+
+  public void setIsFilterMeasures(boolean[] isFilterMeasures) {
+    this.isFilterMeasures = isFilterMeasures;
   }
 }

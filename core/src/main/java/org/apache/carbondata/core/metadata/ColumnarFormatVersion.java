@@ -18,6 +18,7 @@
 package org.apache.carbondata.core.metadata;
 
 public enum ColumnarFormatVersion {
+  R1((short)-1),
   V1((short)1),
   V2((short)2),
   V3((short)3);
@@ -38,6 +39,8 @@ public enum ColumnarFormatVersion {
 
   public static ColumnarFormatVersion valueOf(short version) {
     switch (version) {
+      case -1:
+        return R1;
       case 0:
         // before multiple reader support, for existing carbon file, it is version 1
         return V1;
