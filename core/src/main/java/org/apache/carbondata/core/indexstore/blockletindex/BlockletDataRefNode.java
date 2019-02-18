@@ -260,6 +260,11 @@ public class BlockletDataRefNode implements DataRefNode {
         .getNumberOfRowsPerPage()[pageNumber];
   }
 
+  @Override
+  public TableBlockInfo getBlockInfo() {
+    return blockInfos.get(index);
+  }
+
   public int numberOfNodes() {
     return blockInfos.size();
   }

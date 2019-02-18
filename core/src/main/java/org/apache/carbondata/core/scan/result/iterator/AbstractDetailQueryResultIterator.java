@@ -30,12 +30,14 @@ import org.apache.carbondata.core.datastore.FileReader;
 import org.apache.carbondata.core.datastore.block.AbstractIndex;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataRefNode;
+import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
 import org.apache.carbondata.core.mutate.DeleteDeltaVo;
 import org.apache.carbondata.core.reader.CarbonDeleteFilesDataReader;
 import org.apache.carbondata.core.scan.executor.infos.BlockExecutionInfo;
 import org.apache.carbondata.core.scan.executor.infos.DeleteDeltaInfo;
 import org.apache.carbondata.core.scan.model.QueryModel;
 import org.apache.carbondata.core.scan.processor.DataBlockIterator;
+import org.apache.carbondata.core.scan.processor.RowBlockletIterator;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnarBatch;
 import org.apache.carbondata.core.stats.QueryStatistic;
 import org.apache.carbondata.core.stats.QueryStatisticsConstants;
@@ -237,8 +239,14 @@ public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterato
       }
       BlockExecutionInfo executionInfo = blockExecutionInfos.get(0);
       blockExecutionInfos.remove(executionInfo);
-      return new DataBlockIterator(executionInfo, fileReader, batchSize, queryStatisticsModel,
-          execService);
+      if (executionInfo.getDataBlock().getDataRefNode().getBlockInfo().getVersion()
+          == ColumnarFormatVersion.R1) {
+        return new RowBlockletIterator(executionInfo, fileReader, batchSize, queryStatisticsModel,
+            execService);
+      } else {
+        return new DataBlockIterator(executionInfo, fileReader, batchSize, queryStatisticsModel,
+            execService);
+      }
     }
     return null;
   }

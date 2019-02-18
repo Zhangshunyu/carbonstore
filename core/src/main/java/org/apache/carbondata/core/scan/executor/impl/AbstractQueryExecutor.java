@@ -34,7 +34,6 @@ import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.constants.CarbonV3DataFormatConstants;
 import org.apache.carbondata.core.datamap.Segment;
-import org.apache.carbondata.core.datastore.IndexKey;
 import org.apache.carbondata.core.datastore.ReusableDataBuffer;
 import org.apache.carbondata.core.datastore.block.AbstractIndex;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
@@ -42,7 +41,6 @@ import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.indexstore.BlockletDetailInfo;
 import org.apache.carbondata.core.indexstore.blockletindex.BlockletDataRefNode;
 import org.apache.carbondata.core.indexstore.blockletindex.IndexWrapper;
-import org.apache.carbondata.core.keygenerator.KeyGenException;
 import org.apache.carbondata.core.memory.UnsafeMemoryManager;
 import org.apache.carbondata.core.metadata.blocklet.BlockletInfo;
 import org.apache.carbondata.core.metadata.blocklet.DataFileFooter;
@@ -52,6 +50,7 @@ import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonMeasure;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
+import org.apache.carbondata.core.reader.CarbonHeaderReader;
 import org.apache.carbondata.core.scan.executor.QueryExecutor;
 import org.apache.carbondata.core.scan.executor.exception.QueryExecutionException;
 import org.apache.carbondata.core.scan.executor.infos.BlockExecutionInfo;
@@ -74,10 +73,14 @@ import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.core.util.ThreadLocalSessionInfo;
 import org.apache.carbondata.core.util.ThreadLocalTaskInfo;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
+import org.apache.carbondata.format.FileHeader;
+
+import static org.apache.carbondata.core.util.CarbonUtil.thriftColumnSchemaToWrapperColumnSchema;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
+
 
 /**
  * This class provides a skeletal implementation of the {@link QueryExecutor}
@@ -208,8 +211,8 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
       // available so read the blocklet information from block file
       // 2. CACHE_LEVEL is set to block
       // 3. CACHE_LEVEL is BLOCKLET but filter column min/max is not cached in driver
-      if (blockletDetailInfo.getBlockletInfo() == null || blockletDetailInfo
-            .isUseMinMaxForPruning()) {
+      if (blockInfo.getVersion().number() > 0 && (blockletDetailInfo.getBlockletInfo() == null
+          || blockletDetailInfo.isUseMinMaxForPruning())) {
         blockInfo.setBlockOffset(blockletDetailInfo.getBlockFooterOffset());
         DataFileFooter fileFooter = filePathToFileFooterMapping.get(blockInfo.getFilePath());
         if (null != blockInfo.getDataFileFooter()) {
@@ -243,11 +246,24 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
             blockletDetailInfo, fileFooter, segmentProperties);
       } else {
         if (null == segmentProperties) {
-          segmentProperties = new SegmentProperties(blockInfo.getDetailInfo().getColumnSchemas(),
-              blockInfo.getDetailInfo().getDimLens());
+          List<ColumnSchema> columnSchemas = null;
+          int[] dimLens = null;
+          if (blockInfo.getVersion().number() < 0) {
+            columnSchemas = getColumnSchemasForRowFormat(blockInfo);
+            dimLens = new int[columnSchemas.size()];
+            BlockletDetailInfo detailInfo = new BlockletDetailInfo();
+            blockInfo.setDetailInfo(detailInfo);
+            Arrays.fill(dimLens, Integer.MAX_VALUE);
+            detailInfo.setDimLens(dimLens);
+            detailInfo.setVersionNumber(blockInfo.getVersion().number());
+            detailInfo.setBlockletInfo(new BlockletInfo());
+          } else {
+            dimLens = blockInfo.getDetailInfo().getDimLens();
+            columnSchemas = blockInfo.getDetailInfo().getColumnSchemas();
+          }
+          segmentProperties = new SegmentProperties(columnSchemas, dimLens);
           createFilterExpression(queryModel, segmentProperties);
-          updateColumns(queryModel, blockInfo.getDetailInfo().getColumnSchemas(),
-              blockInfo.getFilePath());
+          updateColumns(queryModel, columnSchemas, blockInfo.getFilePath());
           filePathToSegmentPropertiesMap.put(blockInfo.getFilePath(), segmentProperties);
         }
         tableBlockInfos.add(blockInfo);
@@ -259,6 +275,19 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
           filePathToSegmentPropertiesMap.get(tableBlockInfos.get(0).getFilePath())));
     }
     return indexList;
+  }
+
+  private List<ColumnSchema> getColumnSchemasForRowFormat(TableBlockInfo blockInfo)
+      throws IOException {
+    List<ColumnSchema> columnSchemas;
+    CarbonHeaderReader headerReader = new CarbonHeaderReader(blockInfo.getFilePath());
+    FileHeader header = headerReader.readHeader();
+    columnSchemas = new ArrayList<>();
+    List<org.apache.carbondata.format.ColumnSchema> table_columns = header.getColumn_schema();
+    for (int i = 0; i < table_columns.size(); i++) {
+      columnSchemas.add(thriftColumnSchemaToWrapperColumnSchema(table_columns.get(i)));
+    }
+    return columnSchemas;
   }
 
   /**
@@ -434,6 +463,8 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
           blockExecutionInfoForBlock.setMeasureResusableDataBuffer(measureReusableDataBuffers);
         }
       }
+      blockExecutionInfoForBlock.setIsFilterDimensions(queryModel.getIsFilterDimensions());
+      blockExecutionInfoForBlock.setIsFilterMeasures(queryModel.getIsFilterMeasures());
       blockExecutionInfoList.add(blockExecutionInfoForBlock);
     }
     if (null != queryModel.getStatisticsRecorder()) {
@@ -521,24 +552,12 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
             segmentProperties.getDimensionOrdinalToChunkMapping(),
             segmentProperties.getEachComplexDimColumnValueSize(),
             queryProperties.columnToDictionaryMapping, queryProperties.complexFilterDimension));
-    IndexKey startIndexKey = null;
-    IndexKey endIndexKey = null;
     if (null != queryModel.getFilterExpressionResolverTree()) {
       // loading the filter executor tree for filter evaluation
       blockExecutionInfo.setFilterExecuterTree(FilterUtil
           .getFilterExecuterTree(queryModel.getFilterExpressionResolverTree(), segmentProperties,
               blockExecutionInfo.getComlexDimensionInfoMap()));
     }
-    try {
-      startIndexKey = FilterUtil.prepareDefaultStartIndexKey(segmentProperties);
-      endIndexKey = FilterUtil.prepareDefaultEndIndexKey(segmentProperties);
-    } catch (KeyGenException e) {
-      throw new QueryExecutionException(e);
-    }
-    //setting the start index key of the block node
-    blockExecutionInfo.setStartKey(startIndexKey);
-    //setting the end index key of the block node
-    blockExecutionInfo.setEndKey(endIndexKey);
     // expression measure
     List<CarbonMeasure> expressionMeasures =
         new ArrayList<CarbonMeasure>(CarbonCommonConstants.DEFAULT_COLLECTION_SIZE);

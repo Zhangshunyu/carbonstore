@@ -64,7 +64,7 @@ public class DataBlockIterator extends CarbonIterator<List<Object[]>> {
   /**
    * batch size of result
    */
-  private int batchSize;
+  protected int batchSize;
 
   private ExecutorService executorService;
 

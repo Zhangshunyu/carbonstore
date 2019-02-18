@@ -47,7 +47,7 @@ import org.apache.carbondata.core.constants.{CarbonCommonConstants, CarbonCommon
 import org.apache.carbondata.core.datastore.block.Distributable
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.indexstore.PartitionSpec
-import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
+import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, ColumnarFormatVersion}
 import org.apache.carbondata.core.metadata.schema.table.TableInfo
 import org.apache.carbondata.core.scan.expression.Expression
 import org.apache.carbondata.core.scan.expression.conditional.ImplicitExpression
@@ -165,6 +165,7 @@ class CarbonScanRDD[T: ClassTag](
                 Seq(splitWithIndex._1.asInstanceOf[CarbonInputSplit]).asJava,
                 splitWithIndex._1.getLocations,
                 FileFormat.ROW_V1)
+            multiBlockSplit.getAllSplits.asScala.foreach(_.setVersion(ColumnarFormatVersion.R1))
             new CarbonSparkPartition(id, splitWithIndex._2 + index, multiBlockSplit)
           }
         if (batchPartitions.isEmpty) {
@@ -423,18 +424,18 @@ class CarbonScanRDD[T: ClassTag](
       model.setQueryId(queryId)
       // get RecordReader by FileFormat
       var reader: RecordReader[Void, Object] = inputSplit.getFileFormat match {
-        case FileFormat.ROW_V1 =>
-          // create record reader for row format
-          DataTypeUtil.setDataTypeConverter(dataTypeConverterClz.newInstance())
-          val inputFormat = new CarbonStreamInputFormat
-          inputFormat.setIsVectorReader(vectorReader)
-          inputFormat.setInputMetricsStats(inputMetricsStats)
-          model.setStatisticsRecorder(
-            CarbonTimeStatisticsFactory.createExecutorRecorder(model.getQueryId))
-          inputFormat.setModel(model)
-          val streamReader = inputFormat.createRecordReader(inputSplit, attemptContext)
-            .asInstanceOf[RecordReader[Void, Object]]
-          streamReader
+//        case FileFormat.ROW_V1 =>
+//          // create record reader for row format
+//          DataTypeUtil.setDataTypeConverter(dataTypeConverterClz.newInstance())
+//          val inputFormat = new CarbonStreamInputFormat
+//          inputFormat.setIsVectorReader(vectorReader)
+//          inputFormat.setInputMetricsStats(inputMetricsStats)
+//          model.setStatisticsRecorder(
+//            CarbonTimeStatisticsFactory.createExecutorRecorder(model.getQueryId))
+//          inputFormat.setModel(model)
+//          val streamReader = inputFormat.createRecordReader(inputSplit, attemptContext)
+//            .asInstanceOf[RecordReader[Void, Object]]
+//          streamReader
         case _ =>
           // create record reader for CarbonData file format
           if (vectorReader) {
