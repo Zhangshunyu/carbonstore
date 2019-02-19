@@ -129,8 +129,10 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     String segmentId = CarbonStreamOutputFormat.getSegmentId(hadoopConf);
     carbonLoadModel.setSegmentId(segmentId);
     carbonTable = carbonLoadModel.getCarbonDataLoadSchema().getCarbonTable();
-    long taskNo = TaskID.forName(hadoopConf.get("mapred.tip.id")).getId();
-    carbonLoadModel.setTaskNo("" + taskNo);
+    if (carbonLoadModel.getTaskNo() == null) {
+      long taskNo = TaskID.forName(hadoopConf.get("mapred.tip.id")).getId();
+      carbonLoadModel.setTaskNo(taskNo + "");
+    }
     configuration = DataLoadProcessBuilder.createConfiguration(carbonLoadModel);
     maxRowNums = hadoopConf.getInt(CarbonStreamOutputFormat.CARBON_STREAM_BLOCKLET_ROW_NUMS,
         CarbonStreamOutputFormat.CARBON_STREAM_BLOCKLET_ROW_NUMS_DEFAULT) - 1;
@@ -139,7 +141,10 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
 
     segmentDir = CarbonTablePath.getSegmentPath(
         carbonTable.getAbsoluteTableIdentifier().getTablePath(), segmentId);
-    fileName = CarbonTablePath.getCarbonDataFileName(0, taskNo, 0, 0, "0", segmentId);
+    FileFactory.mkdirs(segmentDir, hadoopConf);
+    fileName = CarbonTablePath
+        .getCarbonDataFileName(0, Long.parseLong(carbonLoadModel.getTaskNo()), 0, 0,
+            carbonLoadModel.getFactTimeStamp() + "", segmentId);
 
     // initialize metadata
     isNoDictionaryDimensionColumn =
@@ -154,7 +159,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     }
   }
 
-  private void initializeAtFirstRow() throws IOException, InterruptedException {
+  private void initializeAtFirstRow() throws IOException {
     // initialize parser and converter
     rowParser = new RowParserImpl(dataFields, configuration);
     badRecordLogger = BadRecordsLoggerProvider.createBadRecordLogger(configuration);
@@ -200,7 +205,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     isFirstRow = false;
   }
 
-  @Override public void write(Void key, Object value) throws IOException, InterruptedException {
+  @Override public void write(Void key, Object value) throws IOException {
     if (isFirstRow) {
       initializeAtFirstRow();
     }
@@ -325,9 +330,9 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
   /**
    * write a blocklet to file
    */
-  private void appendBlockletToDataFile() throws IOException {
+  public boolean appendBlockletToDataFile() throws IOException {
     if (output.getRowIndex() == -1) {
-      return;
+      return false;
     }
     output.apppendBlocklet(outputStream);
     outputStream.flush();
@@ -337,6 +342,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     }
     // reset data
     output.reset();
+    return true;
   }
 
   public BlockletMinMaxIndex getBatchMinMaxIndex() {
@@ -348,12 +354,16 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
         batchMinMaxIndex, output.generateBlockletMinMax(), measureDataTypes);
   }
 
+  public BlockletMinMaxIndex getBatchMinMaxIndexWithoutMerge() {
+    return batchMinMaxIndex;
+  }
+
   public DataType[] getMeasureDataTypes() {
     return measureDataTypes;
   }
 
   @Override
-  public void close(TaskAttemptContext context) throws IOException, InterruptedException {
+  public void close(TaskAttemptContext context) throws IOException {
     try {
       isClosed = true;
       // append remain buffer data

@@ -37,6 +37,13 @@ public abstract class CarbonWriter {
    */
   public abstract void write(Object object) throws IOException;
 
+
+  /**
+   * Flushes the written data to disk
+   * Note: This API is not thread safe
+   */
+  public abstract void flushBatch() throws IOException;
+
   /**
    * Flush and close the writer
    */

@@ -72,6 +72,13 @@ public class StreamSegment {
    * get stream segment or create new stream segment if not exists
    */
   public static String open(CarbonTable table) throws IOException {
+    LoadMetadataDetails[] loadDetails =
+        SegmentStatusManager.readLoadMetadata(
+            CarbonTablePath.getMetadataPath(table.getTablePath()));
+    LoadMetadataDetails segment = getStreamSegment(loadDetails);
+    if (null != segment) {
+      return segment.getLoadName();
+    }
     SegmentStatusManager segmentStatusManager =
         new SegmentStatusManager(table.getAbsoluteTableIdentifier());
     ICarbonLock carbonLock = segmentStatusManager.getTableStatusLock();
@@ -84,15 +91,7 @@ public class StreamSegment {
         LoadMetadataDetails[] details =
             SegmentStatusManager.readLoadMetadata(
                 CarbonTablePath.getMetadataPath(table.getTablePath()));
-        LoadMetadataDetails streamSegment = null;
-        for (LoadMetadataDetails detail : details) {
-          if (FileFormat.ROW_V1 == detail.getFileFormat()) {
-            if (SegmentStatus.STREAMING == detail.getSegmentStatus()) {
-              streamSegment = detail;
-              break;
-            }
-          }
-        }
+        LoadMetadataDetails streamSegment = getStreamSegment(details);
         if (null == streamSegment) {
           int segmentId = SegmentStatusManager.createNewSegmentId(details);
           LoadMetadataDetails newDetail = new LoadMetadataDetails();
@@ -130,6 +129,19 @@ public class StreamSegment {
                 .getTableName() + " during stream table get or create segment");
       }
     }
+  }
+
+  private static LoadMetadataDetails getStreamSegment(LoadMetadataDetails[] details) {
+    LoadMetadataDetails streamSegment = null;
+    for (LoadMetadataDetails detail : details) {
+      if (FileFormat.ROW_V1 == detail.getFileFormat()) {
+        if (SegmentStatus.STREAMING == detail.getSegmentStatus()) {
+          streamSegment = detail;
+          break;
+        }
+      }
+    }
+    return streamSegment;
   }
 
   /**
@@ -591,7 +603,7 @@ public class StreamSegment {
   /**
    * merge new blocklet index and old file index to create new file index
    */
-  private static void updateStreamFileIndex(Map<String, StreamFileIndex> indexMap,
+  public static void updateStreamFileIndex(Map<String, StreamFileIndex> indexMap,
       String indexPath, FileFactory.FileType fileType, DataType[] msrDataTypes
   ) throws IOException {
     List<BlockIndex> blockIndexList = readIndexFile(indexPath, fileType);

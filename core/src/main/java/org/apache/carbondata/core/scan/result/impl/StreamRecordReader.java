@@ -193,7 +193,8 @@ public class StreamRecordReader extends CarbonIterator<Object[]> {
           isRequired[i] = true;
           isProjectionRequired[i] = true;
           projectionMap[i] = j;
-          queryTypes[j] = comlexDimensionInfoMap.get(storageColumns[i].getOrdinal());
+          queryTypes[storageColumns[i].getOrdinal()] =
+              comlexDimensionInfoMap.get(storageColumns[i].getOrdinal());
           break;
         }
       }
