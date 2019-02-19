@@ -35,16 +35,22 @@ import org.apache.carbondata.common.constants.LoggerAction;
 import org.apache.carbondata.common.exceptions.sql.InvalidLoadOptionException;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
+import org.apache.carbondata.core.metadata.CarbonMetadata;
+import org.apache.carbondata.core.metadata.converter.SchemaConverter;
+import org.apache.carbondata.core.metadata.converter.ThriftWrapperSchemaConverterImpl;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.metadata.datatype.MapType;
 import org.apache.carbondata.core.metadata.datatype.StructField;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
+import org.apache.carbondata.core.metadata.schema.table.TableInfo;
 import org.apache.carbondata.core.metadata.schema.table.TableSchema;
 import org.apache.carbondata.core.metadata.schema.table.TableSchemaBuilder;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonUtil;
+import org.apache.carbondata.core.util.path.CarbonTablePath;
+import org.apache.carbondata.core.writer.ThriftWriter;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModelBuilder;
 import org.apache.carbondata.processing.util.CarbonLoaderUtil;
@@ -60,6 +66,7 @@ public class CarbonWriterBuilder {
   private Schema schema;
   private String path;
   //initialize with empty array , as no columns should be selected for sorting in NO_SORT
+  private boolean persistSchemaFile;
   private String[] sortColumns = new String[0];
   private int blockletSize;
   private int blockSize;
@@ -74,7 +81,7 @@ public class CarbonWriterBuilder {
   private String writtenByApp;
   private String[] invertedIndexColumns;
   private enum WRITER_TYPE {
-    CSV, AVRO, JSON
+    CSV, AVRO, JSON, ROWFORMAT
   }
 
   private WRITER_TYPE writerType;
@@ -461,6 +468,20 @@ public class CarbonWriterBuilder {
   /**
    * to build a {@link CarbonWriter}, which accepts row in CSV format
    *
+   * @param schema carbon Schema object {org.apache.carbondata.sdk.file.Schema}
+   * @return CarbonWriterBuilder
+   */
+  public CarbonWriterBuilder withRowFormat(Schema schema) {
+    Objects.requireNonNull(schema, "schema should not be null");
+    this.schema = schema;
+    this.persistSchemaFile = true;
+    this.writerType = WRITER_TYPE.ROWFORMAT;
+    return this;
+  }
+
+  /**
+   * to build a {@link CarbonWriter}, which accepts row in CSV format
+   *
    * @param jsonSchema json Schema string
    * @return CarbonWriterBuilder
    */
@@ -535,6 +556,8 @@ public class CarbonWriterBuilder {
     } else if (this.writerType == WRITER_TYPE.JSON) {
       loadModel.setJsonFileLoad(true);
       return new JsonCarbonWriter(loadModel, hadoopConf);
+    } else if (this.writerType == WRITER_TYPE.ROWFORMAT) {
+      return new RowFormatCarbonWriter(loadModel, hadoopConf);
     } else {
       // CSV
       return new CSVCarbonWriter(loadModel, hadoopConf);
@@ -588,6 +611,14 @@ public class CarbonWriterBuilder {
     }
     // build CarbonTable using schema
     CarbonTable table = buildCarbonTable();
+    if (persistSchemaFile) {
+      if (writerType == WRITER_TYPE.ROWFORMAT) {
+        table.getTableInfo().getFactTable().getTableProperties().put("streaming", "true");
+      }
+      // we are still using the traditional carbon table folder structure
+      persistSchemaFile(table, CarbonTablePath.getSchemaFilePath(path));
+    }
+
     // build LoadModel
     return buildLoadModel(table, timestamp, taskNo, options);
   }
@@ -766,6 +797,37 @@ public class CarbonWriterBuilder {
         }
       }
     }
+  }
+
+  /**
+   * Save the schema of the {@param table} to {@param persistFilePath}
+   * @param table table object containing schema
+   * @param persistFilePath absolute file path with file name
+   */
+  private void persistSchemaFile(CarbonTable table, String persistFilePath) throws IOException {
+    TableInfo tableInfo = table.getTableInfo();
+    String schemaMetadataPath = CarbonTablePath.getFolderContainingFile(persistFilePath);
+    CarbonMetadata.getInstance().loadTableMetadata(tableInfo);
+    SchemaConverter schemaConverter = new ThriftWrapperSchemaConverterImpl();
+    org.apache.carbondata.format.TableInfo thriftTableInfo =
+        schemaConverter.fromWrapperToExternalTableInfo(
+            tableInfo,
+            tableInfo.getDatabaseName(),
+            tableInfo.getFactTable().getTableName());
+    org.apache.carbondata.format.SchemaEvolutionEntry schemaEvolutionEntry =
+        new org.apache.carbondata.format.SchemaEvolutionEntry(
+            tableInfo.getLastUpdatedTime());
+    thriftTableInfo.getFact_table().getSchema_evolution().getSchema_evolution_history()
+        .add(schemaEvolutionEntry);
+    FileFactory.FileType fileType = FileFactory.getFileType(schemaMetadataPath);
+    if (!FileFactory.isFileExist(schemaMetadataPath, fileType)) {
+      FileFactory.mkdirs(schemaMetadataPath, fileType);
+    }
+    ThriftWriter thriftWriter = new ThriftWriter(persistFilePath, false);
+    thriftWriter.open();
+    thriftWriter.write(thriftTableInfo);
+    thriftWriter.close();
+    this.persistSchemaFile = false;
   }
 
   /**

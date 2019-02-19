@@ -450,8 +450,14 @@ public abstract class AbstractDataFileFooterConverter {
       Arrays.fill(minMaxFlag, true);
       isMinMaxSet = Arrays.asList(minMaxFlag);
     }
-    return new BlockletIndex(
-        new BlockletBTreeIndex(btreeIndex.getStart_key(), btreeIndex.getEnd_key()),
+    BlockletBTreeIndex btree;
+    if (btreeIndex != null) {
+      btree =
+          new BlockletBTreeIndex(btreeIndex.getStart_key(), btreeIndex.getEnd_key());
+    } else {
+      btree = new BlockletBTreeIndex();
+    }
+    return new BlockletIndex(btree,
         new BlockletMinMaxIndex(minMaxIndex.getMin_values(), minMaxIndex.getMax_values(),
             isMinMaxSet));
   }

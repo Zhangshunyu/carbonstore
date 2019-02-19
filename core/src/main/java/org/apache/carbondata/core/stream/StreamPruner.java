@@ -26,6 +26,8 @@ import java.util.List;
 import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
+import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
+import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
@@ -114,35 +116,52 @@ public class StreamPruner {
       throws IOException {
     List<StreamFile> streamFileList = new ArrayList<>();
     for (Segment segment : segments) {
-      String segmentDir = CarbonTablePath.getSegmentPath(
-          carbonTable.getAbsoluteTableIdentifier().getTablePath(), segment.getSegmentNo());
+      String segmentDir = CarbonTablePath
+          .getSegmentPath(carbonTable.getAbsoluteTableIdentifier().getTablePath(),
+              segment.getSegmentNo());
       String indexFile = CarbonTablePath.getCarbonStreamIndexFilePath(segmentDir);
       FileFactory.FileType fileType = FileFactory.getFileType(indexFile);
       if (FileFactory.isFileExist(indexFile, fileType)) {
-        CarbonIndexFileReader indexReader = new CarbonIndexFileReader();
-        indexReader.openThriftReader(indexFile);
-        try {
-          while (indexReader.hasNext()) {
-            BlockIndex blockIndex = indexReader.readBlockIndexInfo();
-            String filePath = segmentDir + File.separator + blockIndex.getFile_name();
-            long length = blockIndex.getFile_size();
-            StreamFile streamFile = new StreamFile(segment.getSegmentNo(), filePath, length);
-            streamFileList.add(streamFile);
-            if (withMinMax) {
-              if (blockIndex.getBlock_index() != null
-                  && blockIndex.getBlock_index().getMin_max_index() != null) {
-                streamFile.setMinMaxIndex(CarbonMetadataUtil
-                    .convertExternalMinMaxIndex(blockIndex.getBlock_index().getMin_max_index()));
-              }
-            }
+        readIndexAndgetStreamFiles(withMinMax, streamFileList, segment, segmentDir, indexFile);
+      } else {
+        CarbonFile carbonFile = FileFactory.getCarbonFile(segmentDir);
+        CarbonFile[] files = carbonFile.listFiles(new CarbonFileFilter() {
+          @Override public boolean accept(CarbonFile file) {
+            return file.getName().endsWith(CarbonTablePath.INDEX_FILE_EXT);
           }
-        } finally {
-          indexReader.closeThriftReader();
+        });
+        for (CarbonFile index : files) {
+          readIndexAndgetStreamFiles(withMinMax, streamFileList, segment, segmentDir,
+              index.getAbsolutePath());
         }
       }
     }
     totalFileNums = streamFileList.size();
     return streamFileList;
+  }
+
+  private void readIndexAndgetStreamFiles(boolean withMinMax, List<StreamFile> streamFileList,
+      Segment segment, String segmentDir, String indexFile) throws IOException {
+    CarbonIndexFileReader indexReader = new CarbonIndexFileReader();
+    indexReader.openThriftReader(indexFile);
+    try {
+      while (indexReader.hasNext()) {
+        BlockIndex blockIndex = indexReader.readBlockIndexInfo();
+        String filePath = segmentDir + File.separator + blockIndex.getFile_name();
+        long length = blockIndex.getFile_size();
+        StreamFile streamFile = new StreamFile(segment.getSegmentNo(), filePath, length);
+        streamFileList.add(streamFile);
+        if (withMinMax) {
+          if (blockIndex.getBlock_index() != null
+              && blockIndex.getBlock_index().getMin_max_index() != null) {
+            streamFile.setMinMaxIndex(CarbonMetadataUtil
+                .convertExternalMinMaxIndex(blockIndex.getBlock_index().getMin_max_index()));
+          }
+        }
+      }
+    } finally {
+      indexReader.closeThriftReader();
+    }
   }
 
   public int getTotalFileNums() {

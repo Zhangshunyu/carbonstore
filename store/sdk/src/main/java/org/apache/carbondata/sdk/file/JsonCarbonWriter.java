@@ -88,4 +88,9 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
       throw new IOException(e);
     }
   }
+
+  @Override public void flushBatch() throws IOException {
+    throw new UnsupportedOperationException(
+        "Not supported from this class " + getClass().getName());
+  }
 }
