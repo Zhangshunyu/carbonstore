@@ -22,18 +22,22 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.sdk.file.CarbonReader;
 import org.apache.carbondata.sdk.file.CarbonSchemaReader;
+import org.apache.carbondata.sdk.file.CarbonSchemaWriter;
 import org.apache.carbondata.sdk.file.CarbonWriter;
 import org.apache.carbondata.sdk.file.CarbonWriterBuilder;
 import org.apache.carbondata.sdk.file.Field;
 import org.apache.carbondata.sdk.file.Schema;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Example fo CarbonReader with close method
@@ -41,8 +45,10 @@ import org.apache.commons.io.FileUtils;
  * otherwise main will continue run some time
  */
 public class CarbonReaderExample {
+
   public static void main(String[] args) {
     String path = "./testWriteFiles";
+    String schemaStr = "{\"stringField\":\"string\", \"shortField\":\"short\", \"intField\":\"int\", \"longField\":\"long\", \"doubleField\":\"double\", \"boolField\":\"boolean\",\"dateField\":\"date\",\"timeField\":\"timestamp\",\"decimalField\":\"decimal\",\"varcharField\":\"varchar\", \"tblproperties\":{\"sort_columns\":\"stringField,dateField\"}}";
     try {
       FileUtils.deleteDirectory(new File(path));
       CarbonProperties.getInstance()
@@ -61,10 +67,15 @@ public class CarbonReaderExample {
       fields[7] = new Field("timeField", DataTypes.TIMESTAMP);
       fields[8] = new Field("decimalField", DataTypes.createDecimalType(8, 2));
       fields[9] = new Field("varcharField", DataTypes.VARCHAR);
-      fields[10] = new Field("arrayField", DataTypes.createArrayType(DataTypes.STRING));
+//      fields[10] = new Field("arrayField", DataTypes.createArrayType(DataTypes.STRING));
+      Map<String, String> tblproperties = new HashMap<>();
+      Schema schema = CarbonSchemaWriter.convertToSchemaFromJSON(schemaStr, tblproperties);
+
+      CarbonSchemaWriter.writeSchema(path, schema, tblproperties, new Configuration());
       CarbonWriterBuilder builder =
           CarbonWriter.builder().outputPath(path).withLoadOption("complex_delimiter_level_1", "#")
-              .withRowFormat(new Schema(fields)).writtenBy("CarbonReaderExample");
+              .withTableProperties(tblproperties)
+              .withRowFormat(schema).writtenBy("CarbonReaderExample");
       CarbonWriter writer = builder.build();
       for (int k = 0; k < 1000; k++) {
         for (int i = 0; i < 1000; i++) {
@@ -78,8 +89,8 @@ public class CarbonReaderExample {
               "2019-03-02",
               "2019-02-12 03:03:34",
               "12.345",
-              "varchar",
-              "Hello#World#From#Carbon"
+              "varchar"
+//              "Hello#World#From#Carbon"
           };
           writer.write(row2);
         }
