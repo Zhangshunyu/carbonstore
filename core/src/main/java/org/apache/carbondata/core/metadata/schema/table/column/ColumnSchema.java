@@ -116,6 +116,8 @@ public class ColumnSchema implements Serializable, Writable {
 
   private boolean isSortColumn = false;
 
+  private boolean primaryKeyColumn = false;
+
   /**
    * aggregate function used in pre aggregate table
    */
@@ -345,7 +347,8 @@ public class ColumnSchema implements Serializable, Writable {
     ColumnSchema other = (ColumnSchema) obj;
     if (!columnUniqueId.equals(other.columnUniqueId) ||
         (isDimensionColumn != other.isDimensionColumn) ||
-        (isSortColumn != other.isSortColumn)) {
+        (isSortColumn != other.isSortColumn) ||
+        (isPrimaryKeyColumn() != other.isPrimaryKeyColumn())) {
       return false;
     }
     if (encodingList.size() != other.encodingList.size()) {
@@ -458,6 +461,14 @@ public class ColumnSchema implements Serializable, Writable {
     isSortColumn = sortColumn;
   }
 
+  public boolean isPrimaryKeyColumn() {
+    return primaryKeyColumn;
+  }
+
+  public void setPrimaryKeyColumn(boolean primaryKeyColumn) {
+    this.primaryKeyColumn = primaryKeyColumn;
+  }
+
   public String getAggFunction() {
     return aggFunction;
   }
@@ -513,6 +524,7 @@ public class ColumnSchema implements Serializable, Writable {
     }
     out.writeBoolean(invisible);
     out.writeBoolean(isSortColumn);
+    out.writeBoolean(primaryKeyColumn);
     out.writeUTF(null != aggFunction ? aggFunction : "");
     out.writeUTF(timeSeriesFunction);
     boolean isParentTableColumnRelationExists =
@@ -560,6 +572,7 @@ public class ColumnSchema implements Serializable, Writable {
     }
     this.invisible = in.readBoolean();
     this.isSortColumn = in.readBoolean();
+    this.primaryKeyColumn = in.readBoolean();
     this.aggFunction = in.readUTF();
     this.timeSeriesFunction = in.readUTF();
     boolean isParentTableColumnRelationExists = in.readBoolean();

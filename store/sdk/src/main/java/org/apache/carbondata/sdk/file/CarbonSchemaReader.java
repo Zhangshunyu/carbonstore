@@ -30,6 +30,7 @@ import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.converter.SchemaConverter;
 import org.apache.carbondata.core.metadata.converter.ThriftWrapperSchemaConverterImpl;
+import org.apache.carbondata.core.metadata.schema.table.TableSchema;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 import org.apache.carbondata.core.reader.CarbonFooterReaderV3;
 import org.apache.carbondata.core.reader.CarbonHeaderReader;
@@ -61,11 +62,10 @@ public class CarbonSchemaReader {
   public static Schema readSchemaInSchemaFile(String schemaFilePath) throws IOException {
     org.apache.carbondata.format.TableInfo tableInfo = CarbonUtil.readSchemaFile(schemaFilePath);
     SchemaConverter schemaConverter = new ThriftWrapperSchemaConverterImpl();
-    List<ColumnSchema> schemaList = schemaConverter
-        .fromExternalToWrapperTableInfo(tableInfo, "", "", "")
-        .getFactTable()
-        .getListOfColumns();
-    return new Schema(schemaList);
+    TableSchema factTable =
+        schemaConverter.fromExternalToWrapperTableInfo(tableInfo, "", "", "").getFactTable();
+    List<ColumnSchema> schemaList = factTable.getListOfColumns();
+    return new Schema(schemaList, factTable.getTableProperties());
   }
 
   /**

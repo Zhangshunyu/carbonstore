@@ -3322,4 +3322,14 @@ public final class CarbonUtil {
     }
     return null;
   }
+
+  public static short[] getPrimaryKeyColumnIndexes(List<ColumnSchema> columnSchemas) {
+    List<Short> shorts = new ArrayList<>();
+    for (ColumnSchema schema : columnSchemas) {
+      if (schema.isPrimaryKeyColumn()) {
+        shorts.add((short) schema.getSchemaOrdinal());
+      }
+    }
+    return ArrayUtils.toPrimitive(shorts.toArray(new Short[0]));
+  }
 }

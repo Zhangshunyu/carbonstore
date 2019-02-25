@@ -48,7 +48,7 @@ public class CarbonReaderExample {
 
   public static void main(String[] args) {
     String path = "./testWriteFiles";
-    String schemaStr = "{\"stringField\":\"string\", \"shortField\":\"short\", \"intField\":\"int\", \"longField\":\"long\", \"doubleField\":\"double\", \"boolField\":\"boolean\",\"dateField\":\"date\",\"timeField\":\"timestamp\",\"decimalField\":\"decimal\",\"varcharField\":\"varchar\", \"tblproperties\":{\"sort_columns\":\"stringField,dateField\"}}";
+    String schemaStr = "{\"stringField\":\"string\", \"shortField\":\"short\", \"intField\":\"int\", \"longField\":\"long\", \"doubleField\":\"double\", \"boolField\":\"boolean\",\"dateField\":\"date\",\"timeField\":\"timestamp\",\"decimalField\":\"decimal\",\"varcharField\":\"varchar\", \"tblproperties\":{\"sort_columns\":\"stringField,dateField\", \"primary_key_columns\":\"stringField\"}}";
     try {
       FileUtils.deleteDirectory(new File(path));
       CarbonProperties.getInstance()
@@ -71,7 +71,7 @@ public class CarbonReaderExample {
       Map<String, String> tblproperties = new HashMap<>();
       Schema schema = CarbonSchemaWriter.convertToSchemaFromJSON(schemaStr, tblproperties);
 
-      CarbonSchemaWriter.writeSchema(path, schema, tblproperties, new Configuration());
+      CarbonSchemaWriter.writeSchema(path, schema, new Configuration());
       CarbonWriterBuilder builder =
           CarbonWriter.builder().outputPath(path).withLoadOption("complex_delimiter_level_1", "#")
               .withTableProperties(tblproperties)

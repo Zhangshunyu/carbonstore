@@ -41,6 +41,7 @@ import org.apache.carbondata.core.indexstore.BlockMetaInfo;
 import org.apache.carbondata.core.indexstore.Blocklet;
 import org.apache.carbondata.core.indexstore.ExtendedBlocklet;
 import org.apache.carbondata.core.indexstore.PartitionSpec;
+import org.apache.carbondata.core.indexstore.RangeColumnSplitMerger;
 import org.apache.carbondata.core.indexstore.SafeMemoryDMStore;
 import org.apache.carbondata.core.indexstore.UnsafeMemoryDMStore;
 import org.apache.carbondata.core.indexstore.row.DataMapRow;
@@ -964,6 +965,12 @@ public class BlockDataMap extends CoarseGrainDataMap
 
   protected ExtendedBlocklet createBlocklet(DataMapRow row, String fileName, short blockletId,
       boolean useMinMaxForPruning) {
+    return createBlocklet(row, fileName, blockletId, useMinMaxForPruning,
+        getMinMaxValue(row, MAX_VALUES_INDEX), getMinMaxValue(row, MIN_VALUES_INDEX));
+  }
+
+  protected ExtendedBlocklet createBlocklet(DataMapRow row, String fileName, short blockletId,
+      boolean useMinMaxForPruning, byte[][] maxValues, byte[][] minValues) {
     short versionNumber = row.getShort(VERSION_INDEX);
     ExtendedBlocklet blocklet = new ExtendedBlocklet(fileName, blockletId + "", false,
         ColumnarFormatVersion.valueOf(versionNumber));
@@ -971,6 +978,8 @@ public class BlockDataMap extends CoarseGrainDataMap
     blocklet.setColumnCardinality(getColumnCardinality());
     blocklet.setLegacyStore(isLegacyStore);
     blocklet.setUseMinMaxForPruning(useMinMaxForPruning);
+    blocklet
+        .setSplitMerger(new RangeColumnSplitMerger(getPrimaryKeyIndexes(), minValues, maxValues));
     return blocklet;
   }
 
@@ -1040,6 +1049,11 @@ public class BlockDataMap extends CoarseGrainDataMap
   protected CarbonRowSchema[] getFileFooterEntrySchema() {
     return SegmentPropertiesAndSchemaHolder.getInstance()
         .getSegmentPropertiesWrapper(segmentPropertiesIndex).getBlockFileFooterEntrySchema();
+  }
+
+  protected short[] getPrimaryKeyIndexes() {
+    return SegmentPropertiesAndSchemaHolder.getInstance()
+        .getSegmentPropertiesWrapper(segmentPropertiesIndex).getPrimaryKeyColIndexes();
   }
 
   protected CarbonRowSchema[] getTaskSummarySchema() {

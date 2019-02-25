@@ -88,7 +88,6 @@ public class StreamPruner {
         if (isScanRequire(streamFile)) {
           // if stream file is required to scan
           streamFileList.add(streamFile);
-          streamFile.setMinMaxIndex(null);
         }
       }
       return streamFileList;

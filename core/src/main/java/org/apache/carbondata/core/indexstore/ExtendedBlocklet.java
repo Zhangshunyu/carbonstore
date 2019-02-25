@@ -105,6 +105,14 @@ public class ExtendedBlocklet extends Blocklet {
     this.dataMapUniqueId = dataMapUniqueId;
   }
 
+  public RangeColumnSplitMerger getSplitMerger() {
+    return splitMerger;
+  }
+
+  public void setSplitMerger(RangeColumnSplitMerger splitMerger) {
+    this.splitMerger = splitMerger;
+  }
+
   @Override public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;

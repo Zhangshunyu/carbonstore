@@ -46,11 +46,11 @@ import org.apache.htrace.fasterxml.jackson.databind.ObjectMapper;
  */
 public class CarbonSchemaWriter {
 
-  public static void writeSchema(String tablePath, Schema schema, Map<String, String> tblProperties,
+  public static void writeSchema(String tablePath, Schema schema,
       Configuration configuration) throws IOException, InvalidLoadOptionException {
     ThreadLocalSessionInfo.setConfigurationToCurrentThread(configuration);
     CarbonWriterBuilder builder = new CarbonWriterBuilder();
-    builder.withTableProperties(tblProperties).outputPath(tablePath);
+    builder.withTableProperties(schema.getProperties()).outputPath(tablePath);
     builder.withHadoopConf(configuration);
     CarbonLoadModel loadModel = builder.buildLoadModel(schema);
     CarbonTable table = loadModel.getCarbonDataLoadSchema().getCarbonTable();
@@ -64,7 +64,7 @@ public class CarbonSchemaWriter {
     ThreadLocalSessionInfo.setConfigurationToCurrentThread(configuration);
     Map<String, String> tblProperties = new HashMap<>();
     Schema schema = convertToSchemaFromJSON(jsonSchema, tblProperties);
-    writeSchema(tablePath, schema, tblProperties, configuration);
+    writeSchema(tablePath, schema, configuration);
   }
 
   public static Schema convertToSchemaFromJSON(String jsonSchema,
@@ -85,7 +85,7 @@ public class CarbonSchemaWriter {
         fields.add(new Field(fieldName, convertDataType(entry.getValue().toString())));
       }
     }
-    return new Schema(fields.toArray(new Field[0]));
+    return new Schema(fields.toArray(new Field[0]), tblProperties);
   }
 
   private static DataType convertDataType(String dataType) {

@@ -651,6 +651,17 @@ m filterExpression
     return resultFilteredBlocks;
   }
 
+  private CarbonInputSplit convertToCarbonInputSplit(ExtendedBlocklet blocklet) throws IOException {
+    CarbonInputSplit split = CarbonInputSplit
+        .from(blocklet.getSegmentId(), blocklet.getBlockletId(),
+            new FileSplit(new Path(blocklet.getPath()), 0, blocklet.getLength(),
+                blocklet.getLocations()),
+            ColumnarFormatVersion.valueOf((short) blocklet.getDetailInfo().getVersionNumber()),
+            blocklet.getDataMapWriterPath(), blocklet.getSplitMerger());
+    split.setDetailInfo(blocklet.getDetailInfo());
+    return split;
+  }
+
   @Override public RecordReader<Void, T> createRecordReader(InputSplit inputSplit,
       TaskAttemptContext taskAttemptContext) throws IOException, InterruptedException {
     Configuration configuration = taskAttemptContext.getConfiguration();

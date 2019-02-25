@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
@@ -35,26 +36,21 @@ import org.apache.carbondata.common.constants.LoggerAction;
 import org.apache.carbondata.common.exceptions.sql.InvalidLoadOptionException;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
-import org.apache.carbondata.core.metadata.CarbonMetadata;
-import org.apache.carbondata.core.metadata.converter.SchemaConverter;
-import org.apache.carbondata.core.metadata.converter.ThriftWrapperSchemaConverterImpl;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.metadata.datatype.MapType;
 import org.apache.carbondata.core.metadata.datatype.StructField;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
-import org.apache.carbondata.core.metadata.schema.table.TableInfo;
 import org.apache.carbondata.core.metadata.schema.table.TableSchema;
 import org.apache.carbondata.core.metadata.schema.table.TableSchemaBuilder;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.util.CarbonUtil;
-import org.apache.carbondata.core.util.path.CarbonTablePath;
-import org.apache.carbondata.core.writer.ThriftWriter;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModelBuilder;
 import org.apache.carbondata.processing.util.CarbonLoaderUtil;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -286,7 +282,7 @@ public class CarbonWriterBuilder {
     Set<String> supportedOptions = new HashSet<>(Arrays
         .asList("table_blocksize", "table_blocklet_size", "local_dictionary_threshold",
             "local_dictionary_enable", "sort_columns", "sort_scope", "long_string_columns",
-            "inverted_index", "table_page_size_inmb"));
+            "inverted_index", "table_page_size_inmb", "primary_key_columns"));
 
     for (String key : options.keySet()) {
       if (!supportedOptions.contains(key.toLowerCase())) {
@@ -328,6 +324,8 @@ public class CarbonWriterBuilder {
         this.invertedIndexFor(invertedIndexColumns);
       } else if (entry.getKey().equalsIgnoreCase("table_page_size_inmb")) {
         this.withPageSizeInMb(Integer.parseInt(entry.getValue()));
+      } else {
+        options.put(entry.getKey(), entry.getValue());
       }
     }
     return this;
@@ -751,12 +749,23 @@ public class CarbonWriterBuilder {
           break;
         }
       }
-      if (!exists) {
-        throw new RuntimeException("column: " + invertedIdxColumn
-            + " specified in inverted index columns does not exist in schema");
+    }
+    String primaryKeyCols = options.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS);
+    List<String> primaryKeyList = new ArrayList<>();
+    if (primaryKeyCols != null) {
+      String[] split = primaryKeyCols.split(",");
+      for (String s : split) {
+        if (StringUtils.isNotEmpty(s.trim())) {
+          primaryKeyList.add(s.trim());
+        }
       }
     }
-    int i = 0;
+    TreeSet<String> sortSet = new TreeSet<>(primaryKeyList);
+    sortSet.addAll(sortColumnsList);
+    sortColumnsList = new ArrayList<>(sortSet);
+    // Check if any of the columns specified in inverted index are missing from schema.
+    validateColumns(fields, primaryKeyList,
+        " specified in primary key columns does not exist in schema");
     for (Field field : fields) {
       if (null != field) {
         if (!uniqueFields.add(field.getFieldName())) {
@@ -765,7 +774,8 @@ public class CarbonWriterBuilder {
         }
         int isSortColumn = sortColumnsList.indexOf(field.getFieldName());
         int isInvertedIdxColumn = invertedIdxColumnsList.indexOf(field.getFieldName());
-        if (isSortColumn > -1) {
+        int isPrimaryColumn = primaryKeyList.indexOf(field.getFieldName());
+        if (isSortColumn > -1 || isPrimaryColumn > -1) {
           // unsupported types for ("array", "struct", "double", "float", "decimal")
           if (field.getDataType() == DataTypes.DOUBLE || field.getDataType() == DataTypes.FLOAT
               || DataTypes.isDecimal(field.getDataType()) || field.getDataType().isComplexType()
@@ -813,12 +823,44 @@ public class CarbonWriterBuilder {
             columnSchema.setSortColumn(true);
             sortColumnsSchemaList[isSortColumn] = columnSchema;
           }
+          if (isPrimaryColumn > -1) {
+            columnSchema.setPrimaryKeyColumn(true);
+          }
         }
       }
     }
   }
 
+  private int getIsSortColumn(List<String> sortColumnsList, Field field) {
+    int isSortColumn = sortColumnsList.indexOf(field.getFieldName());
+    if (isSortColumn > -1) {
+      // unsupported types for ("array", "struct", "double", "float", "decimal")
+      if (field.getDataType() == DataTypes.DOUBLE || field.getDataType() == DataTypes.FLOAT
+          || DataTypes.isDecimal(field.getDataType()) || field.getDataType().isComplexType()
+          || field.getDataType() == DataTypes.VARCHAR) {
+        String errorMsg =
+            "sort columns not supported for array, struct, map, double, float, decimal,"
+                + "varchar";
+        throw new RuntimeException(errorMsg);
+      }
+    }
+    return isSortColumn;
+  }
 
+  private void validateColumns(Field[] fields, List<String> sortColumnsList, String s) {
+    for (String sortColumn : sortColumnsList) {
+      boolean exists = false;
+      for (Field field : fields) {
+        if (field.getFieldName().equalsIgnoreCase(sortColumn)) {
+          exists = true;
+          break;
+        }
+      }
+      if (!exists) {
+        throw new RuntimeException("column: " + sortColumn + s);
+      }
+    }
+  }
 
   /**
    * Build a {@link CarbonLoadModel}

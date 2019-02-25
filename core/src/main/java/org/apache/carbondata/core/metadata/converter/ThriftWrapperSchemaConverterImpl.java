@@ -212,6 +212,14 @@ public class ThriftWrapperSchemaConverterImpl implements SchemaConverter {
       }
       properties.put(CarbonCommonConstants.SORT_COLUMNS, "true");
     }
+    if (wrapperColumnSchema.isPrimaryKeyColumn()) {
+      Map<String, String> properties = wrapperColumnSchema.getColumnProperties();
+      if (null == properties) {
+        properties = new HashMap<>();
+        thriftColumnSchema.setColumnProperties(properties);
+      }
+      properties.put(CarbonCommonConstants.PRIMARY_KEY_COLUMNS, "true");
+    }
     if (null != wrapperColumnSchema.getAggFunction() && !wrapperColumnSchema.getAggFunction()
         .isEmpty()) {
       thriftColumnSchema.setAggregate_function(wrapperColumnSchema.getAggFunction());
@@ -551,6 +559,9 @@ public class ThriftWrapperSchemaConverterImpl implements SchemaConverter {
       String sortColumns = properties.get(CarbonCommonConstants.SORT_COLUMNS);
       if (sortColumns != null) {
         wrapperColumnSchema.setSortColumn(true);
+      }
+      if (properties.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS) != null) {
+        wrapperColumnSchema.setPrimaryKeyColumn(true);
       }
       wrapperColumnSchema.setColumnProperties(externalColumnSchema.getColumnProperties());
     }

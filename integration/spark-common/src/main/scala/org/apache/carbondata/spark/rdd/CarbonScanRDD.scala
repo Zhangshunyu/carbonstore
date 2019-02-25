@@ -350,6 +350,35 @@ class CarbonScanRDD[T: ClassTag](
             currentFiles += file
           }
           closePartition()
+        } else if (tableInfo.getFactTable.getListOfColumns.asScala.exists(_.isPrimaryKeyColumn)) {
+          // group as per primary key columns ranges.
+          val array = splits.asScala.toArray
+          val groups = new ArrayBuffer[ArrayBuffer[CarbonInputSplit]]()
+          splits.asScala.foreach{s =>
+            groups.find{f =>
+              f.find(_.getSplitMerger.canBeMerged(
+                s.asInstanceOf[CarbonInputSplit].getSplitMerger)) match {
+                case Some(split) =>
+                  f += s.asInstanceOf[CarbonInputSplit]
+                  true
+                case _ => false
+              }
+            } match {
+              case Some(p) =>
+              case _ =>
+                val splits = new ArrayBuffer[CarbonInputSplit]()
+                splits += s.asInstanceOf[CarbonInputSplit]
+                groups += splits
+            }
+          }
+          groups.zipWithIndex.foreach { splitWithIndex =>
+            val multiBlockSplit =
+              new CarbonMultiBlockSplit(
+                splitWithIndex._1.asJava,
+                splitWithIndex._1.flatMap(f => f.getLocations).distinct.toArray)
+            val partition = new CarbonSparkPartition(id, splitWithIndex._2, multiBlockSplit)
+            result.add(partition)
+          }
         } else {
           // Use block distribution
           splits.asScala.map(_.asInstanceOf[CarbonInputSplit]).zipWithIndex.foreach {
