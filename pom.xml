@@ -106,12 +106,13 @@
     <module>store/sdk</module>
     <module>assembly</module>
     <module>tools/cli</module>
+    <module>tools/hbase</module>
   </modules>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <snappy.version>1.1.2.6</snappy.version>
-    <hadoop.version>3.1.1</hadoop.version>
+    <hadoop.version>2.7.2</hadoop.version>
     <httpclient.version>4.3.4</httpclient.version>
     <httpcore.version>4.3-alpha1</httpcore.version>
     <scala.binary.version>2.11</scala.binary.version>

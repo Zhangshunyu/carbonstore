@@ -58,6 +58,7 @@ import org.apache.carbondata.processing.util.CarbonDataProcessorUtil;
 import org.apache.carbondata.streaming.segment.StreamSegment;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskID;
@@ -335,7 +336,11 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
       return false;
     }
     output.apppendBlocklet(outputStream);
-    outputStream.flush();
+    if (outputStream instanceof FSDataOutputStream) {
+      ((FSDataOutputStream)outputStream).hflush();
+    } else {
+      outputStream.flush();
+    }
     if (!isClosed) {
       batchMinMaxIndex = StreamSegment.mergeBlockletMinMax(
           batchMinMaxIndex, output.generateBlockletMinMax(), measureDataTypes);

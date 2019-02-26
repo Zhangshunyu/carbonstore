@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.sdk.file.CarbonReader;
@@ -47,10 +48,10 @@ import org.apache.hadoop.conf.Configuration;
 public class CarbonReaderExample {
 
   public static void main(String[] args) {
-    String path = "./testWriteFiles";
+    String path = "hdfs://localhost:9000/carbon-store/carbon_reader";
     String schemaStr = "{\"stringField\":\"string\", \"shortField\":\"short\", \"intField\":\"int\", \"longField\":\"long\", \"doubleField\":\"double\", \"boolField\":\"boolean\",\"dateField\":\"date\",\"timeField\":\"timestamp\",\"decimalField\":\"decimal\",\"varcharField\":\"varchar\", \"tblproperties\":{\"sort_columns\":\"stringField,dateField\", \"primary_key_columns\":\"stringField\"}}";
     try {
-      FileUtils.deleteDirectory(new File(path));
+      FileFactory.deleteAllCarbonFilesOfDir(FileFactory.getCarbonFile(path));
       CarbonProperties.getInstance()
           .addProperty(CarbonCommonConstants.CARBON_TIMESTAMP_FORMAT,
               CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT)
