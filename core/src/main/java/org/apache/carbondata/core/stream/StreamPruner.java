@@ -119,8 +119,7 @@ public class StreamPruner {
           .getSegmentPath(carbonTable.getAbsoluteTableIdentifier().getTablePath(),
               segment.getSegmentNo());
       String indexFile = CarbonTablePath.getCarbonStreamIndexFilePath(segmentDir);
-      FileFactory.FileType fileType = FileFactory.getFileType(indexFile);
-      if (FileFactory.isFileExist(indexFile, fileType)) {
+      if (FileFactory.isFileExist(indexFile, FileFactory.getFileType(indexFile))) {
         readIndexAndgetStreamFiles(withMinMax, streamFileList, segment, segmentDir, indexFile);
       } else {
         CarbonFile carbonFile = FileFactory.getCarbonFile(segmentDir);
@@ -139,7 +138,7 @@ public class StreamPruner {
     return streamFileList;
   }
 
-  private void readIndexAndgetStreamFiles(boolean withMinMax, List<StreamFile> streamFileList,
+  public static void readIndexAndgetStreamFiles(boolean withMinMax, List<StreamFile> streamFileList,
       Segment segment, String segmentDir, String indexFile) throws IOException {
     CarbonIndexFileReader indexReader = new CarbonIndexFileReader();
     indexReader.openThriftReader(indexFile);

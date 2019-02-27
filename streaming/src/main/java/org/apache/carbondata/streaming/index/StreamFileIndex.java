@@ -34,6 +34,8 @@ public class StreamFileIndex implements Serializable {
 
   private long rowCount;
 
+  private long fileLen;
+
   public StreamFileIndex(String fileName, BlockletMinMaxIndex minMaxIndex, long rowCount) {
     this.fileName = fileName;
     this.minMaxIndex = minMaxIndex;
@@ -64,4 +66,11 @@ public class StreamFileIndex implements Serializable {
     this.rowCount = rowCount;
   }
 
+  public long getFileLen() {
+    return fileLen;
+  }
+
+  public void setFileLen(long fileLen) {
+    this.fileLen = fileLen;
+  }
 }

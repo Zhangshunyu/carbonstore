@@ -26,35 +26,35 @@ import java.util.Random;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
+import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
 import org.apache.carbondata.core.metadata.blocklet.index.BlockletMinMaxIndex;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonMeasure;
+import org.apache.carbondata.core.stream.StreamFile;
+import org.apache.carbondata.core.stream.StreamPruner;
 import org.apache.carbondata.core.util.CarbonMetadataUtil;
 import org.apache.carbondata.core.util.path.CarbonTablePath;
 import org.apache.carbondata.core.writer.CarbonIndexFileWriter;
 import org.apache.carbondata.format.BlockIndex;
 import org.apache.carbondata.format.BlockletIndex;
-import org.apache.carbondata.format.ColumnSchema;
 import org.apache.carbondata.format.IndexHeader;
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel;
-import org.apache.carbondata.processing.store.writer.AbstractFactDataWriter;
 import org.apache.carbondata.streaming.CarbonStreamOutputFormat;
 import org.apache.carbondata.streaming.CarbonStreamRecordWriter;
 import org.apache.carbondata.streaming.index.StreamFileIndex;
 import org.apache.carbondata.streaming.segment.StreamSegment;
 
-import static org.apache.carbondata.streaming.segment.StreamSegment.updateStreamFileIndex;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.log4j.Logger;
 
+import static org.apache.carbondata.streaming.segment.StreamSegment.updateStreamFileIndex;
 
 public class RowFormatCarbonWriter extends CarbonWriter {
 
@@ -73,10 +73,14 @@ public class RowFormatCarbonWriter extends CarbonWriter {
 
   private IndexHeader indexHeader;
 
+  private long segmentMaxConfigSize;
+
   public RowFormatCarbonWriter(CarbonLoadModel loadModel, Configuration hadoopConf)
       throws IOException {
     this.loadModel = loadModel;
     this.hadoopConf = hadoopConf;
+    segmentMaxConfigSize = Long.parseLong(hadoopConf
+        .get("carbon.streamsegment.maxsize", String.valueOf((long) (1024 * 1024 * 1024))));
     createWriter(loadModel, hadoopConf);
   }
 
@@ -85,8 +89,7 @@ public class RowFormatCarbonWriter extends CarbonWriter {
     CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
     segmentId = StreamSegment.open(carbonTable);
     String segmentDir = CarbonTablePath.getSegmentPath(carbonTable.getTablePath(), segmentId);
-    if (FileFactory.isFileExist(segmentDir) && 1024 * 1024 <= FileFactory
-        .getDirectorySize(segmentDir)) {
+    if (FileFactory.isFileExist(segmentDir) && segmentMaxConfigSize <= getSegmentSize(segmentDir)) {
       segmentId = StreamSegment.close(carbonTable, segmentId);
       String segmentPath = CarbonTablePath.getSegmentPath(carbonTable.getTablePath(), segmentId);
       FileFactory.mkdirs(segmentPath, FileFactory.getFileType(segmentDir));
@@ -114,7 +117,8 @@ public class RowFormatCarbonWriter extends CarbonWriter {
   @Override public void flushBatch() throws IOException {
     if (recordWriter.appendBlockletToDataFile()) {
       StreamFileIndex streamBlockIndex = createStreamBlockIndex(recordWriter.getFileName(),
-          recordWriter.getBatchMinMaxIndexWithoutMerge(), blockletRowCount);
+          recordWriter.getBatchMinMaxIndexWithoutMerge(), blockletRowCount,
+          recordWriter.getRunningFileLen());
       CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
       List<CarbonMeasure> measures = carbonTable.getMeasures();
       DataType[] msrDataTypes = new DataType[measures.size()];
@@ -133,6 +137,35 @@ public class RowFormatCarbonWriter extends CarbonWriter {
     recordWriter.close(null);
   }
 
+  /**
+   * TODO Optimize me
+   * Gets the segment size using index files, we cannot directly ask HDFS to give size as until
+   * file closes data length is not available to namenode.
+   *
+   * @param segmentDir
+   * @return
+   * @throws IOException
+   */
+  private long getSegmentSize(String segmentDir) throws IOException {
+    CarbonFile carbonFile = FileFactory.getCarbonFile(segmentDir);
+    CarbonFile[] files = carbonFile.listFiles(new CarbonFileFilter() {
+      @Override public boolean accept(CarbonFile file) {
+        return file.getName().endsWith(CarbonTablePath.INDEX_FILE_EXT);
+      }
+    });
+    List<StreamFile> streamFiles = new ArrayList<>();
+    for (CarbonFile index : files) {
+      StreamPruner
+          .readIndexAndgetStreamFiles(false, streamFiles, Segment.toSegment("0"), segmentDir,
+              index.getAbsolutePath());
+    }
+    long size = 0;
+    for (StreamFile file : streamFiles) {
+      size += file.getFileSize();
+    }
+    return size;
+  }
+
   private void updateIndexFile(String tablePath, StreamFileIndex fileIndex, DataType[] msrDataTypes)
       throws IOException {
     FileFactory.FileType fileType = FileFactory.getFileType(tablePath);
@@ -143,30 +176,29 @@ public class RowFormatCarbonWriter extends CarbonWriter {
     Map<String, StreamFileIndex> indexMap = new HashMap<>();
     indexMap.put(fileIndex.getFileName(), fileIndex);
     updateStreamFileIndex(indexMap, filePath, fileType, msrDataTypes);
-    if (indexHeader == null) {
-      CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
-      int[] cardinality =
-          new int[carbonTable.getTableInfo().getFactTable().getListOfColumns().size()];
-      List<ColumnSchema> columnSchemaList = AbstractFactDataWriter
-          .getColumnSchemaListAndCardinality(new ArrayList<Integer>(), cardinality,
-              carbonTable.getTableInfo().getFactTable().getListOfColumns());
-      indexHeader = CarbonMetadataUtil.getIndexHeader(cardinality, columnSchemaList, 0, 0);
-      indexHeader.setIs_sort(false);
-    }
+//    if (indexHeader == null) {
+//      CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
+//      int[] cardinality =
+//          new int[carbonTable.getTableInfo().getFactTable().getListOfColumns().size()];
+//      List<ColumnSchema> columnSchemaList = AbstractFactDataWriter
+//          .getColumnSchemaListAndCardinality(new ArrayList<Integer>(), cardinality,
+//              carbonTable.getTableInfo().getFactTable().getListOfColumns());
+//      indexHeader = CarbonMetadataUtil.getIndexHeader(cardinality, columnSchemaList, 0, 0);
+//      indexHeader.setIs_sort(false);
+//    }
     String tempFilePath = filePath + CarbonCommonConstants.TEMPWRITEFILEEXTENSION;
     CarbonIndexFileWriter writer = new CarbonIndexFileWriter();
     String segmentPath = CarbonTablePath.getSegmentPath(tablePath, segmentId);
     try {
       writer.openThriftWriter(tempFilePath);
-      if (false) {
-        writer.writeThrift(indexHeader);
-      }
+//      if (false) {
+//        writer.writeThrift(indexHeader);
+//      }
       BlockIndex blockIndex;
       for (Map.Entry<String, StreamFileIndex> entry : indexMap.entrySet()) {
         blockIndex = new BlockIndex();
         blockIndex.setFile_name(entry.getKey());
-        blockIndex.setFile_size(
-            FileFactory.getCarbonFile(new Path(segmentPath, entry.getKey()).toString()).getSize());
+        blockIndex.setFile_size(entry.getValue().getFileLen());
         blockIndex.setOffset(-1);
         // set min/max index
         BlockletIndex blockletIndex = new BlockletIndex();
@@ -202,8 +234,9 @@ public class RowFormatCarbonWriter extends CarbonWriter {
    * create a StreamBlockIndex from the SimpleStatsResult array
    */
   private static StreamFileIndex createStreamBlockIndex(String fileName,
-      BlockletMinMaxIndex minMaxIndex, int blockletRowCount) {
+      BlockletMinMaxIndex minMaxIndex, int blockletRowCount, long fileLen) {
     StreamFileIndex streamFileIndex = new StreamFileIndex(fileName, minMaxIndex, blockletRowCount);
+    streamFileIndex.setFileLen(fileLen);
     return streamFileIndex;
   }
 }

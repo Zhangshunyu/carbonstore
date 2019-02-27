@@ -213,9 +213,10 @@ public class StreamBlockletWriter {
     return blockletMinMaxIndex;
   }
 
-  void apppendBlocklet(DataOutputStream outputStream) throws IOException {
+  int apppendBlocklet(DataOutputStream outputStream) throws IOException {
+    int len = 0;
     outputStream.write(CarbonStreamOutputFormat.CARBON_SYNC_MARKER);
-
+    len += CarbonStreamOutputFormat.CARBON_SYNC_MARKER.length;
     BlockletInfo blockletInfo = new BlockletInfo();
     blockletInfo.setNum_rows(getRowIndex() + 1);
     BlockletHeader blockletHeader = new BlockletHeader();
@@ -231,11 +232,16 @@ public class StreamBlockletWriter {
     }
     byte[] headerBytes = CarbonUtil.getByteArray(blockletHeader);
     outputStream.writeInt(headerBytes.length);
+    len += 4;
     outputStream.write(headerBytes);
+    len += headerBytes.length;
 
     byte[] compressed = compressor.compressByte(getBytes(), getCount());
     outputStream.writeInt(compressed.length);
+    len += 4;
     outputStream.write(compressed);
+    len += compressed.length;
+    return len;
   }
 
   void close() {

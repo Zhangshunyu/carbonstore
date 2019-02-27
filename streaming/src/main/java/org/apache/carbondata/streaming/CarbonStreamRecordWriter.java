@@ -107,6 +107,8 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
   private BlockletMinMaxIndex batchMinMaxIndex;
   private boolean isClosed = false;
 
+  private long runningFileLen;
+
   CarbonStreamRecordWriter(TaskAttemptContext job) throws IOException {
     initialize(job);
   }
@@ -174,8 +176,9 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     FileFactory.FileType fileType = FileFactory.getFileType(filePath);
     CarbonFile carbonFile = FileFactory.getCarbonFile(filePath, fileType);
     if (carbonFile.exists()) {
+      runningFileLen = carbonFile.getLength();
       // if the file is existed, use the append api
-      outputStream = FileFactory.getDataOutputStreamUsingAppend(filePath, fileType);
+      outputStream = carbonFile.getDataOutputStreamUsingAppend(filePath, fileType);
       // get the compressor from the fileheader. In legacy store,
       // the compressor name is not set and it use snappy compressor
       FileHeader header = new CarbonHeaderReader(filePath).readHeader();
@@ -186,7 +189,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
       }
     } else {
       // IF the file is not existed, use the create api
-      outputStream = FileFactory.getDataOutputStream(filePath, fileType);
+      outputStream = carbonFile.getDataOutputStream(filePath, fileType);
       compressorName = carbonTable.getTableInfo().getFactTable().getTableProperties().get(
           CarbonCommonConstants.COMPRESSOR);
       if (null == compressorName) {
@@ -325,7 +328,9 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     fileHeader.setIs_splitable(true);
     fileHeader.setSync_marker(CarbonStreamOutputFormat.CARBON_SYNC_MARKER);
     fileHeader.setCompressor_name(compressorName);
-    outputStream.write(CarbonUtil.getByteArray(fileHeader));
+    byte[] byteArray = CarbonUtil.getByteArray(fileHeader);
+    outputStream.write(byteArray);
+    runningFileLen += byteArray.length;
   }
 
   /**
@@ -335,11 +340,10 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     if (output.getRowIndex() == -1) {
       return false;
     }
-    output.apppendBlocklet(outputStream);
+    runningFileLen += output.apppendBlocklet(outputStream);
+    outputStream.flush();
     if (outputStream instanceof FSDataOutputStream) {
       ((FSDataOutputStream)outputStream).hflush();
-    } else {
-      outputStream.flush();
     }
     if (!isClosed) {
       batchMinMaxIndex = StreamSegment.mergeBlockletMinMax(
@@ -357,6 +361,10 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
     }
     return StreamSegment.mergeBlockletMinMax(
         batchMinMaxIndex, output.generateBlockletMinMax(), measureDataTypes);
+  }
+
+  public long getRunningFileLen() {
+    return runningFileLen;
   }
 
   public BlockletMinMaxIndex getBatchMinMaxIndexWithoutMerge() {

@@ -17,6 +17,7 @@
 
 package org.apache.carbondata.examples.sdk;
 
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.util.CarbonProperties;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
@@ -39,6 +41,7 @@ import org.apache.carbondata.sdk.file.Schema;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 
 /**
  * Example fo CarbonReader with close method
@@ -99,7 +102,8 @@ public class CarbonReaderExample {
       }
       writer.close();
 
-//      File[] dataFiles = new File(path).listFiles(new FilenameFilter() {
+
+      //      File[] dataFiles = new File(path).listFiles(new FilenameFilter() {
 //        @Override
 //        public boolean accept(File dir, String name) {
 //          if (name == null) {

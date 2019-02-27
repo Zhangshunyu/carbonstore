@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -33,7 +32,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.apache.carbondata.common.exceptions.sql.InvalidLoadOptionException;
 import org.apache.carbondata.sdk.file.CarbonSchemaWriter;
@@ -44,14 +42,11 @@ import org.apache.carbondata.sdk.file.Schema;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -72,16 +67,10 @@ import org.slf4j.LoggerFactory;
 
   // HBase table descriptors
   private TableDescriptors tableDescriptors;
-  private static String ROW = "row";
-  private static String FAMILY = "family";
-  private static String QUALIFIER = "qualifier";
-  private static String TIMESTAMP = "timestamp";
-  private static String VALUE = "value";
-  private static String TAG = "tag";
 
   // Map of table and pair of table schema and properties
-  private Map<TableName, Pair<Schema, Map<String, String>>> tableSchemaMap =
-      Maps.newConcurrentMap();
+  private Map<TableName, CarbonHbaseMeta> tableSchemaMap = Maps.newConcurrentMap();
+
   // Map of regions and carbon writer
   private Map<String, CarbonWriter> regionsWriterMap = Maps.newConcurrentMap();
 
@@ -228,7 +217,7 @@ import org.slf4j.LoggerFactory;
   }
 
   private int serialReplicateRegionEntries(List<Entry> entries, int batchIndex) throws IOException {
-      int batchSize = 0, index = 0;
+    int batchSize = 0, index = 0;
     List<Entry> batch = new ArrayList<>();
     for (Entry entry : entries) {
       int entrySize = getEstimatedEntrySize(entry);
@@ -288,35 +277,30 @@ import org.slf4j.LoggerFactory;
 
     Schema tableSchema = null;
     Map<String, String> tblproperties = null;
-    Pair<Schema, Map<String, String>> pair = tableSchemaMap.get(tableName);
-    if (pair == null) {
+    CarbonHbaseMeta hbaseMeta = tableSchemaMap.get(tableName);
+    // Create carbon writer and cache it
+    if (hbaseMeta == null) {
       // Get the schema from table desc and convert it into JSON format
       String schemaDesc =
           tableDescriptors.get(tableName).getValue(CarbonMasterObserver.CARBON_SCHEMA_DESC);
       tblproperties = new HashMap<>();
       tableSchema = CarbonSchemaWriter.convertToSchemaFromJSON(schemaDesc, tblproperties);
-
-      // Carbon writer only allow predefined properties, clone it to cache and remove hbase mapping
-      // from original table properties map
-      Map<String, String> clonedTblProperties = tblproperties.entrySet().stream()
-          .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-      tableSchemaMap.put(tableName, new Pair<>(tableSchema, clonedTblProperties));
-      tblproperties.remove(CarbonMasterObserver.HBASE_MAPPING_DETAILS);
-
+      hbaseMeta = new CarbonHbaseMeta(tableSchema, tblproperties);
+      tableSchemaMap.put(tableName, hbaseMeta);
     } else {
-      tableSchema = pair.getFirst();
-      tblproperties = pair.getSecond();
+      tableSchema = hbaseMeta.getSchema();
+      tblproperties = hbaseMeta.getTblProperties();
     }
-
-    // Create carbon writer and cache it
     String path = tblproperties.get(CarbonMasterObserver.PATH);
-    tblproperties.remove(CarbonMasterObserver.PATH);
+    Map<String, String> clonedProps = new HashMap<>(tblproperties);
+    clonedProps.remove(CarbonMasterObserver.HBASE_MAPPING_DETAILS);
+    clonedProps.remove(CarbonMasterObserver.PATH);
 
-    CarbonWriterBuilder builder = CarbonWriter.builder().outputPath(path)
-        .withTableProperties(tblproperties).withRowFormat(tableSchema)
-        .writtenBy(CarbonReplicationEndpoint.class.getSimpleName());
+    CarbonWriterBuilder builder =
+        CarbonWriter.builder().outputPath(path).withTableProperties(clonedProps)
+            .withRowFormat(tableSchema).writtenBy(CarbonReplicationEndpoint.class.getSimpleName())
+            .withHadoopConf(conf);
     regionsWriterMap.put(regionName, builder.build());
-    LOG.error("&&&&&&&&&&&&&&&&&&&&&& "+ regionName +"    "+ regionsWriterMap);
   }
 
   private void closeCarbonWriters() {
@@ -345,68 +329,58 @@ import org.slf4j.LoggerFactory;
     try {
       // Check and create the write if not exist
       TableName tName = batch.get(index).getKey().getTableName();
-      if (regionsWriterMap.get(regionName) == null) {
+      CarbonWriter carbonWriter = regionsWriterMap.get(regionName);
+      if (carbonWriter == null) {
         createCarbonWriter(tName, regionName);
+        carbonWriter = regionsWriterMap.get(regionName);
       }
-
-      Pair<Schema, Map<String, String>> pair = tableSchemaMap.get(tName);
-
+      CarbonHbaseMeta hbaseMeta = tableSchemaMap.get(tName);
+      // Check the keys in sequence order and if the keys are same then merge to the same carbon row.
+      ByteArrayWrapper rowKey = null;
+      String[] row = null;
       for (Entry entry : batch) {
         for (Cell cell : entry.getEdit().getCells()) {
-          // Read the cell content
-          Map<String, Object> cellValMap = toStringMap(cell);
-          String rowKey = cellValMap.get(ROW).toString();
-          String colmnFamily = String.valueOf(cellValMap.get(FAMILY));
-          String colmnQualfier = String.valueOf(cellValMap.get(QUALIFIER));
-          String val = String.valueOf(cellValMap.get(VALUE));
+          ByteArrayWrapper tmpKey =
+              new ByteArrayWrapper(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+          boolean merge = false;
+          if (rowKey != null) {
+            if (rowKey.equals(tmpKey)) {
+              merge = true;
+            }
+          }
 
-          // TODO: Currently implementation done for single CF mapping
-
-          // Merge the family and qualifier
-          // String column = colmnFamily + '.' + colmnQualfier;
-          // Retrieve OLAP
-          // String rowkeyToCarbonColumn;
-          // String cfToCarbonColumn;
-          // for (java.util.Map.Entry<String, String> tblProps : pair.getSecond().entrySet()) {
-          // if (tblProps.getKey().equalsIgnoreCase("key")) {
-          // rowkeyToCarbonColumn = tblProps.getValue();
-          // } else if (tblProps.getKey().equalsIgnoreCase(column)) {
-          // cfToCarbonColumn = tblProps.getValue();
-          // }
-          // }
-
-          String[] row = new String[] { rowKey, val };
-          regionsWriterMap.get(regionName).write(row);
+          if (merge) {
+            fillCell(row, cell, hbaseMeta);
+          } else {
+            if (row != null) {
+              carbonWriter.write(row);
+            }
+            row = new String[hbaseMeta.getSchema().getFieldsLength()];
+            int keyColumnIndex = hbaseMeta.getKeyColumnIndex();
+            row[keyColumnIndex] = hbaseMeta
+                .convertData(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+                    keyColumnIndex);
+            row[hbaseMeta.getTimestampMapIndex()] = String.valueOf(cell.getTimestamp());
+            fillCell(row, cell, hbaseMeta);
+          }
+          rowKey = tmpKey;
         }
       }
-      regionsWriterMap.get(regionName).flushBatch();
+      if (row != null) {
+        carbonWriter.write(row);
+      }
+      carbonWriter.flushBatch();
     } catch (Exception e) {
       LOG.error("Exception occured while performing writer flush", e);
-
     }
   }
 
-  private static Map<String, Object> toStringMap(Cell cell) {
-    Map<String, Object> stringMap = new HashMap<>();
-    stringMap.put(ROW,
-        Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
-    stringMap.put(FAMILY, Bytes
-        .toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
-    stringMap.put(QUALIFIER, Bytes
-        .toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
-            cell.getQualifierLength()));
-    stringMap.put(VALUE,
-        Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
-    stringMap.put(TIMESTAMP, cell.getTimestamp());
-    if (cell.getTagsLength() > 0) {
-      List<String> tagsString = new ArrayList<>();
-      Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
-      while (tagsIterator.hasNext()) {
-        Tag tag = tagsIterator.next();
-        tagsString.add((tag.getType()) + ":" + Bytes.toStringBinary(Tag.cloneValue(tag)));
-      }
-      stringMap.put(TAG, tagsString);
-    }
-    return stringMap;
+  private static void fillCell(String[] row, Cell cell, CarbonHbaseMeta meta) {
+    int index = meta.getSchemaIndexOfColumn(cell.getFamilyArray(), cell.getFamilyOffset(),
+        cell.getFamilyLength(), cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength());
+    String data =
+        meta.convertData(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(), index);
+    row[index] = data;
   }
 }
