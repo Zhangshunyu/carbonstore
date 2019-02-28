@@ -89,6 +89,7 @@ public class RowFormatCarbonWriter extends CarbonWriter {
     CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
     segmentId = StreamSegment.open(carbonTable);
     String segmentDir = CarbonTablePath.getSegmentPath(carbonTable.getTablePath(), segmentId);
+    // If the segment size reaches limit then create new writer.
     if (FileFactory.isFileExist(segmentDir) && segmentMaxConfigSize <= getSegmentSize(segmentDir)) {
       segmentId = StreamSegment.close(carbonTable, segmentId);
       String segmentPath = CarbonTablePath.getSegmentPath(carbonTable.getTablePath(), segmentId);
@@ -115,6 +116,12 @@ public class RowFormatCarbonWriter extends CarbonWriter {
   }
 
   @Override public void flushBatch() throws IOException {
+    flush();
+    // Just check if the segment size reaches limit and create writer if it so.
+    createWriter(loadModel, hadoopConf);
+  }
+
+  private void flush() throws IOException {
     if (recordWriter.appendBlockletToDataFile()) {
       StreamFileIndex streamBlockIndex = createStreamBlockIndex(recordWriter.getFileName(),
           recordWriter.getBatchMinMaxIndexWithoutMerge(), blockletRowCount,
@@ -129,11 +136,10 @@ public class RowFormatCarbonWriter extends CarbonWriter {
       updateIndexFile(carbonTable.getTablePath(), streamBlockIndex, msrDataTypes);
       blockletRowCount = 0;
     }
-    createWriter(loadModel, hadoopConf);
   }
 
   @Override public void close() throws IOException {
-    flushBatch();
+    flush();
     recordWriter.close(null);
   }
 

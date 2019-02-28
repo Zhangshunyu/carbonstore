@@ -49,17 +49,23 @@ object CarbonSessionExample {
     val rootPath = new File(this.getClass.getResource("/").getPath
                             + "../../../..").getCanonicalPath
 
-//    spark.sql("DROP TABLE IF EXISTS source")
+//    spark.sql("DROP TABLE IF EXISTS source2")
 
     // Create table
 //    spark.sql(
 //      s"""
-//         | CREATE external TABLE source STORED AS carbondata location 'hdfs://localhost:9000/carbon-store/hbase-carbon1'
+//         | CREATE external TABLE source2 STORED AS carbondata location 'hdfs://localhost:9000/carbon-store/hbase-emp'
 //       """.stripMargin)
+//    val table = CarbonEnv.getCarbonTable(None, "source2")(spark)
 
     val path = s"$rootPath/examples/spark2/src/main/resources/data.csv"
 
-    spark.sql("select * from source").show()
+//    spark.sql("describe formatted source2").show(false)
+
+    spark.sql("select count(*) from source2").show()
+    val l = System.currentTimeMillis()
+    spark.sql("select * from source2 where id = 1001").show()
+    println("point query " + (System.currentTimeMillis() - l))
     // Drop table
 //    spark.sql("DROP TABLE IF EXISTS source")
   }

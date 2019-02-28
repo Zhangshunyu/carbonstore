@@ -102,10 +102,13 @@ public class CarbonMasterObserver implements MasterCoprocessor, MasterObserver {
       // Get the schema from table desc and convert it into JSON format
       Map<String, String> tblproperties = new HashMap<>();
       Schema schema = CarbonSchemaWriter.convertToSchemaFromJSON(schemaDesc, tblproperties);
+      CarbonHbaseMeta hbaseMeta = new CarbonHbaseMeta(schema, tblproperties);
       // Carbon writer only allow predefined properties, remove the hbase mapping
       schema.getProperties().remove(HBASE_MAPPING_DETAILS);
       String tablePath = schema.getProperties().get(PATH);
       schema.getProperties().remove(PATH);
+      schema.getProperties().put(CarbonCommonConstants.PRIMARY_KEY_COLUMNS,
+          hbaseMeta.getPrimaryKeyColumns());
       if (tablePath == null) {
         throw new IOException("Path cannot be null, please specify in carbonschema");
       }

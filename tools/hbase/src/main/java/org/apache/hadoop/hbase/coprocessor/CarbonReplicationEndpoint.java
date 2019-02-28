@@ -34,6 +34,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.carbondata.common.exceptions.sql.InvalidLoadOptionException;
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.sdk.file.CarbonSchemaWriter;
 import org.apache.carbondata.sdk.file.CarbonWriter;
 import org.apache.carbondata.sdk.file.CarbonWriterBuilder;
@@ -54,8 +55,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@InterfaceAudience.Private public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
+@InterfaceAudience.Private
+public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
   private static final Logger LOG = LoggerFactory.getLogger(CarbonReplicationEndpoint.class);
+
+  private static final String CARBON_APPEND_BATCH = "hbase.carbon.append.batch";
 
   private Configuration conf;
   // Size limit for replication RPCs, in bytes
@@ -63,6 +67,7 @@ import org.slf4j.LoggerFactory;
 
   // Thread pool executor to write the table into carbon file format
   private ThreadPoolExecutor exec;
+
   private int maxThreads;
 
   // HBase table descriptors
@@ -73,6 +78,8 @@ import org.slf4j.LoggerFactory;
 
   // Map of regions and carbon writer
   private Map<String, CarbonWriter> regionsWriterMap = Maps.newConcurrentMap();
+
+  private boolean appendBatch;
 
   @Override public UUID getPeerUUID() {
     return ctx.getClusterId();
@@ -108,6 +115,7 @@ import org.slf4j.LoggerFactory;
     // Initialize the executor
     this.maxThreads = conf.getInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY,
         HConstants.REPLICATION_SOURCE_MAXTHREADS_DEFAULT);
+    this.appendBatch = conf.getBoolean(CARBON_APPEND_BATCH, true);
     this.exec = new ThreadPoolExecutor(maxThreads, maxThreads, 60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<>());
     this.exec.allowCoreThreadTimeOut(true);
@@ -209,6 +217,10 @@ import org.slf4j.LoggerFactory;
       // if we had any exceptions, try again
       throw iox;
     }
+    // If append batch is not enabled then close the writers for each batch write.
+    if (!appendBatch) {
+      closeCarbonWriters();
+    }
     return lastWriteTime;
   }
 
@@ -291,6 +303,7 @@ import org.slf4j.LoggerFactory;
       tableSchema = hbaseMeta.getSchema();
       tblproperties = hbaseMeta.getTblProperties();
     }
+    tblproperties.put(CarbonCommonConstants.PRIMARY_KEY_COLUMNS, hbaseMeta.getPrimaryKeyColumns());
     String path = tblproperties.get(CarbonMasterObserver.PATH);
     Map<String, String> clonedProps = new HashMap<>(tblproperties);
     clonedProps.remove(CarbonMasterObserver.HBASE_MAPPING_DETAILS);
@@ -299,7 +312,7 @@ import org.slf4j.LoggerFactory;
     CarbonWriterBuilder builder =
         CarbonWriter.builder().outputPath(path).withTableProperties(clonedProps)
             .withRowFormat(tableSchema).writtenBy(CarbonReplicationEndpoint.class.getSimpleName())
-            .withHadoopConf(conf);
+            .withHadoopConf(new Configuration(conf));
     regionsWriterMap.put(regionName, builder.build());
   }
 
@@ -308,6 +321,7 @@ import org.slf4j.LoggerFactory;
       for (CarbonWriter writer : regionsWriterMap.values()) {
         writer.close();
       }
+      regionsWriterMap.clear();
     } catch (Exception e) {
       LOG.error("Exception occured while closing the carbon writer", e);
     }

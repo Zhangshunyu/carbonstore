@@ -149,6 +149,16 @@ public class TableSchemaBuilder {
         }
       }
     }
+    StringBuilder primaryKeyColumnsStr = new StringBuilder();
+    for (ColumnSchema column : allColumns) {
+      if (column.isPrimaryKeyColumn()) {
+        primaryKeyColumnsStr.append(column.getColumnName()).append(",");
+      }
+    }
+    if (primaryKeyColumnsStr.length() > 0) {
+      property.put(CarbonCommonConstants.PRIMARY_KEY_COLUMNS,
+          primaryKeyColumnsStr.substring(0, primaryKeyColumnsStr.length() - 1));
+    }
     if (property.size() != 0) {
       schema.setTableProperties(property);
     }

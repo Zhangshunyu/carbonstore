@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
@@ -26,6 +29,8 @@ public class CarbonHbaseMeta {
 
   private QualifierArray temp = new QualifierArray();
 
+  private String primaryKeyColumns;
+
   public CarbonHbaseMeta(Schema schema, Map<String, String> tblProperties) {
     this.schema = schema;
     this.tblProperties = tblProperties;
@@ -37,6 +42,7 @@ public class CarbonHbaseMeta {
     String timestamp = "timestamp";
     schemaMapping = new HashMap<>();
     List<Integer> keyMapping = new ArrayList<>();
+    List<String> primaryKeyMapping = new ArrayList<>();
     String hbase_mapping = tblProperties.get("hbase_mapping");
     String[] split = hbase_mapping.split(",");
     for (String s : split) {
@@ -47,6 +53,7 @@ public class CarbonHbaseMeta {
       String[] qualifiers = map[0].split(":");
       if (map[0].equalsIgnoreCase(keyName)) {
         keyMapping.add(getSchemaIndex(map[1]));
+        primaryKeyMapping.add(map[1]);
       } else if (map[0].equalsIgnoreCase(timestamp)) {
         timestampMap = getSchemaIndex(map[1]);
       } else {
@@ -67,6 +74,7 @@ public class CarbonHbaseMeta {
           "Time stamp mapping is mandatory for hbase, "
               + "please use timestamp in hbase_mapping carbon property inside schema");
     }
+    primaryKeyColumns = primaryKeyMapping.stream().collect(Collectors.joining(","));
   }
 
   private int getSchemaIndex(String columnName) {
@@ -104,6 +112,10 @@ public class CarbonHbaseMeta {
 
   public Map<String, String> getTblProperties() {
     return tblProperties;
+  }
+
+  public String getPrimaryKeyColumns() {
+    return primaryKeyColumns;
   }
 
   public String convertData(byte[] value, int offset, int len, int schemaIndex) {

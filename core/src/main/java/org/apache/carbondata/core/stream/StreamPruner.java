@@ -81,7 +81,7 @@ public class StreamPruner {
   public List<StreamFile> prune(List<Segment> segments) throws IOException {
     if (filterExecuter == null) {
       // if filter is null, list all steam files
-      return listAllStreamFiles(segments, false);
+      return listAllStreamFiles(segments, true);
     } else {
       List<StreamFile> streamFileList = new ArrayList<>();
       for (StreamFile streamFile : listAllStreamFiles(segments, true)) {

@@ -334,14 +334,14 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
             bytesRemaining -= splitSize;
           }
           if (bytesRemaining != 0) {
-//            RangeColumnSplitMerger merger =
-//                new RangeColumnSplitMerger(primaryKeyColIndexes,
-//                    streamFile.getMinMaxIndex().getMinValues(),
-//                    streamFile.getMinMaxIndex().getMaxValues());
+            RangeColumnSplitMerger merger =
+                new RangeColumnSplitMerger(primaryKeyColIndexes,
+                    streamFile.getMinMaxIndex().getMinValues(),
+                    streamFile.getMinMaxIndex().getMaxValues());
             int blkIndex = getBlockIndex(blkLocations, length - bytesRemaining);
             splits.add(makeSplit(streamFile.getSegmentNo(), streamFile.getFilePath(),
                 length - bytesRemaining, bytesRemaining, blkLocations[blkIndex].getHosts(),
-                blkLocations[blkIndex].getCachedHosts(), FileFormat.ROW_V1, null));
+                blkLocations[blkIndex].getCachedHosts(), FileFormat.ROW_V1, merger));
           }
         }
       }

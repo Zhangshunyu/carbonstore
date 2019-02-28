@@ -337,7 +337,7 @@ public class CarbonStreamRecordWriter extends RecordWriter<Void, Object> {
    * write a blocklet to file
    */
   public boolean appendBlockletToDataFile() throws IOException {
-    if (output.getRowIndex() == -1) {
+    if (output == null || output.getRowIndex() == -1) {
       return false;
     }
     runningFileLen += output.apppendBlocklet(outputStream);

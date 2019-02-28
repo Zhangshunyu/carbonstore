@@ -103,6 +103,8 @@ private[sql] case class CarbonDescribeFormattedCommand(
       ("External", carbonTable.isExternalTable.toString, ""),
       ("Transactional", carbonTable.isTransactionalTable.toString, ""),
       ("Streaming", streaming, ""),
+      ("Primary Key Columns",
+        tblProps.getOrElse(CarbonCommonConstants.PRIMARY_KEY_COLUMNS, ""), ""),
       ("Table Block Size ", carbonTable.getBlockSizeInMB + " MB", ""),
       ("Table Blocklet Size ", carbonTable.getBlockletSizeInMB + " MB", ""),
       ("Comment", tblProps.getOrElse(CarbonCommonConstants.TABLE_COMMENT, ""), ""),

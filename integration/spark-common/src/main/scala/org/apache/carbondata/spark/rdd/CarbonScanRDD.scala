@@ -139,54 +139,18 @@ class CarbonScanRDD[T: ClassTag](
       numStreamSegments = format.getNumStreamSegments
       numBlocks = format.getNumBlocks
 
-      // separate split
-      // 1. for batch splits, invoke distributeSplits method to create partitions
-      // 2. for stream splits, create partition for each split by default
-      val columnarSplits = new ArrayList[InputSplit]()
-      val streamSplits = new ArrayBuffer[InputSplit]()
       splits.asScala.foreach { split =>
         val carbonInputSplit = split.asInstanceOf[CarbonInputSplit]
         if (FileFormat.ROW_V1 == carbonInputSplit.getFileFormat) {
-          streamSplits += split
-        } else {
-          columnarSplits.add(split)
+          carbonInputSplit.setVersion(ColumnarFormatVersion.R1)
         }
       }
       distributeStartTime = System.currentTimeMillis()
-      val batchPartitions = distributeColumnarSplits(columnarSplits)
+      val batchPartitions = distributeColumnarSplits(splits)
       distributeEndTime = System.currentTimeMillis()
       // check and remove InExpression from filterExpression
       checkAndRemoveInExpressinFromFilterExpression(batchPartitions)
-      if (streamSplits.isEmpty) {
-        partitions = batchPartitions.toArray
-      } else {
-        val index = batchPartitions.length
-        val streamPartitions: mutable.Buffer[Partition] =
-          streamSplits.zipWithIndex.map { splitWithIndex =>
-            val multiBlockSplit =
-              new CarbonMultiBlockSplit(
-                Seq(splitWithIndex._1.asInstanceOf[CarbonInputSplit]).asJava,
-                splitWithIndex._1.getLocations,
-                FileFormat.ROW_V1)
-            multiBlockSplit.getAllSplits.asScala.foreach(_.setVersion(ColumnarFormatVersion.R1))
-            new CarbonSparkPartition(id, splitWithIndex._2 + index, multiBlockSplit)
-          }
-        if (batchPartitions.isEmpty) {
-          partitions = streamPartitions.toArray
-        } else {
-          // should keep the order by index of partition
-          batchPartitions.appendAll(streamPartitions)
-          partitions = batchPartitions.toArray
-        }
-        logInfo(
-          s"""
-             | Identified no.of.streaming splits/tasks: ${ streamPartitions.size },
-             | no.of.streaming files: ${format.getHitedStreamFiles},
-             | no.of.total streaming files: ${format.getNumStreamFiles},
-             | no.of.total streaming segement: ${format.getNumStreamSegments}
-          """.stripMargin)
-
-      }
+      partitions = batchPartitions.toArray
       partitions
     } finally {
       Profiler.invokeIfEnable {
@@ -268,7 +232,36 @@ class CarbonScanRDD[T: ClassTag](
             CarbonCommonConstants.CARBON_CUSTOM_BLOCK_DISTRIBUTION,
             "false").toBoolean ||
           carbonDistribution.equalsIgnoreCase(CarbonCommonConstants.CARBON_TASK_DISTRIBUTION_CUSTOM)
-        if (useCustomDistribution && !tableInfo.hasColumnDrift) {
+        if (tableInfo.getFactTable.getListOfColumns.asScala.exists(_.isPrimaryKeyColumn)) {
+          // group as per primary key columns ranges.
+          val array = splits.asScala.toArray
+          val groups = new ArrayBuffer[ArrayBuffer[CarbonInputSplit]]()
+          splits.asScala.foreach{s =>
+            groups.find{f =>
+              f.find(_.getSplitMerger.canBeMerged(
+                s.asInstanceOf[CarbonInputSplit].getSplitMerger)) match {
+                case Some(split) =>
+                  f += s.asInstanceOf[CarbonInputSplit]
+                  true
+                case _ => false
+              }
+            } match {
+              case Some(p) =>
+              case _ =>
+                val splits = new ArrayBuffer[CarbonInputSplit]()
+                splits += s.asInstanceOf[CarbonInputSplit]
+                groups += splits
+            }
+          }
+          groups.zipWithIndex.foreach { splitWithIndex =>
+            val multiBlockSplit =
+              new CarbonMultiBlockSplit(
+                splitWithIndex._1.asJava,
+                splitWithIndex._1.flatMap(f => f.getLocations).distinct.toArray)
+            val partition = new CarbonSparkPartition(id, splitWithIndex._2, multiBlockSplit)
+            result.add(partition)
+          }
+        } else if (useCustomDistribution && !tableInfo.hasColumnDrift) {
           // create a list of block based on split
           val blockList = splits.asScala.map(_.asInstanceOf[Distributable])
 
@@ -350,35 +343,6 @@ class CarbonScanRDD[T: ClassTag](
             currentFiles += file
           }
           closePartition()
-        } else if (tableInfo.getFactTable.getListOfColumns.asScala.exists(_.isPrimaryKeyColumn)) {
-          // group as per primary key columns ranges.
-          val array = splits.asScala.toArray
-          val groups = new ArrayBuffer[ArrayBuffer[CarbonInputSplit]]()
-          splits.asScala.foreach{s =>
-            groups.find{f =>
-              f.find(_.getSplitMerger.canBeMerged(
-                s.asInstanceOf[CarbonInputSplit].getSplitMerger)) match {
-                case Some(split) =>
-                  f += s.asInstanceOf[CarbonInputSplit]
-                  true
-                case _ => false
-              }
-            } match {
-              case Some(p) =>
-              case _ =>
-                val splits = new ArrayBuffer[CarbonInputSplit]()
-                splits += s.asInstanceOf[CarbonInputSplit]
-                groups += splits
-            }
-          }
-          groups.zipWithIndex.foreach { splitWithIndex =>
-            val multiBlockSplit =
-              new CarbonMultiBlockSplit(
-                splitWithIndex._1.asJava,
-                splitWithIndex._1.flatMap(f => f.getLocations).distinct.toArray)
-            val partition = new CarbonSparkPartition(id, splitWithIndex._2, multiBlockSplit)
-            result.add(partition)
-          }
         } else {
           // Use block distribution
           splits.asScala.map(_.asInstanceOf[CarbonInputSplit]).zipWithIndex.foreach {
