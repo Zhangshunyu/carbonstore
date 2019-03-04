@@ -28,14 +28,10 @@ import org.apache.carbondata.core.datastore.FileReader;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
 import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
-import org.apache.carbondata.core.metadata.converter.SchemaConverter;
-import org.apache.carbondata.core.metadata.converter.ThriftWrapperSchemaConverterImpl;
-import org.apache.carbondata.core.metadata.schema.table.TableSchema;
 import org.apache.carbondata.core.metadata.schema.table.column.ColumnSchema;
 import org.apache.carbondata.core.reader.CarbonFooterReaderV3;
 import org.apache.carbondata.core.reader.CarbonHeaderReader;
 import org.apache.carbondata.core.reader.CarbonIndexFileReader;
-import org.apache.carbondata.core.util.CarbonUtil;
 import org.apache.carbondata.format.FileFooter3;
 import org.apache.carbondata.processing.loading.exception.CarbonDataLoadingException;
 import org.apache.carbondata.sdk.file.arrow.ArrowConverter;
@@ -50,23 +46,6 @@ import org.apache.hadoop.conf.Configuration;
  * Schema reader for carbon files, including carbondata file, carbonindex file, and schema file
  */
 public class CarbonSchemaReader {
-
-  /**
-   * Read schema file and return the schema
-   *
-   * @param schemaFilePath complete path including schema file name
-   * @return schema object
-   * @throws IOException
-   */
-  @Deprecated
-  public static Schema readSchemaInSchemaFile(String schemaFilePath) throws IOException {
-    org.apache.carbondata.format.TableInfo tableInfo = CarbonUtil.readSchemaFile(schemaFilePath);
-    SchemaConverter schemaConverter = new ThriftWrapperSchemaConverterImpl();
-    TableSchema factTable =
-        schemaConverter.fromExternalToWrapperTableInfo(tableInfo, "", "", "").getFactTable();
-    List<ColumnSchema> schemaList = factTable.getListOfColumns();
-    return new Schema(schemaList, factTable.getTableProperties());
-  }
 
   /**
    * get carbondata/carbonindex file in path

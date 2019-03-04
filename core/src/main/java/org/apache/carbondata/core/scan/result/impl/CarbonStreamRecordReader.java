@@ -60,8 +60,11 @@ public class CarbonStreamRecordReader extends StreamRecordReader {
           initializeAtFirstRow();
         }
         if (!notConsumed) {
-          notConsumed = true;
-          return input.nextBlocklet();
+          boolean nextBlocklet = input.nextBlocklet();
+          if (nextBlocklet) {
+            notConsumed = true;
+          }
+          return nextBlocklet;
         } else {
           return true;
         }
@@ -79,6 +82,9 @@ public class CarbonStreamRecordReader extends StreamRecordReader {
   private boolean nextColumnarBatch(CarbonColumnarBatch columnarBatch) throws IOException {
     boolean scanMore = false;
     notConsumed = false;
+    if (!input.hasData()) {
+      return true;
+    }
     do {
       // read blocklet header
       BlockletHeader header = input.readBlockletHeader();

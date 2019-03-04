@@ -284,12 +284,14 @@ public class CarbonWriterBuilder {
             "local_dictionary_enable", "sort_columns", "sort_scope", "long_string_columns",
             "inverted_index", "table_page_size_inmb", "primary_key_columns"));
 
-    for (String key : options.keySet()) {
-      if (!supportedOptions.contains(key.toLowerCase())) {
-        throw new IllegalArgumentException(
-            "Unsupported options. " + "Refer method header or documentation");
-      }
-    }
+    // TODO handle this
+
+//    for (String key : options.keySet()) {
+//      if (!supportedOptions.contains(key.toLowerCase())) {
+//        throw new IllegalArgumentException(
+//            "Unsupported options. " + key + " Refer method header or documentation");
+//      }
+//    }
 
     for (Map.Entry<String, String> entry : options.entrySet()) {
       if (entry.getKey().equalsIgnoreCase("table_blocksize")) {

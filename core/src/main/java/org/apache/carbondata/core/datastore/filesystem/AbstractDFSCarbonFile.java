@@ -143,7 +143,11 @@ public abstract class AbstractDFSCarbonFile implements CarbonFile {
   }
 
   @Override public long getSize() {
-    return fileStatus.getLen();
+    if (fileStatus != null) {
+      return fileStatus.getLen();
+    } else {
+      return 0;
+    }
   }
 
   public boolean renameTo(String changeToName) {

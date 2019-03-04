@@ -143,7 +143,7 @@ public class StreamBlockletReader {
    * find the next blocklet
    */
   public boolean nextBlocklet() throws IOException {
-    if (pos >= limitStart) {
+    if (!hasData()) {
       return false;
     }
     if (isAlreadySync) {
@@ -158,6 +158,13 @@ public class StreamBlockletReader {
     }
 
     return pos < limitEnd;
+  }
+
+  protected boolean hasData() {
+    if (pos >= limitStart) {
+      return false;
+    }
+    return true;
   }
 
   public boolean hasNext() throws IOException {

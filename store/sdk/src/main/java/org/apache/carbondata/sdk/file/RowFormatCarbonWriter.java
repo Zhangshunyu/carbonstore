@@ -79,34 +79,52 @@ public class RowFormatCarbonWriter extends CarbonWriter {
       throws IOException {
     this.loadModel = loadModel;
     this.hadoopConf = hadoopConf;
-    segmentMaxConfigSize = Long.parseLong(hadoopConf
-        .get("carbon.streamsegment.maxsize", String.valueOf((long) (1024 * 1024 * 1024))));
+    segmentMaxConfigSize = Long.parseLong(
+        hadoopConf.get("carbon.streamsegment.maxsize", String.valueOf((long) (100 * 1024 * 1024))));
     createWriter(loadModel, hadoopConf);
   }
 
   private void createWriter(CarbonLoadModel loadModel, Configuration hadoopConf)
       throws IOException {
     CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
-    segmentId = StreamSegment.open(carbonTable);
-    String segmentDir = CarbonTablePath.getSegmentPath(carbonTable.getTablePath(), segmentId);
-    // If the segment size reaches limit then create new writer.
-    if (FileFactory.isFileExist(segmentDir) && segmentMaxConfigSize <= getSegmentSize(segmentDir)) {
-      segmentId = StreamSegment.close(carbonTable, segmentId);
-      String segmentPath = CarbonTablePath.getSegmentPath(carbonTable.getTablePath(), segmentId);
-      FileFactory.mkdirs(segmentPath, FileFactory.getFileType(segmentDir));
-      loadModel.setTaskNo(null);
-      if (recordWriter != null) {
-        recordWriter.close(null);
+    String segmentId = StreamSegment.open(carbonTable);
+    boolean createWriter = false;
+    // Close the writer if the segment is changed.
+    if (this.segmentId == null || !this.segmentId.equals(segmentId)) {
+      createWriter = true;
+      closeWriterAndCreateSegDir(carbonTable, segmentId);
+    } else {
+      CarbonFile segmentDir = FileFactory
+          .getCarbonFile(CarbonTablePath.getSegmentPath(carbonTable.getTablePath(), segmentId));
+      // If the segment size reaches limit then create new writer.
+      if (segmentDir.exists() && segmentMaxConfigSize <= getSegmentSize(segmentDir)) {
+        segmentId = StreamSegment.close(carbonTable, segmentId);
+        createWriter = true;
+        closeWriterAndCreateSegDir(carbonTable, segmentId);
       }
     }
+
     CarbonStreamOutputFormat.setSegmentId(hadoopConf, segmentId);
+    this.segmentId = segmentId;
     Random random = new Random();
-    if (loadModel.getTaskNo() == null) {
+    if (createWriter) {
       loadModel.setTaskNo(random.nextInt(Integer.MAX_VALUE) + "");
       loadModel.setFactTimeStamp(System.currentTimeMillis());
       recordWriter =
           new CarbonStreamRecordWriter(new TaskAttemptContextImpl(hadoopConf, new TaskAttemptID()),
               loadModel);
+    }
+  }
+
+  private void closeWriterAndCreateSegDir(CarbonTable carbonTable, String segmentId)
+      throws IOException {
+    String segmentPath = CarbonTablePath.getSegmentPath(carbonTable.getTablePath(), segmentId);
+    FileFactory.mkdirs(segmentPath, FileFactory.getFileType(segmentPath));
+    if (recordWriter != null) {
+      recordWriter.close(null);
+      CarbonFile carbonFile = FileFactory
+          .getCarbonFile(recordWriter.getSegmentDir() + "/" + recordWriter.getFileName());
+      System.out.println(carbonFile.getLength());
     }
   }
 
@@ -152,18 +170,16 @@ public class RowFormatCarbonWriter extends CarbonWriter {
    * @return
    * @throws IOException
    */
-  private long getSegmentSize(String segmentDir) throws IOException {
-    CarbonFile carbonFile = FileFactory.getCarbonFile(segmentDir);
-    CarbonFile[] files = carbonFile.listFiles(new CarbonFileFilter() {
+  private long getSegmentSize(CarbonFile segmentDir) throws IOException {
+    CarbonFile[] files = segmentDir.listFiles(new CarbonFileFilter() {
       @Override public boolean accept(CarbonFile file) {
         return file.getName().endsWith(CarbonTablePath.INDEX_FILE_EXT);
       }
     });
     List<StreamFile> streamFiles = new ArrayList<>();
     for (CarbonFile index : files) {
-      StreamPruner
-          .readIndexAndgetStreamFiles(false, streamFiles, Segment.toSegment("0"), segmentDir,
-              index.getAbsolutePath());
+      StreamPruner.readIndexAndgetStreamFiles(false, streamFiles, Segment.toSegment("0"),
+          segmentDir.getAbsolutePath(), index.getAbsolutePath());
     }
     long size = 0;
     for (StreamFile file : streamFiles) {
@@ -182,24 +198,23 @@ public class RowFormatCarbonWriter extends CarbonWriter {
     Map<String, StreamFileIndex> indexMap = new HashMap<>();
     indexMap.put(fileIndex.getFileName(), fileIndex);
     updateStreamFileIndex(indexMap, filePath, fileType, msrDataTypes);
-//    if (indexHeader == null) {
-//      CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
-//      int[] cardinality =
-//          new int[carbonTable.getTableInfo().getFactTable().getListOfColumns().size()];
-//      List<ColumnSchema> columnSchemaList = AbstractFactDataWriter
-//          .getColumnSchemaListAndCardinality(new ArrayList<Integer>(), cardinality,
-//              carbonTable.getTableInfo().getFactTable().getListOfColumns());
-//      indexHeader = CarbonMetadataUtil.getIndexHeader(cardinality, columnSchemaList, 0, 0);
-//      indexHeader.setIs_sort(false);
-//    }
+    //    if (indexHeader == null) {
+    //      CarbonTable carbonTable = loadModel.getCarbonDataLoadSchema().getCarbonTable();
+    //      int[] cardinality =
+    //          new int[carbonTable.getTableInfo().getFactTable().getListOfColumns().size()];
+    //      List<ColumnSchema> columnSchemaList = AbstractFactDataWriter
+    //          .getColumnSchemaListAndCardinality(new ArrayList<Integer>(), cardinality,
+    //              carbonTable.getTableInfo().getFactTable().getListOfColumns());
+    //      indexHeader = CarbonMetadataUtil.getIndexHeader(cardinality, columnSchemaList, 0, 0);
+    //      indexHeader.setIs_sort(false);
+    //    }
     String tempFilePath = filePath + CarbonCommonConstants.TEMPWRITEFILEEXTENSION;
     CarbonIndexFileWriter writer = new CarbonIndexFileWriter();
-    String segmentPath = CarbonTablePath.getSegmentPath(tablePath, segmentId);
     try {
       writer.openThriftWriter(tempFilePath);
-//      if (false) {
-//        writer.writeThrift(indexHeader);
-//      }
+      //      if (false) {
+      //        writer.writeThrift(indexHeader);
+      //      }
       BlockIndex blockIndex;
       for (Map.Entry<String, StreamFileIndex> entry : indexMap.entrySet()) {
         blockIndex = new BlockIndex();

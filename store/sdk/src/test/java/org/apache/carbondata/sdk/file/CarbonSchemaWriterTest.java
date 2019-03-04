@@ -24,16 +24,11 @@ import java.util.Map;
 
 import org.apache.carbondata.common.exceptions.sql.InvalidLoadOptionException;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
-import org.apache.carbondata.core.datastore.filesystem.CarbonFile;
-import org.apache.carbondata.core.datastore.filesystem.CarbonFileFilter;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
-import org.apache.carbondata.core.metadata.datatype.DataTypes;
-import org.apache.carbondata.core.util.path.CarbonTablePath;
 
 import junit.framework.TestCase;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -54,10 +49,6 @@ public class CarbonSchemaWriterTest extends TestCase {
     schema.getProperties().put(CarbonCommonConstants.PRIMARY_KEY_COLUMNS, "ID");
     CarbonSchemaWriter.writeSchema(path, schema, FileFactory.getConfiguration());
 
-
-    Schema schema1 =
-        CarbonSchemaReader.readSchemaInSchemaFile(CarbonTablePath.getSchemaFilePath(path));
-    System.out.println(schema1);
   }
 
 
