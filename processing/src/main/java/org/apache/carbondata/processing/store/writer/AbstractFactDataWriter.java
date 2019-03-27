@@ -154,6 +154,8 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
 
   protected ExecutorService fallbackExecutorService;
 
+  protected long totalFileSize = 0;
+
   public AbstractFactDataWriter(CarbonFactDataHandlerModel model) {
     this.model = model;
     blockIndexInfoList = new ArrayList<>();
@@ -511,5 +513,9 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
       FileFactory.deleteFile(fileName, FileFactory.getFileType(fileName));
       return null;
     }
+  }
+
+  @Override public long getTotalFileSize() {
+    return totalFileSize;
   }
 }

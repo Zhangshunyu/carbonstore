@@ -15,19 +15,30 @@
  * limitations under the License.
  */
 
-package org.apache.carbondata.processing.store;
+package org.apache.carbondata.core.keytable;
 
-import org.apache.carbondata.core.datastore.exception.CarbonDataWriterException;
-import org.apache.carbondata.core.datastore.row.CarbonRow;
+import java.io.Serializable;
+import java.util.Comparator;
 
-public interface CarbonFactHandler {
-  void initialise() throws CarbonDataWriterException;
+import org.apache.carbondata.core.util.ByteUtil;
 
-  void addDataToStore(CarbonRow row) throws CarbonDataWriterException;
+public class RawRowComparator implements Comparator<Object[]>, Serializable {
 
-  void finish() throws CarbonDataWriterException;
+  private int sortColumnCount = 0;
 
-  void closeHandler() throws CarbonDataWriterException;
+  public RawRowComparator(int sortColumnCount) {
+    this.sortColumnCount = sortColumnCount;
+  }
 
-  long getTotalFileSize();
+  @Override public int compare(Object[] o1, Object[] o2) {
+    int diff = 0;
+
+    for (int i = 0; i < sortColumnCount; i++) {
+      diff = ByteUtil.UnsafeComparer.INSTANCE.compareTo((byte[]) (o1[i]), (byte[]) (o2[i]));
+      if (diff != 0) {
+        return diff;
+      }
+    }
+    return diff;
+  }
 }

@@ -185,6 +185,7 @@ object CarbonEnv {
       .addListener(classOf[AlterTableCompactionPostEvent], new MergeIndexEventListener)
       .addListener(classOf[AlterTableMergeIndexEvent], new MergeIndexEventListener)
       .addListener(classOf[BuildDataMapPostExecutionEvent], new MergeBloomIndexEventListener)
+      .addListener(classOf[AlterTableHandOffPostEvent], new MergeIndexEventListener)
   }
 
   /**

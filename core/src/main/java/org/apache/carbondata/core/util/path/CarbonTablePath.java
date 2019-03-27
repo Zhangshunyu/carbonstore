@@ -45,6 +45,7 @@ public class CarbonTablePath {
   private static final String LOCK_DIR = "LockFiles";
 
   public static final String TABLE_STATUS_FILE = "tablestatus";
+  public static final String TABLE_PARTITION_META = "partitionmeta";
   public static final String TABLE_STATUS_HISTORY_FILE = "tablestatus.history";
   public static final String CARBON_DATA_EXT = ".carbondata";
   public static final String INDEX_FILE_EXT = ".carbonindex";
@@ -215,6 +216,10 @@ public class CarbonTablePath {
    */
   public static String getTableStatusFilePath(String tablePath) {
     return getMetadataPath(tablePath) + File.separator + TABLE_STATUS_FILE;
+  }
+
+  public static String getTablePartitionMetaFilePath(String tablePath) {
+    return getMetadataPath(tablePath) + File.separator + TABLE_PARTITION_META;
   }
 
   public static String getTableStatusFilePathWithUUID(String tablePath, String uuid) {

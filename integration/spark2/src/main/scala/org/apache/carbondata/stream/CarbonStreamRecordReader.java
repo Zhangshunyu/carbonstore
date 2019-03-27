@@ -48,8 +48,8 @@ public class CarbonStreamRecordReader extends StreamRecordReader {
   private InputMetricsStats inputMetricsStats;
 
   public CarbonStreamRecordReader(boolean isVectorReader, InputMetricsStats inputMetricsStats,
-      QueryModel mdl, boolean useRawRow) {
-    super(mdl, useRawRow);
+      QueryModel mdl, boolean useRawRow, boolean readSortColumn) {
+    super(mdl, useRawRow, readSortColumn);
     this.isVectorReader = isVectorReader;
     this.inputMetricsStats = inputMetricsStats;
   }

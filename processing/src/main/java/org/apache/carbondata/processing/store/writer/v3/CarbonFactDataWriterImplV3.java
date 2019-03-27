@@ -126,6 +126,7 @@ public class CarbonFactDataWriterImplV3 extends AbstractFactDataWriter {
       buffer.putLong(currentPosition);
       buffer.flip();
       currentOffsetInFile += fileChannel.write(buffer);
+      totalFileSize += currentOffsetInFile;
     } catch (IOException e) {
       LOGGER.error("Problem while writing the carbon file", e);
       throw new CarbonDataWriterException("Problem while writing the carbon file: ", e);

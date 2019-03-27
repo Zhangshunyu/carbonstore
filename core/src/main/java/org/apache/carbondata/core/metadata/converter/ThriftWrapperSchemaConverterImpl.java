@@ -202,8 +202,8 @@ public class ThriftWrapperSchemaConverterImpl implements SchemaConverter {
     thriftColumnSchema.setInvisible(wrapperColumnSchema.isInvisible());
     thriftColumnSchema.setColumnReferenceId(wrapperColumnSchema.getColumnReferenceId());
     thriftColumnSchema.setSchemaOrdinal(wrapperColumnSchema.getSchemaOrdinal());
+    Map<String, String> properties = wrapperColumnSchema.getColumnProperties();
     if (wrapperColumnSchema.isSortColumn()) {
-      Map<String, String> properties = wrapperColumnSchema.getColumnProperties();
       if (null == properties) {
         properties = new HashMap<String, String>();
         thriftColumnSchema.setColumnProperties(properties);
@@ -211,7 +211,6 @@ public class ThriftWrapperSchemaConverterImpl implements SchemaConverter {
       properties.put(CarbonCommonConstants.SORT_COLUMNS, "true");
     }
     if (wrapperColumnSchema.isPrimaryKeyColumn()) {
-      Map<String, String> properties = wrapperColumnSchema.getColumnProperties();
       if (null == properties) {
         properties = new HashMap<>();
         thriftColumnSchema.setColumnProperties(properties);

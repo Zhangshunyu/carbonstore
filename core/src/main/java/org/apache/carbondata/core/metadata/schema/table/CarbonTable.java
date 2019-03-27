@@ -948,6 +948,21 @@ public class CarbonTable implements Serializable {
     return getSortColumns(getTableName());
   }
 
+  public List<String> getPrimaryKeys() {
+    String primaryKey = tableInfo.getFactTable().getTableProperties()
+        .get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS);
+    if (primaryKey == null) {
+      return new ArrayList<String>(0);
+    }
+    String[] columnNames = primaryKey.split(",", -1);
+
+    List<String> primaryKeys = new ArrayList<String>(columnNames.length);
+    for (String columnName : columnNames) {
+      primaryKeys.add(columnName);
+    }
+    return primaryKeys;
+  }
+
   public int getNumberOfSortColumns() {
     return numberOfSortColumns;
   }

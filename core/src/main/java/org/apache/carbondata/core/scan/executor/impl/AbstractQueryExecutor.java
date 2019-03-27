@@ -245,22 +245,26 @@ public abstract class AbstractQueryExecutor<E> implements QueryExecutor<E> {
         readAndFillBlockletInfo(tableBlockInfos, blockInfo,
             blockletDetailInfo, fileFooter, segmentProperties);
       } else {
-        if (null == segmentProperties) {
-          List<ColumnSchema> columnSchemas = null;
-          int[] dimLens = null;
+        List<ColumnSchema> columnSchemas = null;
+        int[] dimLens = null;
+        if (null == segmentProperties || null == blockInfo.getDetailInfo()) {
           if (blockInfo.getVersion().number() < 0) {
             columnSchemas = getColumnSchemasForRowFormat(blockInfo);
             dimLens = new int[columnSchemas.size()];
-            BlockletDetailInfo detailInfo = new BlockletDetailInfo();
-            blockInfo.setDetailInfo(detailInfo);
-            Arrays.fill(dimLens, Integer.MAX_VALUE);
-            detailInfo.setDimLens(dimLens);
-            detailInfo.setVersionNumber(blockInfo.getVersion().number());
-            detailInfo.setBlockletInfo(new BlockletInfo());
           } else {
             dimLens = blockInfo.getDetailInfo().getDimLens();
             columnSchemas = blockInfo.getDetailInfo().getColumnSchemas();
           }
+        }
+        if (null == blockInfo.getDetailInfo()) {
+          BlockletDetailInfo detailInfo = new BlockletDetailInfo();
+          blockInfo.setDetailInfo(detailInfo);
+          Arrays.fill(dimLens, Integer.MAX_VALUE);
+          detailInfo.setDimLens(dimLens);
+          detailInfo.setVersionNumber(blockInfo.getVersion().number());
+          detailInfo.setBlockletInfo(new BlockletInfo());
+        }
+        if (null == segmentProperties) {
           segmentProperties = new SegmentProperties(columnSchemas, dimLens);
           createFilterExpression(queryModel, segmentProperties);
           updateColumns(queryModel, columnSchemas, blockInfo.getFilePath());

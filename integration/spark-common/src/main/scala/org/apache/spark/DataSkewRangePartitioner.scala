@@ -92,7 +92,7 @@ class DataSkewRangePartitioner[K: Ordering : ClassTag, V](
   // dataSkewCount: how many bounds happened data skew
   // dataSkewIndex: the index of data skew bounds
   // dataSkewNum: how many partition of each data skew bound
-  private var (rangeBounds: Array[K], skewCount: Int, skewIndexes: Array[Int],
+  var (rangeBounds: Array[K], skewCount: Int, skewIndexes: Array[Int],
   skewWeights: Array[Int]) = {
     if (partitions <= 1) {
       (Array.empty[K], 0, Array.empty[Int], Array.empty[Int])

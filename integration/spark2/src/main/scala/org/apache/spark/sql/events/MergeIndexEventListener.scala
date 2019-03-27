@@ -23,7 +23,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.SparkContext
 import org.apache.spark.rdd.CarbonMergeFilesRDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.util.CarbonException
@@ -35,7 +34,7 @@ import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
 import org.apache.carbondata.core.metadata.SegmentFileStore
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
-import org.apache.carbondata.events.{AlterTableCompactionPostEvent, AlterTableMergeIndexEvent, Event, OperationContext, OperationEventListener}
+import org.apache.carbondata.events._
 import org.apache.carbondata.processing.loading.events.LoadEvents.LoadTablePostExecutionEvent
 import org.apache.carbondata.processing.merger.CarbonDataMergerUtil
 
@@ -78,6 +77,14 @@ class MergeIndexEventListener extends OperationEventListener with Logging {
         if(!carbonTable.isStreamingSink) {
           mergeIndexFilesForCompactedSegments(sparkSession, carbonTable, mergedLoads)
         }
+      case alterTableHandOffPostEvent: AlterTableHandOffPostEvent =>
+        LOGGER.info("merge index for hand off")
+        val mergeToLoads = new util.ArrayList[String](1)
+        mergeToLoads.add(alterTableHandOffPostEvent.mergeToLoad)
+        mergeIndexFilesForCompactedSegments(
+          alterTableHandOffPostEvent.sparkSession,
+          alterTableHandOffPostEvent.carbonTable,
+          mergeToLoads)
       case alterTableMergeIndexEvent: AlterTableMergeIndexEvent =>
         val carbonMainTable = alterTableMergeIndexEvent.carbonTable
         val sparkSession = alterTableMergeIndexEvent.sparkSession

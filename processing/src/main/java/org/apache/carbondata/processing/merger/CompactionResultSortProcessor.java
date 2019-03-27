@@ -144,6 +144,15 @@ public class CompactionResultSortProcessor extends AbstractResultProcessor {
 
   private CarbonColumn[] noDicAndComplexColumns;
 
+  private Object[] startKey;
+
+  private Object[] endKey;
+
+  /**
+   * total size of new carbondata files
+   */
+  private long totalFileSize = 0;
+
   public CompactionResultSortProcessor(CarbonLoadModel carbonLoadModel, CarbonTable carbonTable,
       SegmentProperties segmentProperties, CompactionType compactionType, String tableName,
       PartitionSpec partitionSpec) {
@@ -214,6 +223,7 @@ public class CompactionResultSortProcessor extends AbstractResultProcessor {
     // close data handler
     if (null != dataHandler) {
       dataHandler.closeHandler();
+      this.totalFileSize = dataHandler.getTotalFileSize();
     }
   }
 
@@ -388,10 +398,17 @@ public class CompactionResultSortProcessor extends AbstractResultProcessor {
         finalMerger.addInMemoryRawResultIterator(sortedRawResultIterator, segmentProperties,
             noDicAndComplexColumns, dataTypes);
       }
-      while (finalMerger.hasNext()) {
-        Object[] row = finalMerger.next();
+      Object[] row = null;
+      if (finalMerger.hasNext()) {
+        row = finalMerger.next();
+        startKey = row;
         dataHandler.addDataToStore(new CarbonRow(row));
       }
+      while (finalMerger.hasNext()) {
+        row = finalMerger.next();
+        dataHandler.addDataToStore(new CarbonRow(row));
+      }
+      endKey = row;
       dataHandler.finish();
     } catch (CarbonDataWriterException e) {
       LOGGER.error(e.getMessage(), e);
@@ -403,6 +420,7 @@ public class CompactionResultSortProcessor extends AbstractResultProcessor {
       if (null != dataHandler) {
         try {
           dataHandler.closeHandler();
+          this.totalFileSize = dataHandler.getTotalFileSize();
         } catch (CarbonDataWriterException e) {
           LOGGER.error("Error in close data handler", e);
           throw new Exception("Error in close data handler", e);
@@ -531,5 +549,17 @@ public class CompactionResultSortProcessor extends AbstractResultProcessor {
     tempStoreLocation = CarbonDataProcessorUtil
         .getLocalDataFolderLocation(carbonTable, carbonLoadModel.getTaskNo(),
            segmentId, true, false);
+  }
+
+  public Object[] getStartKey() {
+    return startKey;
+  }
+
+  public Object[] getEndKey() {
+    return endKey;
+  }
+
+  public long getTotalFileSize() {
+    return totalFileSize;
   }
 }

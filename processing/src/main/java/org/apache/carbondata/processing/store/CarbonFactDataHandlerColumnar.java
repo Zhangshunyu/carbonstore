@@ -121,6 +121,11 @@ public class CarbonFactDataHandlerColumnar implements CarbonFactHandler {
   private ColumnarFormatVersion version;
 
   /**
+   * total size of all data files
+   */
+  private long totalFileSize = 0;
+
+  /**
    * CarbonFactDataHandler constructor
    */
   public CarbonFactDataHandlerColumnar(CarbonFactDataHandlerModel model) {
@@ -393,6 +398,7 @@ public class CarbonFactDataHandlerColumnar implements CarbonFactHandler {
       }
       // close all the open stream for both the files
       this.dataWriter.closeWriter();
+      this.totalFileSize = this.dataWriter.getTotalFileSize();
     }
     this.dataWriter = null;
   }
@@ -503,6 +509,10 @@ public class CarbonFactDataHandlerColumnar implements CarbonFactHandler {
    */
   private void resetBlockletProcessingCount() {
     blockletProcessingCount.set(0);
+  }
+
+  @Override public long getTotalFileSize() {
+    return totalFileSize;
   }
 
   /**

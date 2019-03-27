@@ -384,6 +384,32 @@ public final class DataTypeUtil {
     }
   }
 
+  public static byte[] getBytesBasedOnDataTypeForNoDictionaryColumn(Object dimensionValue,
+      DataType actualDataType) {
+    if (actualDataType == DataTypes.BOOLEAN) {
+      return ByteUtil.toBytes((boolean) dimensionValue);
+    } else if (actualDataType == DataTypes.SHORT) {
+      return ByteUtil.toXorBytes((short) dimensionValue);
+    } else if (actualDataType == DataTypes.INT) {
+      return ByteUtil.toXorBytes((int) dimensionValue);
+    } else if (actualDataType == DataTypes.LONG) {
+      return ByteUtil.toXorBytes((long) dimensionValue);
+    } else if (actualDataType == DataTypes.DOUBLE) {
+      return ByteUtil.toXorBytes((double) dimensionValue);
+    } else if (actualDataType == DataTypes.FLOAT) {
+      return ByteUtil.toXorBytes((float) dimensionValue);
+    } else if (actualDataType == DataTypes.BYTE) {
+      return (byte[]) dimensionValue;
+    } else if (DataTypes.isDecimal(actualDataType)) {
+      return bigDecimalToByte((BigDecimal) dimensionValue);
+    } else if (actualDataType == DataTypes.TIMESTAMP) {
+      return ByteUtil.toXorBytes(((Date) dimensionValue).getTime());
+    } else {
+      // Default action for String/Varchar
+      return (byte[]) dimensionValue;
+    }
+  }
+
   public static byte[] getBytesBasedOnDataTypeForNoDictionaryColumn(String dimensionValue,
       DataType actualDataType, String dateFormat) {
     if (actualDataType == DataTypes.BOOLEAN) {

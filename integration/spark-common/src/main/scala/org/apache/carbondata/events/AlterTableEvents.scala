@@ -165,6 +165,19 @@ case class AlterTableCompactionPostEvent(sparkSession: SparkSession,
     carbonTable: CarbonTable,
     carbonMergerMapping: CarbonMergerMapping,
     compactedLoads: java.util.List[String]) extends Event with AlterTableCompactionEventInfo
+
+/**
+ * HandOff Event
+ * @param sparkSession
+ * @param carbonTable
+ * @param mergeToLoad
+ */
+case class AlterTableHandOffPostEvent(
+    sparkSession: SparkSession,
+    carbonTable: CarbonTable,
+    mergeToLoad: String
+) extends Event with AlterTableHandOffEventInfo
+
 /**
  * Compaction Event for handling pre update status file opeartions, lister has to implement this
  * event before updating the table status file

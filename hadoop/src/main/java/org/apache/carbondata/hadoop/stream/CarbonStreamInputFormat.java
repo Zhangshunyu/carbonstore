@@ -55,8 +55,14 @@ public class CarbonStreamInputFormat extends FileInputFormat<Void, Object> {
   // return raw row for handoff
   private boolean useRawRow = false;
 
+  private boolean readSortColumns = false;
+
   public void setUseRawRow(boolean useRawRow) {
     this.useRawRow = useRawRow;
+  }
+
+  public void setReadSortColumns(boolean readSortColumns) {
+    this.readSortColumns = readSortColumns;
   }
 
   public void setInputMetricsStats(InputMetricsStats inputMetricsStats) {
@@ -83,10 +89,10 @@ public class CarbonStreamInputFormat extends FileInputFormat<Void, Object> {
     try {
       Constructor cons = CarbonStreamUtils
           .getConstructorWithReflection(STREAM_RECORD_READER_INSTANCE, boolean.class,
-              InputMetricsStats.class, QueryModel.class, boolean.class);
+              InputMetricsStats.class, QueryModel.class, boolean.class, boolean.class);
       return (RecordReader) CarbonStreamUtils
-          .getInstanceWithReflection(cons, isVectorReader, inputMetricsStats, model, useRawRow);
-
+          .getInstanceWithReflection(cons, isVectorReader, inputMetricsStats, model, useRawRow,
+              readSortColumns);
     } catch (Exception e) {
       throw new IOException(e);
     }
