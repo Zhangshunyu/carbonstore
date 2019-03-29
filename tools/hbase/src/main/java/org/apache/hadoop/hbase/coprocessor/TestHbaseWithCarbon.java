@@ -66,7 +66,7 @@ public class TestHbaseWithCarbon {
     Random random = new Random();
     List<Put> puts  = new ArrayList<>(batchSize);
     for (int i = 0; i < size; i++) {
-      Put put = new Put(Bytes.toBytes(k + System.currentTimeMillis()));
+      Put put = new Put(Bytes.toBytes(k + 1553693589489L));
       put.addColumn(Bytes.toBytes("cf1"), Bytes.toBytes("name"), Bytes.toBytes("ravi"+(k%100000)));
       put.addColumn(Bytes.toBytes("cf1"), Bytes.toBytes("dept"), Bytes.toBytes("dept"+(k%1000)));
       put.addColumn(Bytes.toBytes("cf1"), Bytes.toBytes("city"), Bytes.toBytes("city"+(k%500)));
@@ -96,7 +96,7 @@ public class TestHbaseWithCarbon {
     tableDescriptor.addFamily(new HColumnDescriptor("cf1"));
     if (createCarbon) {
       String schema =
-          "{\"ID\":\"long\",\"name\":\"string\",\"dept\":\"string\",\"city\":\"string\",\"age\":\"short\",\"salary\":\"double\",\"timestamp\":\"long\",\"tblproperties\":{\"sort_columns\":\"ID\",\"hbase_mapping\":\"key=ID,cf1:name=name,cf1:dept=dept,cf1:city=city,cf1:age=age,timestamp=timestamp,cf1:salary=salary\",\"path\":\""
+          "{\"ID\":\"long\",\"name\":\"string\",\"dept\":\"string\",\"city\":\"string\",\"age\":\"short\",\"salary\":\"double\",\"timestamp\":\"long\",\"tblproperties\":{\"sort_columns\":\"ID,timestamp\",\"hbase_mapping\":\"key=ID,cf1:name=name,cf1:dept=dept,cf1:city=city,cf1:age=age,timestamp=timestamp,cf1:salary=salary\",\"path\":\""
               + path + "\"}}";
       System.out.println("Schema >>>>>>>>> " + schema);
       tableDescriptor.setValue("CARBON_SCHEMA", schema);

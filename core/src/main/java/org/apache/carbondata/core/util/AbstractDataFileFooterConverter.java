@@ -355,6 +355,9 @@ public abstract class AbstractDataFileFooterConverter {
       if (properties.get(CarbonCommonConstants.SORT_COLUMNS) != null) {
         wrapperColumnSchema.setSortColumn(true);
       }
+      if (properties.get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS) != null) {
+        wrapperColumnSchema.setPrimaryKeyColumn(true);
+      }
     }
     wrapperColumnSchema.setFunction(externalColumnSchema.getAggregate_function());
     List<org.apache.carbondata.format.ParentColumnTableRelation> parentColumnTableRelation =

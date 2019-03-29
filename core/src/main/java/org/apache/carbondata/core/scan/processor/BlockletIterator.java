@@ -23,7 +23,7 @@ import org.apache.carbondata.core.datastore.DataRefNode;
 /**
  * Below class will be used to iterate over data block
  */
-class BlockletIterator extends CarbonIterator<DataRefNode> {
+public class BlockletIterator extends CarbonIterator<DataRefNode> {
   /**
    * data store block
    */

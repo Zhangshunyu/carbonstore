@@ -88,4 +88,8 @@ public class CarbonColumnarBatch {
       }
     }
   }
+
+  public boolean[] getFilteredRows() {
+    return filteredRows;
+  }
 }

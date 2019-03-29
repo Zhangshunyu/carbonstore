@@ -152,3 +152,13 @@ class RefreshResultImpl extends RefreshResult[String, (String, Boolean)] {
   override def getKey(key: String,
       value: (String, Boolean)): (String, (String, Boolean)) = (key, value)
 }
+
+trait PrimaryKeyResult[K, V] extends Serializable {
+  def getKey(key: String, value: Seq[SegmentUpdateDetails]): (K, V)
+
+}
+
+class PrimaryKeyResultImpl extends PrimaryKeyResult[String, Seq[SegmentUpdateDetails]] {
+  override def getKey(key: String,
+      value: Seq[SegmentUpdateDetails]): (String, Seq[SegmentUpdateDetails]) = (key, value)
+}

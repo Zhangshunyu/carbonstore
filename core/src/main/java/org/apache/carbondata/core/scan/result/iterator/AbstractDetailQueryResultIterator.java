@@ -51,7 +51,8 @@ import org.apache.log4j.Logger;
  * executing that query are returning a iterator over block and every time next
  * call will come it will execute the block and return the result
  */
-public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterator<E> {
+public abstract class AbstractDetailQueryResultIterator<E> extends CarbonIterator<E>
+    implements CarbonBatchIterator {
 
   /**
    * LOGGER.

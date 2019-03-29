@@ -234,7 +234,6 @@ class CarbonScanRDD[T: ClassTag](
           carbonDistribution.equalsIgnoreCase(CarbonCommonConstants.CARBON_TASK_DISTRIBUTION_CUSTOM)
         if (tableInfo.getFactTable.getListOfColumns.asScala.exists(_.isPrimaryKeyColumn)) {
           // group as per primary key columns ranges.
-          val array = splits.asScala.toArray
           val groups = new ArrayBuffer[ArrayBuffer[CarbonInputSplit]]()
           splits.asScala.foreach{s =>
             groups.find{f =>

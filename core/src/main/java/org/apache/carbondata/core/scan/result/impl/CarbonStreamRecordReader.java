@@ -139,7 +139,7 @@ public class CarbonStreamRecordReader extends StreamRecordReader {
     }
   }
 
-  public void putRowToColumnBatch(int rowId, Object value, CarbonColumnVector columnVector) {
+  public static void putRowToColumnBatch(int rowId, Object value, CarbonColumnVector columnVector) {
     DataType t = columnVector.getType();
     if (null == value) {
       columnVector.putNull(rowId);
@@ -159,8 +159,13 @@ public class CarbonStreamRecordReader extends StreamRecordReader {
       } else if (t == DataTypes.DOUBLE) {
         columnVector.putDouble(rowId, (double) value);
       } else if (t == DataTypes.STRING) {
-        String v = (String) value;
-        columnVector.putByteArray(rowId, v.getBytes());
+        // TODO find better way
+        if (value instanceof byte[]) {
+          columnVector.putByteArray(rowId, (byte[]) value);
+        } else {
+          String v = (String) value;
+          columnVector.putByteArray(rowId, v.getBytes());
+        }
       } else if (t instanceof DecimalType) {
         BigDecimal d = (BigDecimal) value;
         DecimalType decimalType = (DecimalType) t;

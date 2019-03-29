@@ -16,7 +16,9 @@
  */
 package org.apache.carbondata.core.scan.executor;
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.scan.executor.impl.DetailQueryExecutor;
+import org.apache.carbondata.core.scan.executor.impl.MVCCVectorDetailQueryExecutor;
 import org.apache.carbondata.core.scan.executor.impl.VectorDetailQueryExecutor;
 import org.apache.carbondata.core.scan.model.QueryModel;
 
@@ -30,7 +32,13 @@ public class QueryExecutorFactory {
 
   public static QueryExecutor getQueryExecutor(QueryModel queryModel, Configuration configuration) {
     if (queryModel.isVectorReader()) {
-      return new VectorDetailQueryExecutor(configuration);
+      if (queryModel.getTable().getTableInfo().getFactTable().getTableProperties().get(
+          CarbonCommonConstants.PRIMARY_KEY_COLUMNS) != null) {
+        return new MVCCVectorDetailQueryExecutor(configuration, queryModel.getUpdateTimeStamp() > 0);
+      } else {
+        return new VectorDetailQueryExecutor(configuration);
+      }
+//      return new VectorDetailQueryExecutor(configuration);
     } else {
       return new DetailQueryExecutor(configuration);
     }

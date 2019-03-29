@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.cache.dictionary.Dictionary;
 import org.apache.carbondata.core.constants.CarbonV3DataFormatConstants;
@@ -41,7 +40,7 @@ import org.apache.carbondata.core.scan.expression.conditional.NotEqualsExpressio
 import org.apache.carbondata.core.scan.model.ProjectionDimension;
 import org.apache.carbondata.core.scan.model.ProjectionMeasure;
 import org.apache.carbondata.core.scan.model.QueryModel;
-import org.apache.carbondata.core.scan.result.iterator.AbstractDetailQueryResultIterator;
+import org.apache.carbondata.core.scan.result.iterator.CarbonBatchIterator;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnVector;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnarBatch;
 import org.apache.carbondata.core.util.CarbonUtil;
@@ -53,11 +52,12 @@ import org.apache.carbondata.hadoop.InputMetricsStats;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.log4j.Logger;
 import org.apache.spark.memory.MemoryMode;
+import org.apache.spark.sql.CarbonVectorProxy;
 import org.apache.spark.sql.carbondata.execution.datasources.CarbonSparkDataSourceUtil;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.execution.vectorized.ColumnVectorUtils;
-import org.apache.spark.sql.CarbonVectorProxy;
 import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
@@ -95,7 +95,7 @@ public class VectorizedCarbonRecordReader extends AbstractRecordReader<Object> {
 
   private QueryModel queryModel;
 
-  private AbstractDetailQueryResultIterator iterator;
+  private CarbonBatchIterator iterator;
 
   private QueryExecutor queryExecutor;
 
@@ -143,7 +143,7 @@ public class VectorizedCarbonRecordReader extends AbstractRecordReader<Object> {
     try {
       queryExecutor =
           QueryExecutorFactory.getQueryExecutor(queryModel, taskAttemptContext.getConfiguration());
-      iterator = (AbstractDetailQueryResultIterator) queryExecutor.execute(queryModel);
+      iterator = (CarbonBatchIterator) queryExecutor.execute(queryModel);
     } catch (QueryExecutionException e) {
       if (ExceptionUtils.indexOfThrowable(e, FileNotFoundException.class) > 0) {
         LOGGER.error(e.getMessage(), e);
@@ -370,9 +370,12 @@ public class VectorizedCarbonRecordReader extends AbstractRecordReader<Object> {
     }
     vectorProxy.reset();
     carbonColumnarBatch.reset();
-    if (iterator.hasNext()) {
+    while (iterator.hasNext()) {
       iterator.processNextBatch(carbonColumnarBatch);
       int actualSize = carbonColumnarBatch.getActualSize();
+      if (actualSize == 0) {
+        continue;
+      }
       vectorProxy.setNumRows(actualSize);
       numBatched = actualSize;
       batchIdx = 0;
@@ -381,4 +384,7 @@ public class VectorizedCarbonRecordReader extends AbstractRecordReader<Object> {
     return false;
   }
 
+  @Override public QueryExecutor getQueryExecutor() {
+    return queryExecutor;
+  }
 }

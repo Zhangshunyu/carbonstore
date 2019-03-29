@@ -21,11 +21,15 @@ import java.text.SimpleDateFormat
 import java.util
 import java.util.{Date, UUID}
 
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.mapred.JobConf
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
 import org.apache.hadoop.mapreduce.{Job, RecordReader, TaskAttemptID, TaskType}
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
 import org.apache.spark.{Partition, SerializableWritable, TaskContext}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
+import org.apache.spark.sql.execution.command.ExecutionErrors
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.converter.SparkDataTypeConverterImpl
@@ -33,7 +37,9 @@ import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.datastore.block.SegmentProperties
 import org.apache.carbondata.core.datastore.impl.FileFactory
 import org.apache.carbondata.core.locks.{CarbonLockFactory, LockUsage}
+import org.apache.carbondata.core.metadata.AbsoluteTableIdentifier
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
+import org.apache.carbondata.core.mutate.SegmentUpdateDetails
 import org.apache.carbondata.core.scan.result.iterator.RawResultIterator
 import org.apache.carbondata.core.statusmanager.{LoadMetadataDetails, SegmentStatus, SegmentStatusManager}
 import org.apache.carbondata.core.util.{CarbonUtil, DataTypeUtil}
@@ -46,8 +52,8 @@ import org.apache.carbondata.processing.loading.events.LoadEvents.{LoadTablePost
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.merger.{CompactionResultSortProcessor, CompactionType}
 import org.apache.carbondata.processing.util.CarbonLoaderUtil
-import org.apache.carbondata.spark.{HandoffResult, HandoffResultImpl}
-import org.apache.carbondata.spark.util.CommonUtil
+import org.apache.carbondata.spark.{HandoffResult, HandoffResultImpl, PrimaryKeyResultImpl}
+import org.apache.carbondata.spark.util.{CarbonScalaUtil, CommonUtil}
 
 
 /**
@@ -330,6 +336,11 @@ object StreamHandoffRDD {
           loadStatus = SegmentStatus.LOAD_FAILURE
         }
       }
+      val tuples = new UpdatePrimaryKeyRDD(
+        sparkSession, new PrimaryKeyResultImpl,
+        carbonLoadModel,
+        carbonLoadModel.getSegmentId).collect()
+      updateDeleteStatus(tuples, carbonLoadModel)
     } catch {
       case ex: Exception =>
         loadStatus = SegmentStatus.LOAD_FAILURE
@@ -367,6 +378,41 @@ object StreamHandoffRDD {
       }
     }
 
+  }
+
+
+  private def updateDeleteStatus(result: Array[(String, Seq[SegmentUpdateDetails])],
+      carbonLoadModel: CarbonLoadModel): Unit = {
+    val d = result.map{ res =>
+      val segmentStatus =
+      if (res._1.equals("true")) {
+        SegmentStatus.SUCCESS
+      } else {
+        SegmentStatus.LOAD_FAILURE
+      }
+      res._2.map(s => (segmentStatus, (s, null: ExecutionErrors))).toList
+    }
+
+    val table = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
+    val (carbonInputFormat, job) = createCarbonInputFormat(table.getAbsoluteTableIdentifier)
+    CarbonInputFormat.setTableInfo(job.getConfiguration, table.getTableInfo)
+    val blockMappingVO =
+      carbonInputFormat.getBlockRowCount(
+        job,
+        table,
+        null)
+    CarbonScalaUtil.checkAndUpdateStatusFiles(d,
+      blockMappingVO, table,
+      carbonLoadModel.getFactTimeStamp.toString, null, false)
+  }
+
+  private def createCarbonInputFormat(absoluteTableIdentifier: AbsoluteTableIdentifier) :
+  (CarbonTableInputFormat[Array[Object]], Job) = {
+    val carbonInputFormat = new CarbonTableInputFormat[Array[Object]]()
+    val jobConf: JobConf = new JobConf(FileFactory.getConfiguration)
+    val job: Job = new Job(jobConf)
+    FileInputFormat.addInputPath(job, new Path(absoluteTableIdentifier.getTablePath))
+    (carbonInputFormat, job)
   }
 
   /**

@@ -16,6 +16,7 @@
  */
 package org.apache.carbondata.hadoop;
 
+import org.apache.carbondata.core.scan.executor.QueryExecutor;
 import org.apache.carbondata.core.stats.QueryStatistic;
 import org.apache.carbondata.core.stats.QueryStatisticsConstants;
 import org.apache.carbondata.core.stats.QueryStatisticsRecorder;
@@ -41,5 +42,9 @@ public abstract class AbstractRecordReader<T> extends RecordReader<Void, T> {
       queryStatistic.addCountStatistic(QueryStatisticsConstants.RESULT_SIZE, recordCount);
       recorder.recordStatistics(queryStatistic);
     }
+  }
+
+  public QueryExecutor getQueryExecutor() {
+    throw new UnsupportedOperationException("Not supported here");
   }
 }

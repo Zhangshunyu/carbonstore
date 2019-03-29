@@ -36,6 +36,7 @@ import org.apache.carbondata.core.scan.model.ProjectionDimension;
 import org.apache.carbondata.core.scan.model.ProjectionMeasure;
 import org.apache.carbondata.core.scan.model.QueryModel;
 import org.apache.carbondata.core.scan.result.iterator.AbstractDetailQueryResultIterator;
+import org.apache.carbondata.core.scan.result.iterator.CarbonBatchIterator;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnVector;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnarBatch;
 import org.apache.carbondata.core.scan.result.vector.impl.CarbonColumnVectorImpl;
@@ -64,7 +65,7 @@ public class CarbonVectorizedRecordReader extends AbstractRecordReader<Object> {
 
   private int numBatched = 0;
 
-  private AbstractDetailQueryResultIterator iterator;
+  private CarbonBatchIterator iterator;
 
   private QueryModel queryModel;
   //This holds mapping of  fetch index with respect to project col index.
@@ -103,7 +104,7 @@ public class CarbonVectorizedRecordReader extends AbstractRecordReader<Object> {
     try {
       queryExecutor =
           QueryExecutorFactory.getQueryExecutor(queryModel, taskAttemptContext.getConfiguration());
-      iterator = (AbstractDetailQueryResultIterator) queryExecutor.execute(queryModel);
+      iterator = (CarbonBatchIterator) queryExecutor.execute(queryModel);
       initBatch();
     } catch (QueryExecutionException e) {
       LOGGER.error(e);

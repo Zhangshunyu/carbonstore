@@ -214,6 +214,9 @@ public class ThriftWrapperSchemaConverterImpl implements SchemaConverter {
     }
     if (wrapperColumnSchema.isPrimaryKeyColumn()) {
       Map<String, String> properties = wrapperColumnSchema.getColumnProperties();
+      if (thriftColumnSchema.getColumnProperties() != null) {
+        properties = thriftColumnSchema.getColumnProperties();
+      }
       if (null == properties) {
         properties = new HashMap<>();
         thriftColumnSchema.setColumnProperties(properties);

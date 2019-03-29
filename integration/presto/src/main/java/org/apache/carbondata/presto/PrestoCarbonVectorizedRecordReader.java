@@ -36,6 +36,7 @@ import org.apache.carbondata.core.scan.model.ProjectionDimension;
 import org.apache.carbondata.core.scan.model.ProjectionMeasure;
 import org.apache.carbondata.core.scan.model.QueryModel;
 import org.apache.carbondata.core.scan.result.iterator.AbstractDetailQueryResultIterator;
+import org.apache.carbondata.core.scan.result.iterator.CarbonBatchIterator;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnVector;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnarBatch;
 import org.apache.carbondata.core.stats.QueryStatistic;
@@ -71,7 +72,7 @@ class PrestoCarbonVectorizedRecordReader extends AbstractRecordReader<Object> {
 
   private QueryModel queryModel;
 
-  private AbstractDetailQueryResultIterator iterator;
+  private CarbonBatchIterator iterator;
 
   private QueryExecutor queryExecutor;
 
@@ -82,7 +83,7 @@ class PrestoCarbonVectorizedRecordReader extends AbstractRecordReader<Object> {
   private CarbonDictionaryDecodeReadSupport readSupport;
 
   public PrestoCarbonVectorizedRecordReader(QueryExecutor queryExecutor, QueryModel queryModel,
-      AbstractDetailQueryResultIterator iterator, CarbonDictionaryDecodeReadSupport readSupport) {
+      CarbonBatchIterator iterator, CarbonDictionaryDecodeReadSupport readSupport) {
     this.queryModel = queryModel;
     this.iterator = iterator;
     this.queryExecutor = queryExecutor;

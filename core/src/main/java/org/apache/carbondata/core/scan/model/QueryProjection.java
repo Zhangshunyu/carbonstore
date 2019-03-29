@@ -79,4 +79,11 @@ public class QueryProjection {
     this.measures.add(queryMeasure);
   }
 
+  public QueryProjection getCopy() {
+    QueryProjection projection = new QueryProjection();
+    projection.dimensions = new ArrayList<>(dimensions);
+    projection.measures = new ArrayList<>(measures);
+    return projection;
+  }
+
 }
