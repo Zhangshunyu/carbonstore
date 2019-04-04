@@ -36,11 +36,11 @@ public class IteratorVectorHolder implements IteratorHolder {
         return false;
       }
     }
-    if (counter >= columnarBatch.getActualSize() - 1 && iterator.hasNext()) {
+    if (counter >= columnarBatch.getRowCounter() - 1 && iterator.hasNext()) {
       counter = -1;
       return processData();
     }
-    return counter < columnarBatch.getActualSize() - 1 || iterator.hasNext();
+    return counter < columnarBatch.getRowCounter() - 1 || iterator.hasNext();
   }
 
   private boolean processData() {
@@ -48,7 +48,7 @@ public class IteratorVectorHolder implements IteratorHolder {
     while (iterator.hasNext()) {
       columnarBatch.reset();
       iterator.processNextBatch(columnarBatch);
-      if (columnarBatch.getActualSize() > 0) {
+      if (columnarBatch.getRowCounter() > 0) {
         hasData = true;
         break;
       }
@@ -74,14 +74,6 @@ public class IteratorVectorHolder implements IteratorHolder {
 
   @Override public BlockExecutionInfo getBlockExecutionInfo() {
     return executionInfo;
-  }
-
-  @Override public void incrementDeleteRow() {
-    deletedRows += 1;
-  }
-
-  @Override public int getDeleteRowCount() {
-    return deletedRows;
   }
 
   @Override public boolean isDeleted() {

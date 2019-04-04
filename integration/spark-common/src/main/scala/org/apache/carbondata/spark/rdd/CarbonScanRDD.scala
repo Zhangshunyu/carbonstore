@@ -252,6 +252,19 @@ class CarbonScanRDD[T: ClassTag](
                 groups += splits
             }
           }
+          val regroups = new ArrayBuffer[ArrayBuffer[CarbonInputSplit]]()
+          // Seperate the rowformats and columnar farmat groups.
+          groups.foreach{ g =>
+            if (!g.exists(_.getVersion == ColumnarFormatVersion.R1) && g.size > 1) {
+              g.foreach{ s =>
+                val splits = new ArrayBuffer[CarbonInputSplit]()
+                splits += s
+                regroups += splits
+              }
+            } else {
+              regroups += g
+            }
+          }
           groups.zipWithIndex.foreach { splitWithIndex =>
             val multiBlockSplit =
               new CarbonMultiBlockSplit(

@@ -21,9 +21,7 @@ import java.util.AbstractQueue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.Executors;
 
@@ -34,7 +32,9 @@ import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.metadata.datatype.StructField;
+import org.apache.carbondata.core.metadata.schema.table.column.CarbonColumn;
 import org.apache.carbondata.core.metadata.schema.table.column.CarbonDimension;
+import org.apache.carbondata.core.metadata.schema.table.column.CarbonMeasure;
 import org.apache.carbondata.core.scan.executor.exception.QueryExecutionException;
 import org.apache.carbondata.core.scan.executor.infos.BlockExecutionInfo;
 import org.apache.carbondata.core.scan.model.ProjectionDimension;
@@ -43,17 +43,18 @@ import org.apache.carbondata.core.scan.model.QueryModel;
 import org.apache.carbondata.core.scan.primarykey.IteratorHolder;
 import org.apache.carbondata.core.scan.primarykey.IteratorRowHolder;
 import org.apache.carbondata.core.scan.primarykey.IteratorVectorHolder;
+import org.apache.carbondata.core.scan.primarykey.PrimaryKeyDataTypeConverterImpl;
 import org.apache.carbondata.core.scan.primarykey.PrimaryKeyDeleteVectorDetailQueryResultIterator;
 import org.apache.carbondata.core.scan.primarykey.PrimaryKeyRowComparator;
 import org.apache.carbondata.core.scan.primarykey.PrimaryKeyVectorComparator;
 import org.apache.carbondata.core.scan.primarykey.PrimaryKeyVectorDetailQueryResultIterator;
+import org.apache.carbondata.core.scan.primarykey.merger.PrimaryKeyMerger;
 import org.apache.carbondata.core.scan.result.iterator.ChunkRowIterator;
 import org.apache.carbondata.core.scan.result.iterator.DetailQueryResultIterator;
 import org.apache.carbondata.core.scan.result.iterator.VectorDetailQueryResultIterator;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnVector;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnarBatch;
 import org.apache.carbondata.core.scan.result.vector.impl.CarbonColumnVectorImpl;
-import org.apache.carbondata.core.util.DataTypeConverterImpl;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -72,34 +73,43 @@ public class MVCCVectorDetailQueryExecutor extends AbstractQueryExecutor<Object>
   @Override public CarbonIterator<Object> execute(QueryModel queryModel)
       throws QueryExecutionException, IOException {
     queryModel = queryModel.getCopy();
-    queryModel.setConverter(new DataTypeConverterImpl());
-    CarbonDimension versionColumn = null;
-    List<CarbonDimension> primaryKeyCols = new ArrayList<>();
+    queryModel.setConverter(new PrimaryKeyDataTypeConverterImpl());
+    queryModel.setDirectVectorFill(false);
+    CarbonColumn versionColumn = null;
+    CarbonColumn deleteColumn = null;
+    List<CarbonColumn> primaryKeyCols = new ArrayList<>();
     for (CarbonDimension schema : queryModel.getTable().getAllDimensions()) {
       if (schema.getColumnSchema().isPrimaryKeyColumn()) {
         primaryKeyCols.add(schema);
       }
-      // TODO make the version column configurable
-      if (schema.getColName().equalsIgnoreCase("timestamp")) {
-        versionColumn = schema;
-      }
+      versionColumn = getTimeStampColumn(schema, versionColumn);
+      deleteColumn = getDeleteStatusColumn(schema, deleteColumn);
+
     }
+    for (CarbonMeasure schema : queryModel.getTable().getAllMeasures()) {
+      versionColumn = getTimeStampColumn(schema, versionColumn);
+      deleteColumn = getDeleteStatusColumn(schema, deleteColumn);
+    }
+
     DataType[] dataTypes = new DataType[primaryKeyCols.size()];
     for (int i = 0; i < primaryKeyCols.size(); i++) {
       dataTypes[i] = primaryKeyCols.get(i).getDataType();
     }
     int[] primaryKeyOrdinals = new int[primaryKeyCols.size()];
     int[] timestampOrdinal = new int[1];
+    int[] deleteStatusOrdinal = new int[1];
 
     fillPrimaryKeyOrdinals(primaryKeyCols, primaryKeyOrdinals, queryModel);
     fillPrimaryKeyOrdinals(Arrays.asList(versionColumn), timestampOrdinal, queryModel);
+    fillPrimaryKeyOrdinals(Arrays.asList(deleteColumn), deleteStatusOrdinal, queryModel);
     int tupleIdex = -1;
     if (isUpdate) {
       CarbonDimension tupleId = queryModel.getTable()
           .getDimensionByName(queryModel.getTable().getTableName(),
               CarbonCommonConstants.CARBON_IMPLICIT_COLUMN_TUPLEID);
       ProjectionDimension projectionDimension = new ProjectionDimension(tupleId);
-      projectionDimension.setOrdinal(queryModel.getProjectionDimensions().size() + queryModel.getProjectionMeasures().size());
+      projectionDimension.setOrdinal(
+          queryModel.getProjectionDimensions().size() + queryModel.getProjectionMeasures().size());
       queryModel.getProjectionDimensions().add(projectionDimension);
       tupleIdex = projectionDimension.getOrdinal();
     }
@@ -121,7 +131,8 @@ public class MVCCVectorDetailQueryExecutor extends AbstractQueryExecutor<Object>
         while (rowIterator.hasNext()) {
           objects.add(rowIterator.next());
         }
-        Collections.sort(objects, new PrimaryKeyRowComparator(dataTypes, primaryKeyOrdinals));
+        Collections.sort(objects,
+            new PrimaryKeyRowComparator(dataTypes, primaryKeyOrdinals));
         IteratorRowHolder holder =
             new IteratorRowHolder(comparator, objects.iterator(), executionInfo);
         if (holder.hasNext()) {
@@ -147,25 +158,74 @@ public class MVCCVectorDetailQueryExecutor extends AbstractQueryExecutor<Object>
 
     int dataLength =
         queryModel.getProjectionDimensions().size() + queryModel.getProjectionMeasures().size();
+    int[] columnOrdinals =
+        getNormalColumnOrdinals(queryModel, primaryKeyOrdinals, timestampOrdinal[0],
+            deleteStatusOrdinal[0], tupleIdex);
+    PrimaryKeyMerger merger = new PrimaryKeyMerger(new PrimaryKeyRowComparator(dataTypes, primaryKeyOrdinals),
+        timestampOrdinal[0], deleteStatusOrdinal[0], columnOrdinals);
     if (isUpdate) {
-      this.queryIterator = new PrimaryKeyDeleteVectorDetailQueryResultIterator(recordHolder,
-          new PrimaryKeyRowComparator(dataTypes, primaryKeyOrdinals), dataLength,
-          timestampOrdinal[0], tupleIdex, queryModel.getUpdateTimeStamp());
+      this.queryIterator =
+          new PrimaryKeyDeleteVectorDetailQueryResultIterator(recordHolder, dataLength, merger,
+              tupleIdex, queryModel.getUpdateTimeStamp());
     } else {
-      this.queryIterator = new PrimaryKeyVectorDetailQueryResultIterator(recordHolder,
-          new PrimaryKeyRowComparator(dataTypes, primaryKeyOrdinals), dataLength,
-          timestampOrdinal[0]);
+      this.queryIterator =
+          new PrimaryKeyVectorDetailQueryResultIterator(recordHolder, dataLength, merger);
     }
     return this.queryIterator;
   }
 
+  private CarbonColumn getTimeStampColumn(CarbonColumn schema, CarbonColumn versionColumn) {
+    // TODO make the version column configurable
+    if (schema.getColName().equalsIgnoreCase("timestamp")) {
+      return schema;
+    }
+    return versionColumn;
+  }
 
-  private void fillPrimaryKeyOrdinals(List<CarbonDimension> primaryKeyCols,
-      int[] primaryKeyOrdinals, QueryModel queryModel) {
+  private CarbonColumn getDeleteStatusColumn(CarbonColumn schema, CarbonColumn deleteColumn) {
+    // TODO make the version column configurable
+    if (schema.getColName().equalsIgnoreCase("deletestatus")) {
+      return schema;
+    }
+    return deleteColumn;
+  }
+
+  private int[] getNormalColumnOrdinals(QueryModel queryModel, int[] primaryKeyOrdinals,
+      int timestampOrdinal, int deleteStatusOrdinal, int tupleIdex) {
+    CarbonColumn[] columns = queryModel.getProjectionColumns();
+    int size = columns.length - primaryKeyOrdinals.length - 2;
+    if (isUpdate) {
+      size -= 1;
+    }
+    int[] normColOrdinals = new int[size];
+    int k = 0;
+    for (int i = 0; i < columns.length; i++) {
+      int ordinal = i;
+      boolean found = false;
+      if (ordinal == timestampOrdinal || ordinal == deleteStatusOrdinal || ordinal == tupleIdex) {
+        found = true;
+      } else {
+        for (int keyOrdinal : primaryKeyOrdinals) {
+          if (keyOrdinal == ordinal) {
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) {
+        normColOrdinals[k++] = ordinal;
+      }
+    }
+    return normColOrdinals;
+  }
+
+  private void fillPrimaryKeyOrdinals(List<CarbonColumn> primaryKeyCols, int[] primaryKeyOrdinals,
+      QueryModel queryModel) {
     List<ProjectionDimension> projectionDimensions = queryModel.getProjectionDimensions();
+    List<ProjectionMeasure> projectionMeasures = queryModel.getProjectionMeasures();
 
     int k = 0;
-    for (CarbonDimension keyCol : primaryKeyCols) {
+    for (CarbonColumn keyCol : primaryKeyCols) {
       boolean found = false;
       for (int j = 0; j < projectionDimensions.size(); j++) {
         if (projectionDimensions.get(j).getDimension().equals(keyCol)) {
@@ -174,12 +234,30 @@ public class MVCCVectorDetailQueryExecutor extends AbstractQueryExecutor<Object>
           break;
         }
       }
+
+      for (int j = 0; j < projectionMeasures.size(); j++) {
+        if (projectionMeasures.get(j).getMeasure().equals(keyCol)) {
+          primaryKeyOrdinals[k++] = projectionMeasures.get(j).getOrdinal();
+          found = true;
+          break;
+        }
+      }
+
       if (!found) {
-        ProjectionDimension projectionDimension = new ProjectionDimension(keyCol);
-        projectionDimensions.add(projectionDimension);
-        projectionDimension.setOrdinal(
-            projectionDimensions.size() + queryModel.getProjectionMeasures().size() - 1);
-        primaryKeyOrdinals[k++] = projectionDimension.getOrdinal();
+        if (keyCol instanceof CarbonDimension) {
+          ProjectionDimension projectionDimension =
+              new ProjectionDimension((CarbonDimension) keyCol);
+          projectionDimensions.add(projectionDimension);
+          projectionDimension.setOrdinal(
+              projectionDimensions.size() + queryModel.getProjectionMeasures().size() - 1);
+          primaryKeyOrdinals[k++] = projectionDimension.getOrdinal();
+        } else if (keyCol instanceof CarbonMeasure) {
+          ProjectionMeasure projectionMeasure = new ProjectionMeasure((CarbonMeasure) keyCol);
+          projectionMeasures.add(projectionMeasure);
+          projectionMeasure.setOrdinal(
+              projectionDimensions.size() + queryModel.getProjectionMeasures().size() - 1);
+          primaryKeyOrdinals[k++] = projectionMeasure.getOrdinal();
+        }
       }
     }
   }

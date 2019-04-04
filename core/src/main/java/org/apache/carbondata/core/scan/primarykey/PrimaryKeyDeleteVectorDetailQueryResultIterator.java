@@ -31,6 +31,7 @@ import org.apache.carbondata.core.mutate.DeleteDeltaBlockDetails;
 import org.apache.carbondata.core.mutate.DeleteDeltaVo;
 import org.apache.carbondata.core.mutate.SegmentUpdateDetails;
 import org.apache.carbondata.core.mutate.TupleIdEnum;
+import org.apache.carbondata.core.scan.primarykey.merger.PrimaryKeyMerger;
 import org.apache.carbondata.core.scan.result.impl.CarbonStreamRecordReader;
 import org.apache.carbondata.core.scan.result.iterator.CarbonBatchIterator;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnVector;
@@ -48,19 +49,11 @@ public class PrimaryKeyDeleteVectorDetailQueryResultIterator extends CarbonItera
 
   private AbstractQueue<IteratorHolder> recordHolder;
 
-  private PrimaryKeyRowComparator rowComparator;
-
-  private Object[] mergedKey;
-
   private Object[] newKey;
-
-  private int versionColIndex;
 
   private int tupleIDIndex;
 
-  private Map<IteratorHolder, DeleteDeltaBlockDetails> deltaBlockDetailsMap;
-
-  private IteratorHolder oldHolder;
+  private Map<String, DeleteDeltaInfoHolder> deltaBlockDetailsMap;
 
   private boolean isMergedKey;
 
@@ -68,23 +61,24 @@ public class PrimaryKeyDeleteVectorDetailQueryResultIterator extends CarbonItera
 
   private long updateTimeStamp;
 
+  private PrimaryKeyMerger merger;
+
   public PrimaryKeyDeleteVectorDetailQueryResultIterator(AbstractQueue<IteratorHolder> recordHolder,
-      PrimaryKeyRowComparator rowComparator, int dataLength, int versionColIndex,
-      int tupleIDIndex, long updateTimeStamp) {
+      int dataLength, PrimaryKeyMerger merger, int tupleIDIndex, long updateTimeStamp) {
     this.recordHolder = recordHolder;
-    this.rowComparator = rowComparator;
     newKey = new Object[dataLength];
-    this.versionColIndex = versionColIndex;
     this.tupleIDIndex = tupleIDIndex;
     deltaBlockDetailsMap = new HashMap<>(recordHolder.size());
     this.updateTimeStamp = updateTimeStamp;
-
+    this.merger = merger;
+    merger.setTupleIdIndex(tupleIDIndex);
     for (IteratorHolder holder : recordHolder) {
       TableBlockInfo blockInfo =
           holder.getBlockExecutionInfo().getDataBlock().getDataRefNode().getBlockInfo();
       String blockName = CarbonTablePath.getCarbonDataFileName(blockInfo.getFilePath());
       DeleteDeltaBlockDetails deltaBlockDetails = new DeleteDeltaBlockDetails(blockName);
-      deltaBlockDetailsMap.put(holder, deltaBlockDetails);
+      deltaBlockDetailsMap.put(blockName.replace("part-", ""),
+          new DeleteDeltaInfoHolder(deltaBlockDetails, holder.getBlockExecutionInfo()));
     }
   }
 
@@ -99,8 +93,10 @@ public class PrimaryKeyDeleteVectorDetailQueryResultIterator extends CarbonItera
     while (i < batchSize && hasNext()) {
       IteratorHolder poll = this.recordHolder.poll();
       if (poll.isDeleted()) {
-        poll.read();
-        recordHolder.add(poll);
+        if (poll.hasNext()) {
+          poll.read();
+          recordHolder.add(poll);
+        }
         continue;
       }
       for (int i1 = 0; i1 < newKey.length; i1++) {
@@ -111,38 +107,29 @@ public class PrimaryKeyDeleteVectorDetailQueryResultIterator extends CarbonItera
         poll.read();
         recordHolder.add(poll);
       }
-
-      if (mergedKey == null) {
-        mergedKey = new Object[newKey.length];
-        System.arraycopy(newKey, 0, mergedKey, 0, newKey.length);
+      if (!merger.isDataAdded()) {
+        merger.addFreshRow(newKey);
       } else {
-        if (rowComparator.compare(mergedKey, newKey) == 0) {
-          writeDeleteDelta(new String((byte[]) mergedKey[tupleIDIndex]), oldHolder);
-          writeDeleteDelta(new String((byte[]) newKey[tupleIDIndex]), poll);
-          if ((long) newKey[versionColIndex] > (long) mergedKey[versionColIndex]) {
-            for (int i1 = 0; i1 < mergedKey.length; i1++) {
-              if (newKey[i1] != null) {
-                mergedKey[i1] = newKey[i1];
-              }
-            }
-          }
+        Object oldTupleId = merger.getMergedRow()[tupleIDIndex];
+        Object newTupleId = newKey[tupleIDIndex];
+        if (merger.mergeRow(newKey)) {
+          writeDeleteDelta(new String((byte[]) oldTupleId));
+          writeDeleteDelta(new String((byte[]) newTupleId));
           isMergedKey = true;
         } else {
-          if (isMergedKey) {
+          if (isMergedKey && !merger.isDeletedRow()) {
             for (int j = 0; j < columnVectors.length; j++) {
-              CarbonStreamRecordReader.putRowToColumnBatch(i, mergedKey[j], columnVectors[j]);
+              CarbonStreamRecordReader
+                  .putRowToColumnBatch(i, merger.getMergedRow()[j], columnVectors[j]);
             }
             i++;
           }
           isMergedKey = false;
-          // TODO find better way to avoid array creation for each object
-          System.arraycopy(newKey, 0, mergedKey, 0, newKey.length);
-
+          merger.addFreshRow(newKey);
         }
       }
-      oldHolder = poll;
     }
-    if (i < batchSize && isMergedKey) {
+    if (i < batchSize && isMergedKey && !merger.isDeletedRow()) {
       for (int j = 0; j < columnVectors.length; j++) {
         CarbonStreamRecordReader.putRowToColumnBatch(i, newKey[j], columnVectors[j]);
       }
@@ -151,15 +138,17 @@ public class PrimaryKeyDeleteVectorDetailQueryResultIterator extends CarbonItera
     columnarBatch.setActualSize(i);
   }
 
-  private void writeDeleteDelta(String tid, IteratorHolder holder) {
-    DeleteDeltaBlockDetails deltaBlockDetails = deltaBlockDetailsMap.get(holder);
-    holder.incrementDeleteRow();
+  private void writeDeleteDelta(String tid) {
+    String blockID = CarbonUpdateUtil.getRequiredFieldFromTID(tid, TupleIdEnum.BLOCK_ID);
+    DeleteDeltaInfoHolder holder = deltaBlockDetailsMap.get(blockID);
+    holder.incrementDeleteCounter();
     String offset = CarbonUpdateUtil.getRequiredFieldFromTID(tid, TupleIdEnum.OFFSET);
     String blockletId = CarbonUpdateUtil.getRequiredFieldFromTID(tid, TupleIdEnum.BLOCKLET_ID);
     int pageId =
         Integer.parseInt(CarbonUpdateUtil.getRequiredFieldFromTID(tid, TupleIdEnum.PAGE_ID));
     try {
-      boolean isValidOffset = deltaBlockDetails.addBlocklet(blockletId, offset, pageId);
+      boolean isValidOffset =
+          holder.getDeleteDeltaBlockDetails().addBlocklet(blockletId, offset, pageId);
       if (!isValidOffset) {
         // TODO
       }
@@ -175,13 +164,13 @@ public class PrimaryKeyDeleteVectorDetailQueryResultIterator extends CarbonItera
   @Override public void close() {
     try {
       String timestamp = String.valueOf(updateTimeStamp);
-      for (Map.Entry<IteratorHolder, DeleteDeltaBlockDetails> entry : deltaBlockDetailsMap
+      for (Map.Entry<String, DeleteDeltaInfoHolder> entry : deltaBlockDetailsMap
           .entrySet()) {
-        if (entry.getValue().getBlockletDetails().size() == 0) {
+        if (entry.getValue().getDeleteDeltaBlockDetails().getBlockletDetails().size() == 0) {
           continue;
         }
         TableBlockInfo blockInfo =
-            entry.getKey().getBlockExecutionInfo().getDataBlock().getDataRefNode().getBlockInfo();
+            entry.getValue().getBlockExecutionInfo().getDataBlock().getDataRefNode().getBlockInfo();
         String blockName = CarbonTablePath.getCarbonDataFileName(blockInfo.getFilePath());
         String segmentId = blockInfo.getSegmentId();
 
@@ -203,19 +192,19 @@ public class PrimaryKeyDeleteVectorDetailQueryResultIterator extends CarbonItera
         segmentUpdateDetail.setDeleteDeltaEndTimestamp(timestamp);
         segmentUpdateDetail.setDeleteDeltaStartTimestamp(timestamp);
         int prevDeleteRowSize = 0;
-        if (entry.getKey().getBlockExecutionInfo().getDeletedRecordsMap() != null) {
-          for (DeleteDeltaVo deltaVo : entry.getKey().getBlockExecutionInfo().getDeletedRecordsMap()
+        if (entry.getValue().getBlockExecutionInfo().getDeletedRecordsMap() != null) {
+          for (DeleteDeltaVo deltaVo : entry.getValue().getBlockExecutionInfo().getDeletedRecordsMap()
               .values()) {
             prevDeleteRowSize += deltaVo.getBitSet().length();
           }
         }
-        long totalDeletedRows = prevDeleteRowSize + entry.getKey().getDeleteRowCount();
+        long totalDeletedRows = prevDeleteRowSize + entry.getValue().getDeleteRowCount();
         segmentUpdateDetail.setDeletedRowsInBlock(String.valueOf(totalDeletedRows));
         if (totalDeletedRows == blockInfo.getDetailInfo().getRowCount()) {
           segmentUpdateDetail.setSegmentStatus(SegmentStatus.MARKED_FOR_DELETE);
         } else {
           // write the delta file
-          carbonDeleteWriter.write(entry.getValue());
+          carbonDeleteWriter.write(entry.getValue().getDeleteDeltaBlockDetails());
         }
         this.segmentUpdateDetails.add(segmentUpdateDetail);
       }

@@ -12,9 +12,5 @@ public interface IteratorHolder extends Comparable<IteratorHolder> {
 
   BlockExecutionInfo getBlockExecutionInfo();
 
-  void incrementDeleteRow();
-
-  int getDeleteRowCount();
-
   boolean isDeleted();
 }

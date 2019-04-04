@@ -47,14 +47,6 @@ public class IteratorRowHolder implements IteratorHolder {
     return executionInfo;
   }
 
-  @Override public void incrementDeleteRow() {
-    deletedRows += 1;
-  }
-
-  @Override public int getDeleteRowCount() {
-    return deletedRows;
-  }
-
   @Override public boolean isDeleted() {
     return false;
   }

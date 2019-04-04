@@ -27,6 +27,8 @@ public class CarbonHbaseMeta {
 
   private int timestampMap = -1;
 
+  private int deleteStatusMap = -1;
+
   private QualifierArray temp = new QualifierArray();
 
   private String primaryKeyColumns;
@@ -40,6 +42,7 @@ public class CarbonHbaseMeta {
   private void createSchemaMapping() {
     String keyName = "key";
     String timestamp = "timestamp";
+    String status = "deletestatus";
     schemaMapping = new HashMap<>();
     List<Integer> keyMapping = new ArrayList<>();
     List<String> primaryKeyMapping = new ArrayList<>();
@@ -56,6 +59,8 @@ public class CarbonHbaseMeta {
         primaryKeyMapping.add(map[1]);
       } else if (map[0].equalsIgnoreCase(timestamp)) {
         timestampMap = getSchemaIndex(map[1]);
+      } else if (map[0].equalsIgnoreCase(status)) {
+        deleteStatusMap = getSchemaIndex(map[1]);
       } else {
         if (qualifiers.length < 2) {
           throw new UnsupportedOperationException(
@@ -73,6 +78,11 @@ public class CarbonHbaseMeta {
       throw new UnsupportedOperationException(
           "Time stamp mapping is mandatory for hbase, "
               + "please use timestamp in hbase_mapping carbon property inside schema");
+    }
+    if (deleteStatusMap == -1) {
+      throw new UnsupportedOperationException(
+          "Delete status mapping is mandatory for hbase, "
+              + "please use deletestatus in hbase_mapping carbon property inside schema");
     }
     primaryKeyColumns = primaryKeyMapping.stream().collect(Collectors.joining(","));
   }
@@ -97,6 +107,10 @@ public class CarbonHbaseMeta {
     }
   }
 
+  public Map<QualifierArray, Integer> getSchemaMapping() {
+    return schemaMapping;
+  }
+
   public int getKeyColumnIndex() {
     // TODO row key split needed to be supported.
     return rowKeyMapping[0];
@@ -104,6 +118,10 @@ public class CarbonHbaseMeta {
 
   public int getTimestampMapIndex() {
     return timestampMap;
+  }
+
+  public int getDeleteStatusMap() {
+    return deleteStatusMap;
   }
 
   public Schema getSchema() {

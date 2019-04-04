@@ -17,6 +17,7 @@
 package org.apache.carbondata.core.scan.executor;
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
+import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
 import org.apache.carbondata.core.scan.executor.impl.DetailQueryExecutor;
 import org.apache.carbondata.core.scan.executor.impl.MVCCVectorDetailQueryExecutor;
 import org.apache.carbondata.core.scan.executor.impl.VectorDetailQueryExecutor;
@@ -32,9 +33,15 @@ public class QueryExecutorFactory {
 
   public static QueryExecutor getQueryExecutor(QueryModel queryModel, Configuration configuration) {
     if (queryModel.isVectorReader()) {
-      if (queryModel.getTable().getTableInfo().getFactTable().getTableProperties().get(
-          CarbonCommonConstants.PRIMARY_KEY_COLUMNS) != null) {
-        return new MVCCVectorDetailQueryExecutor(configuration, queryModel.getUpdateTimeStamp() > 0);
+      boolean directV3Read = false;
+      if (queryModel.getTableBlockInfos().size() == 1 && queryModel.getUpdateTimeStamp() == 0) {
+        directV3Read =
+            queryModel.getTableBlockInfos().get(0).getVersion() == ColumnarFormatVersion.V3;
+      }
+      if (queryModel.getTable().getTableInfo().getFactTable().getTableProperties()
+          .get(CarbonCommonConstants.PRIMARY_KEY_COLUMNS) != null && !directV3Read) {
+        return new MVCCVectorDetailQueryExecutor(configuration,
+            queryModel.getUpdateTimeStamp() > 0);
       } else {
         return new VectorDetailQueryExecutor(configuration);
       }

@@ -61,6 +61,10 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
 
   private static final String CARBON_APPEND_BATCH = "hbase.carbon.append.batch";
 
+  private static String DELETE = String.valueOf(1);
+  private static String DELETEFAMILY = String.valueOf(2);
+  private static String INSERT = String.valueOf(0);
+
   private Configuration conf;
   // Size limit for replication RPCs, in bytes
   private int replicationRpcLimit;
@@ -355,7 +359,10 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
       for (Entry entry : batch) {
         for (Cell cell : entry.getEdit().getCells()) {
           ByteArrayWrapper tmpKey =
-              new ByteArrayWrapper(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+              new ByteArrayWrapper(cell.getRowArray(), cell.getRowOffset(),
+                  cell.getRowLength(), cell.getType());
+          boolean deleteFamily = cell.getType() == Cell.Type.DeleteFamily;
+          boolean delete = cell.getType() == Cell.Type.Delete;
           boolean merge = false;
           if (rowKey != null) {
             if (rowKey.equals(tmpKey)) {
@@ -364,7 +371,11 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
           }
 
           if (merge) {
-            fillCell(row, cell, hbaseMeta);
+            if (deleteFamily) {
+              fillCellDeleteFamily(row, hbaseMeta);
+            } else {
+              fillCell(row, cell, hbaseMeta, delete);
+            }
           } else {
             if (row != null) {
               carbonWriter.write(row);
@@ -375,7 +386,19 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
                 .convertData(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
                     keyColumnIndex);
             row[hbaseMeta.getTimestampMapIndex()] = String.valueOf(cell.getTimestamp());
-            fillCell(row, cell, hbaseMeta);
+            if (deleteFamily) {
+              fillCellDeleteFamily(row, hbaseMeta);
+            } else {
+              fillCell(row, cell, hbaseMeta, delete);
+            }
+
+            if (delete ) {
+              row[hbaseMeta.getDeleteStatusMap()] = DELETE;
+            } else if (deleteFamily) {
+              row[hbaseMeta.getDeleteStatusMap()] = DELETEFAMILY;
+            } else {
+              row[hbaseMeta.getDeleteStatusMap()] = INSERT;
+            }
           }
           rowKey = tmpKey;
         }
@@ -389,12 +412,24 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
     }
   }
 
-  private static void fillCell(String[] row, Cell cell, CarbonHbaseMeta meta) {
+  private static void fillCellDeleteFamily(String[] row, CarbonHbaseMeta meta) {
+
+    for (Integer index : meta.getSchemaMapping().values()) {
+      row[index] = DELETE;
+    }
+  }
+
+  private static void fillCell(String[] row, Cell cell, CarbonHbaseMeta meta, boolean delete) {
+
     int index = meta.getSchemaIndexOfColumn(cell.getFamilyArray(), cell.getFamilyOffset(),
         cell.getFamilyLength(), cell.getQualifierArray(), cell.getQualifierOffset(),
         cell.getQualifierLength());
-    String data =
-        meta.convertData(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(), index);
-    row[index] = data;
+    if (!delete) {
+      String data =
+          meta.convertData(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(), index);
+      row[index] = data;
+    } else {
+      row[index] = DELETE;
+    }
   }
 }

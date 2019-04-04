@@ -17,12 +17,9 @@
 package org.apache.carbondata.core.scan.primarykey;
 
 import java.util.AbstractQueue;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import org.apache.carbondata.common.CarbonIterator;
-import org.apache.carbondata.core.scan.executor.infos.BlockExecutionInfo;
-import org.apache.carbondata.core.scan.model.QueryModel;
+import org.apache.carbondata.core.scan.primarykey.merger.PrimaryKeyMerger;
 import org.apache.carbondata.core.scan.result.impl.CarbonStreamRecordReader;
 import org.apache.carbondata.core.scan.result.iterator.CarbonBatchIterator;
 import org.apache.carbondata.core.scan.result.vector.CarbonColumnVector;
@@ -36,20 +33,15 @@ public class PrimaryKeyVectorDetailQueryResultIterator extends CarbonIterator
 
   private AbstractQueue<IteratorHolder> recordHolder;
 
-  private PrimaryKeyRowComparator rowComparator;
-
-  private Object[] mergedKey;
-
   private Object[] newKey;
 
-  private int versionColIndex;
+  private PrimaryKeyMerger merger;
 
   public PrimaryKeyVectorDetailQueryResultIterator(AbstractQueue<IteratorHolder> recordHolder,
-      PrimaryKeyRowComparator rowComparator, int dataLength, int versionColIndex) {
+      int dataLength, PrimaryKeyMerger merger) {
     this.recordHolder = recordHolder;
-    this.rowComparator = rowComparator;
     newKey = new Object[dataLength];
-    this.versionColIndex = versionColIndex;
+    this.merger = merger;
   }
 
   @Override public boolean hasNext() {
@@ -62,6 +54,13 @@ public class PrimaryKeyVectorDetailQueryResultIterator extends CarbonIterator
     int i = 0;
     while (i < batchSize && hasNext()) {
       IteratorHolder poll = this.recordHolder.poll();
+      if (poll.isDeleted()) {
+        if (poll.hasNext()) {
+          poll.read();
+          recordHolder.add(poll);
+        }
+        continue;
+      }
       for (int i1 = 0; i1 < newKey.length; i1++) {
         newKey[i1] = poll.getCell(i1);
       }
@@ -69,31 +68,25 @@ public class PrimaryKeyVectorDetailQueryResultIterator extends CarbonIterator
         poll.read();
         recordHolder.add(poll);
       }
-      if (mergedKey == null) {
-        mergedKey = new Object[newKey.length];
-        System.arraycopy(newKey, 0, mergedKey, 0, newKey.length);
+      if (!merger.isDataAdded()) {
+        merger.addFreshRow(newKey);
       } else {
-        if (rowComparator.compare(mergedKey, newKey) == 0) {
-          if ((long) newKey[versionColIndex] > (long) mergedKey[versionColIndex]) {
-            for (int i1 = 0; i1 < mergedKey.length; i1++) {
-              if (newKey[i1] != null) {
-                mergedKey[i1] = newKey[i1];
-              }
+        if (!merger.mergeRow(newKey)) {
+          if (!merger.isDeletedRow()) {
+            for (int j = 0; j < columnVectors.length; j++) {
+              CarbonStreamRecordReader
+                  .putRowToColumnBatch(i, merger.getMergedRow()[j], columnVectors[j]);
             }
+            i++;
           }
-        } else {
-          for (int j = 0; j < columnVectors.length; j++) {
-            CarbonStreamRecordReader.putRowToColumnBatch(i, mergedKey[j], columnVectors[j]);
-          }
-          // TODO find better way to avoid array creation for each object
-          System.arraycopy(newKey, 0, mergedKey, 0, newKey.length);
-          i++;
+          merger.addFreshRow(newKey);
         }
       }
     }
-    if (i < batchSize) {
+    if (i < batchSize && !merger.isDeletedRow()) {
+
       for (int j = 0; j < columnVectors.length; j++) {
-        CarbonStreamRecordReader.putRowToColumnBatch(i, newKey[j], columnVectors[j]);
+        CarbonStreamRecordReader.putRowToColumnBatch(i, merger.getMergedRow()[j], columnVectors[j]);
       }
       i++;
     }
