@@ -265,7 +265,17 @@ class CarbonScanRDD[T: ClassTag](
               regroups += g
             }
           }
-          groups.zipWithIndex.foreach { splitWithIndex =>
+          val logStr = new mutable.StringBuilder()
+          regroups.zipWithIndex.foreach{ r =>
+            logStr.append("group :" + r._2).append(" : ")
+            r._1.foreach(s => logStr.append(s.getVersion + " : " +s.getBlockPath).append(" &&& ") )
+            logStr.append(
+              s"""
+                 | ----------------------
+               """.stripMargin)
+          }
+          logInfo(logStr.toString())
+          regroups.zipWithIndex.foreach { splitWithIndex =>
             val multiBlockSplit =
               new CarbonMultiBlockSplit(
                 splitWithIndex._1.asJava,

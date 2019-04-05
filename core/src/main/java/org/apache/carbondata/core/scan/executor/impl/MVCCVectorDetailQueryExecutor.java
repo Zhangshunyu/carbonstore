@@ -26,8 +26,10 @@ import java.util.PriorityQueue;
 import java.util.concurrent.Executors;
 
 import org.apache.carbondata.common.CarbonIterator;
+import org.apache.carbondata.common.logging.LogServiceFactory;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.constants.CarbonV3DataFormatConstants;
+import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
@@ -57,11 +59,15 @@ import org.apache.carbondata.core.scan.result.vector.CarbonColumnarBatch;
 import org.apache.carbondata.core.scan.result.vector.impl.CarbonColumnVectorImpl;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.log4j.Logger;
 
 /**
  * Below class will be used to execute the detail query and returns columnar vectors.
  */
 public class MVCCVectorDetailQueryExecutor extends AbstractQueryExecutor<Object> {
+
+  private static final Logger LOGGER =
+      LogServiceFactory.getLogService(MVCCVectorDetailQueryExecutor.class.getName());
 
   private boolean isUpdate;
 
@@ -72,6 +78,14 @@ public class MVCCVectorDetailQueryExecutor extends AbstractQueryExecutor<Object>
 
   @Override public CarbonIterator<Object> execute(QueryModel queryModel)
       throws QueryExecutionException, IOException {
+
+    LOGGER.info(
+        "Started executing with MVCC with update " + isUpdate + " no of blocks " + queryModel
+            .getTableBlockInfos().size());
+    for (TableBlockInfo info : queryModel.getTableBlockInfos()) {
+      LOGGER.info("Version : "+info.getVersion() + " path : "+ info.getFilePath());
+    }
+
     queryModel = queryModel.getCopy();
     queryModel.setConverter(new PrimaryKeyDataTypeConverterImpl());
     queryModel.setDirectVectorFill(false);

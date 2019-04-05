@@ -22,6 +22,7 @@ import java.util
 import java.util.{ArrayList, Date, Random, UUID}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.hadoop.io.NullWritable
@@ -38,6 +39,7 @@ import org.apache.carbondata.common.CarbonIterator
 import org.apache.carbondata.converter.SparkDataTypeConverterImpl
 import org.apache.carbondata.core.datamap.Segment
 import org.apache.carbondata.core.datastore.impl.FileFactory
+import org.apache.carbondata.core.metadata.ColumnarFormatVersion
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.mutate.{CarbonUpdateUtil, SegmentUpdateDetails}
 import org.apache.carbondata.core.scan.executor.impl.MVCCVectorDetailQueryExecutor
@@ -265,7 +267,26 @@ class UpdatePrimaryKeyRDD[K, V](
           groups += splits
       }
     }
-    groups.zipWithIndex.foreach { splitWithIndex =>
+
+    val regroups = new ArrayBuffer[ArrayBuffer[CarbonInputSplit]]()
+    // Seperate the rowformats and columnar farmat groups.
+    groups.foreach{ g =>
+      if (g.exists(_.getVersion == ColumnarFormatVersion.R1) && g.size > 1) {
+        regroups += g
+      }
+    }
+    val logStr = new mutable.StringBuilder()
+    regroups.zipWithIndex.foreach{ r =>
+      logStr.append("group :" + r._2).append(" : ")
+      r._1.foreach(s => logStr.append(s.getVersion + " : " +s.getBlockPath).append(" &&& ") )
+      logStr.append(
+        s"""
+           | ----------------------
+               """.stripMargin)
+    }
+    logInfo(logStr.toString())
+
+    regroups.zipWithIndex.foreach { splitWithIndex =>
       val multiBlockSplit =
         new CarbonMultiBlockSplit(
           splitWithIndex._1.asJava,

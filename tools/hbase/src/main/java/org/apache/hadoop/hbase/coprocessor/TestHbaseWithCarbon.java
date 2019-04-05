@@ -206,7 +206,7 @@ public class TestHbaseWithCarbon {
     tableDescriptor.addFamily(new HColumnDescriptor("cf1"));
     if (createCarbon) {
       String schema =
-          "{\"ID\":\"long\",\"name\":\"string\",\"dept\":\"string\",\"city\":\"string\",\"age\":\"short\",\"salary\":\"double\",\"timestamp\":\"long\",\"deletestatus\":\"long\",\"tblproperties\":{\"sort_columns\":\"ID,timestamp\",\"hbase_mapping\":\"key=ID,cf1:name=name,cf1:dept=dept,cf1:city=city,cf1:age=age,timestamp=timestamp,deletestatus=deletestatus,cf1:salary=salary\",\"path\":\""
+          "{\"ID\":\"long\",\"name\":\"string\",\"dept\":\"string\",\"city\":\"string\",\"age\":\"short\",\"salary\":\"double\",\"timestamp\":\"long\",\"deletestatus\":\"long\",\"tblproperties\":{\"sort_columns\":\"ID,timestamp\",\"table_blocksize\":\"256\",\"table_blocklet_size\":\"32\",\"hbase_mapping\":\"key=ID,cf1:name=name,cf1:dept=dept,cf1:city=city,cf1:age=age,timestamp=timestamp,deletestatus=deletestatus,cf1:salary=salary\",\"path\":\""
               + path + "\"}}";
       System.out.println("Schema >>>>>>>>> " + schema);
       tableDescriptor.setValue("CARBON_SCHEMA", schema);
