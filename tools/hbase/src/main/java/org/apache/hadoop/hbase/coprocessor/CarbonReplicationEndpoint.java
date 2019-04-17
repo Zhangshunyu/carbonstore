@@ -353,6 +353,7 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
         carbonWriter = regionsWriterMap.get(regionName);
       }
       CarbonHbaseMeta hbaseMeta = tableSchemaMap.get(tName);
+      DataTypeConverter converter = hbaseMeta.getDataTypeConverter();
       // Check the keys in sequence order and if the keys are same then merge to the same carbon row.
       ByteArrayWrapper rowKey = null;
       String[] row = null;
@@ -381,10 +382,9 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
               carbonWriter.write(row);
             }
             row = new String[hbaseMeta.getSchema().getFieldsLength()];
-            int keyColumnIndex = hbaseMeta.getKeyColumnIndex();
-            row[keyColumnIndex] = hbaseMeta
-                .convertData(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
-                    keyColumnIndex);
+            int[] keyColumnIndexes = hbaseMeta.getKeyColumnIndex();
+            converter.convertRowKey(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+                keyColumnIndexes, hbaseMeta.getSchema().getFields(), row);
             row[hbaseMeta.getTimestampMapIndex()] = String.valueOf(cell.getTimestamp());
             if (deleteFamily) {
               fillCellDeleteFamily(row, hbaseMeta);
@@ -425,9 +425,11 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
         cell.getFamilyLength(), cell.getQualifierArray(), cell.getQualifierOffset(),
         cell.getQualifierLength());
     if (!delete) {
-      String data =
-          meta.convertData(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(), index);
-      row[index] = data;
+
+      row[index] = meta.getDataTypeConverter()
+          .convert(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
+              meta.getSchema().getFields()[index].getDataType());
+      ;
     } else {
       row[index] = DELETE;
     }

@@ -156,9 +156,15 @@ public class TestHbaseWithCarbon {
       System.out.println("Loading data with size "+ size +" and batch size "+ batchSize);
       List<Put> puts = new ArrayList<>(batchSize);
       for (int i = 0; i < size; i++) {
-        Put put = new Put(Bytes.toBytes(k + start));
-        put.addColumn(Bytes.toBytes("cf1"), Bytes.toBytes("name"),
-            Bytes.toBytes("ravi" + (k % 100000)));
+        byte[] row = Bytes.toBytes(k + start);
+        byte[] key = Bytes.toBytes("ravi" + (k % 100000));
+        byte[] completeKey = new byte[row.length + key.length + 4];
+        System.arraycopy(row, 0, completeKey, 0, row.length);
+        System.arraycopy(Bytes.toBytes(key.length), 0, completeKey, row.length, 4);
+        System.arraycopy(key, 0, completeKey, row.length+4, key.length);
+        Put put = new Put(completeKey);
+//        put.addColumn(Bytes.toBytes("cf1"), Bytes.toBytes("name"),
+//            key);
         put.addColumn(Bytes.toBytes("cf1"), Bytes.toBytes("dept"), Bytes.toBytes("dept1" + (k % 1000)));
         put.addColumn(Bytes.toBytes("cf1"), Bytes.toBytes("city"), Bytes.toBytes("city" + (k % 500)));
         put.addColumn(Bytes.toBytes("cf1"), Bytes.toBytes("age"), Bytes.toBytes((short) (k % 60)));
@@ -206,7 +212,7 @@ public class TestHbaseWithCarbon {
     tableDescriptor.addFamily(new HColumnDescriptor("cf1"));
     if (createCarbon) {
       String schema =
-          "{\"ID\":\"long\",\"name\":\"string\",\"dept\":\"string\",\"city\":\"string\",\"age\":\"short\",\"salary\":\"double\",\"timestamp\":\"long\",\"deletestatus\":\"long\",\"tblproperties\":{\"sort_columns\":\"ID,timestamp\",\"table_blocksize\":\"256\",\"table_blocklet_size\":\"32\",\"hbase_mapping\":\"key=ID,cf1:name=name,cf1:dept=dept,cf1:city=city,cf1:age=age,timestamp=timestamp,deletestatus=deletestatus,cf1:salary=salary\",\"path\":\""
+          "{\"ID\":\"long\",\"name\":\"string\",\"dept\":\"string\",\"city\":\"string\",\"age\":\"short\",\"salary\":\"double\",\"timestamp\":\"long\",\"deletestatus\":\"long\",\"tblproperties\":{\"sort_columns\":\"ID\",\"table_blocksize\":\"256\",\"table_blocklet_size\":\"32\",\"hbase_mapping\":\"key=ID,key=name,cf1:dept=dept,cf1:city=city,cf1:age=age,timestamp=timestamp,deletestatus=deletestatus,cf1:salary=salary\",\"path\":\""
               + path + "\"}}";
       System.out.println("Schema >>>>>>>>> " + schema);
       tableDescriptor.setValue("CARBON_SCHEMA", schema);

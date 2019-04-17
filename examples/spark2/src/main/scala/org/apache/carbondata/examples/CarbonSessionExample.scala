@@ -54,7 +54,7 @@ object CarbonSessionExample {
     // Create table
 //    spark.sql(
 //      s"""
-//         | CREATE external TABLE emp10 STORED AS carbondata location 'hdfs://localhost:9000/carbon-store/hbase-emp1'
+//         | CREATE external TABLE emp10 STORED AS carbondata location 'hdfs://localhost:9000/carbon-store/hbase-emp5'
 //       """.stripMargin)
 
     val path = s"$rootPath/examples/spark2/src/main/resources/data.csv"
@@ -64,9 +64,9 @@ object CarbonSessionExample {
     val l = System.currentTimeMillis()
     spark.sql("select count(id) from emp10").show()
 //    spark.sql("show segments for table  emp5").show(false)
-    spark.sql("select * from emp10 where id=600001").show()
+//    spark.sql("select * from emp10 where id=600001").show()
     spark.sql("select * from emp10").show(200)
-        spark.sql("show segments for table emp10").show(10000,false)
+//        spark.sql("show segments for table emp10").show(10000,false)
 //    spark.sql("select * from emp2 ").show()
 //    spark.sql("select sum(salary),dept from emp2 where city='city0' group by dept").show()
 //    spark.sql("select sum(salary),city from emp2 group by city").show()

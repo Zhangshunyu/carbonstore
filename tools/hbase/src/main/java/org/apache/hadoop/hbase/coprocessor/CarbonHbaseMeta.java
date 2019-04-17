@@ -33,9 +33,12 @@ public class CarbonHbaseMeta {
 
   private String primaryKeyColumns;
 
+  private DataTypeConverter dataTypeConverter;
+
   public CarbonHbaseMeta(Schema schema, Map<String, String> tblProperties) {
     this.schema = schema;
     this.tblProperties = tblProperties;
+    dataTypeConverter = new HbaseDataTypeConverter();
     createSchemaMapping();
   }
 
@@ -111,9 +114,9 @@ public class CarbonHbaseMeta {
     return schemaMapping;
   }
 
-  public int getKeyColumnIndex() {
+  public int[] getKeyColumnIndex() {
     // TODO row key split needed to be supported.
-    return rowKeyMapping[0];
+    return rowKeyMapping;
   }
 
   public int getTimestampMapIndex() {
@@ -136,37 +139,8 @@ public class CarbonHbaseMeta {
     return primaryKeyColumns;
   }
 
-  public String convertData(byte[] value, int offset, int len, int schemaIndex) {
-    DataType dataType = schema.getFields()[schemaIndex].getDataType();
-    int id = dataType.getId();
-    if (id == DataTypes.BOOLEAN.getId()) {
-      return String.valueOf(value[offset]!= (byte) 0);
-    } else if (id == DataTypes.STRING.getId()) {
-      return Bytes.toString(value, offset, len);
-    } else if (id == DataTypes.INT.getId()) {
-      return String.valueOf(Bytes.toInt(value, offset, len));
-    } else if (id == DataTypes.SHORT.getId()) {
-      return String.valueOf(Bytes.toShort(value, offset, len));
-    } else if (id == DataTypes.LONG.getId()) {
-      return String.valueOf(Bytes.toLong(value, offset, len));
-    } else if (id == DataTypes.DOUBLE.getId()) {
-      return String.valueOf(Bytes.toDouble(value, offset));
-    } else if (DataTypes.isDecimal(dataType)) {
-      return String.valueOf(Bytes.toBigDecimal(value, offset, len));
-    } else if (id == DataTypes.DATE.getId()) {
-      return String.valueOf(Bytes.toInt(value, offset, len));
-    } else if (id == DataTypes.TIMESTAMP.getId()) {
-      return String.valueOf(Bytes.toLong(value, offset, len));
-    } else if (id == DataTypes.VARCHAR.getId()) {
-      return String.valueOf(Bytes.toString(value, offset, len));
-    } else if (id == DataTypes.FLOAT.getId()) {
-      return String.valueOf(Bytes.toFloat(value, offset));
-    } else if (id == DataTypes.BYTE.getId()) {
-      return String.valueOf(value[offset]);
-    } else {
-      throw new UnsupportedOperationException(
-          "Provided datatype " + dataType + " is not supported");
-    }
+  public DataTypeConverter getDataTypeConverter() {
+    return dataTypeConverter;
   }
 
 }
