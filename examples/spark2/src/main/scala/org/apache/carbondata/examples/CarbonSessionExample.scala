@@ -20,7 +20,7 @@ package org.apache.carbondata.examples
 import java.io.File
 
 import org.apache.log4j.PropertyConfigurator
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{CarbonEnv, SparkSession}
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.carbondata.core.util.CarbonProperties
@@ -54,18 +54,21 @@ object CarbonSessionExample {
     // Create table
 //    spark.sql(
 //      s"""
-//         | CREATE external TABLE emp10 STORED AS carbondata location 'hdfs://localhost:9000/carbon-store/hbase-emp5'
+//         | CREATE external TABLE emp10 STORED AS carbondata location 'hdfs://localhost:9000/carbon-store/tpch1/lineitem'
 //       """.stripMargin)
 
     val path = s"$rootPath/examples/spark2/src/main/resources/data.csv"
 
-  //    spark.sql("describe formatted emp5").show(100, false)
+//    val sessionToTable = CarbonEnv.getCarbonTable(None, "emp10")(spark)
+
+//      spark.sql("describe formatted emp10").show(100, false)
 
     val l = System.currentTimeMillis()
-    spark.sql("select count(id) from emp10").show()
+//    spark.sql("select * from emp10 where l_linestatus='Z'").show(1000) // How??
+    spark.sql("select count(*) from emp10").show(1000) // How??
 //    spark.sql("show segments for table  emp5").show(false)
 //    spark.sql("select * from emp10 where id=600001").show()
-    spark.sql("select * from emp10").show(200)
+    spark.sql("select * from emp10 where l_orderkey=999 and l_linenumber=2").show(200)
 //        spark.sql("show segments for table emp10").show(10000,false)
 //    spark.sql("select * from emp2 ").show()
 //    spark.sql("select sum(salary),dept from emp2 where city='city0' group by dept").show()

@@ -314,7 +314,8 @@ public class CarbonReplicationEndpoint extends BaseReplicationEndpoint {
     clonedProps.remove(CarbonMasterObserver.PATH);
 
     CarbonWriterBuilder builder =
-        CarbonWriter.builder().outputPath(path).withTableProperties(clonedProps)
+        CarbonWriter.builder().outputPath(path).withTableProperties(clonedProps).
+            withLoadOption("bad_records_action", "force")
             .withRowFormat(tableSchema).writtenBy(CarbonReplicationEndpoint.class.getSimpleName())
             .withHadoopConf(new Configuration(conf));
     regionsWriterMap.put(regionName, builder.build());

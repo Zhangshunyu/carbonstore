@@ -52,7 +52,7 @@ public class CarbonHbaseMeta {
     String hbase_mapping = tblProperties.get("hbase_mapping");
     String[] split = hbase_mapping.split(",");
     for (String s : split) {
-      String[] map = s.split("=");
+      String[] map = s.toLowerCase().split("=");
       if (map.length < 2) {
         throw new UnsupportedOperationException("Hbase mapping is not right " + s);
       }

@@ -236,25 +236,37 @@ class CarbonScanRDD[T: ClassTag](
           // group as per primary key columns ranges.
           val groups = new ArrayBuffer[ArrayBuffer[CarbonInputSplit]]()
           splits.asScala.foreach{s =>
-            groups.find{f =>
+            var find = false
+            groups.foreach {f =>
               f.find(_.getSplitMerger.canBeMerged(
                 s.asInstanceOf[CarbonInputSplit].getSplitMerger)) match {
                 case Some(split) =>
                   f += s.asInstanceOf[CarbonInputSplit]
-                  true
+                  find = true
                 case _ => false
               }
-            } match {
-              case Some(p) =>
-              case _ =>
-                val splits = new ArrayBuffer[CarbonInputSplit]()
-                splits += s.asInstanceOf[CarbonInputSplit]
-                groups += splits
+            }
+            if (!find) {
+              val splits = new ArrayBuffer[CarbonInputSplit]()
+              splits += s.asInstanceOf[CarbonInputSplit]
+              groups += splits
             }
           }
+          val mergeGroups = new ArrayBuffer[mutable.HashSet[CarbonInputSplit]]()
+          groups.foreach{ g =>
+            mergeGroups.find(s => s.exists(e => g.exists(_.equals(e)))) match {
+              case Some(p) =>
+                p ++= g
+              case _ =>
+                val set = new mutable.HashSet[CarbonInputSplit]()
+                set ++= g
+                mergeGroups += set
+            }
+          }
+
           val regroups = new ArrayBuffer[ArrayBuffer[CarbonInputSplit]]()
           // Seperate the rowformats and columnar farmat groups.
-          groups.foreach{ g =>
+          mergeGroups.foreach{ g =>
             if (!g.exists(_.getVersion == ColumnarFormatVersion.R1) && g.size > 1) {
               g.foreach{ s =>
                 val splits = new ArrayBuffer[CarbonInputSplit]()
@@ -262,7 +274,7 @@ class CarbonScanRDD[T: ClassTag](
                 regroups += splits
               }
             } else {
-              regroups += g
+              regroups += new ArrayBuffer[CarbonInputSplit]() ++ g
             }
           }
           val logStr = new mutable.StringBuilder()

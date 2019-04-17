@@ -1,12 +1,21 @@
 package org.apache.hadoop.hbase.coprocessor;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.sdk.file.Field;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
+import static org.apache.carbondata.core.keygenerator.directdictionary.timestamp.DateDirectDictionaryGenerator.MILLIS_PER_DAY;
+
 public class HbaseDataTypeConverter implements DataTypeConverter {
+
+  private static SimpleDateFormat dateFormat = new SimpleDateFormat(CarbonCommonConstants.CARBON_DATE_DEFAULT_FORMAT);
+  private static SimpleDateFormat timeFormat = new SimpleDateFormat(CarbonCommonConstants.CARBON_TIMESTAMP_DEFAULT_FORMAT);
 
   @Override
   public void convertRowKey(byte[] key, int offset, int len, int[] mapping, Field[] fields,
@@ -43,10 +52,10 @@ public class HbaseDataTypeConverter implements DataTypeConverter {
           row[mapping[i]] = String.valueOf(Bytes.toBigDecimal(key, offset, decLen));
           offset += decLen;
         } else if (id == DataTypes.DATE.getId()) {
-          row[mapping[i]] = String.valueOf(Bytes.toInt(key, offset, 4));
+          row[mapping[i]] = dateFormat.format(new Date( Bytes.toInt(key, offset, 4)*MILLIS_PER_DAY));
           offset += 4;
         } else if (id == DataTypes.TIMESTAMP.getId()) {
-          row[mapping[i]] = String.valueOf(Bytes.toLong(key, offset, 8));
+          row[mapping[i]] = timeFormat.format(new Date( Bytes.toLong(key, offset, 8)));
           offset += 8;
         } else if (id == DataTypes.VARCHAR.getId()) {
           int strLen = Bytes.toInt(key, offset, 4);
@@ -83,9 +92,9 @@ public class HbaseDataTypeConverter implements DataTypeConverter {
     } else if (DataTypes.isDecimal(dataType)) {
       return String.valueOf(Bytes.toBigDecimal(value, offset, len));
     } else if (id == DataTypes.DATE.getId()) {
-      return String.valueOf(Bytes.toInt(value, offset, len));
+      return dateFormat.format(new Date( Bytes.toInt(value, offset, len) * MILLIS_PER_DAY));
     } else if (id == DataTypes.TIMESTAMP.getId()) {
-      return String.valueOf(Bytes.toLong(value, offset, len));
+      return timeFormat.format(new Date( Bytes.toLong(value, offset, len)));
     } else if (id == DataTypes.VARCHAR.getId()) {
       return String.valueOf(Bytes.toString(value, offset, len));
     } else if (id == DataTypes.FLOAT.getId()) {

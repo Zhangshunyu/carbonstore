@@ -36,7 +36,7 @@ public class RangeColumnSplitMerger {
   public boolean canBeMerged(RangeColumnSplitMerger other) {
     boolean selected = false;
     if (primaryColIndexes.length > 0) {
-      for (int i = 0; i < primaryColIndexes.length; i++) {
+      for (int i = 0; i < 1; i++) {
         int minToMaxCompare = ByteUtil.UnsafeComparer.INSTANCE
             .compareTo(minValues[primaryColIndexes[i]], other.maxValues[primaryColIndexes[i]]);
 
@@ -52,6 +52,9 @@ public class RangeColumnSplitMerger {
           selected = true;
         } else {
           selected = false;
+        }
+        if (selected) {
+          break;
         }
       }
     }
