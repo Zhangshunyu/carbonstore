@@ -41,17 +41,19 @@ public class ExtendedBlocklet extends Blocklet {
   }
 
   public ExtendedBlocklet(String filePath, String blockletId,
-      boolean compareBlockletIdForObjectMatching, ColumnarFormatVersion version) {
+      boolean compareBlockletIdForObjectMatching, ColumnarFormatVersion version, RangeColumnSplitMerger merger) {
     super(filePath, blockletId, compareBlockletIdForObjectMatching);
     try {
-      this.inputSplit = CarbonInputSplit.from(null, blockletId, filePath, 0, -1, version, null);
+      this.inputSplit =
+          CarbonInputSplit.from(null, blockletId, filePath, 0, -1, version, null, merger);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  public ExtendedBlocklet(String filePath, String blockletId, ColumnarFormatVersion version) {
-    this(filePath, blockletId, true, version);
+  public ExtendedBlocklet(String filePath, String blockletId, ColumnarFormatVersion version,
+      RangeColumnSplitMerger merger) {
+    this(filePath, blockletId, true, version, merger);
   }
 
   public BlockletDetailInfo getDetailInfo() {
@@ -106,11 +108,7 @@ public class ExtendedBlocklet extends Blocklet {
   }
 
   public RangeColumnSplitMerger getSplitMerger() {
-    return splitMerger;
-  }
-
-  public void setSplitMerger(RangeColumnSplitMerger splitMerger) {
-    this.splitMerger = splitMerger;
+    return inputSplit.getSplitMerger();
   }
 
   @Override public boolean equals(Object o) {
@@ -157,8 +155,6 @@ public class ExtendedBlocklet extends Blocklet {
   public void setColumnSchema(List<ColumnSchema> columnSchema) {
     this.inputSplit.setColumnSchema(columnSchema);
   }
-
-
 
   @Override public void write(DataOutput out) throws IOException {
     super.write(out);

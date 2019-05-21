@@ -327,7 +327,6 @@ public class CarbonTableInputFormat<T> extends CarbonInputFormat<T> {
                 new RangeColumnSplitMerger(primaryKeyColIndexes,
                     streamFile.getMinMaxIndex().getMinValues(),
                     streamFile.getMinMaxIndex().getMaxValues());
-            splits.add(
             splits.add(makeSplit(streamFile.getSegmentNo(), streamFile.getFilePath(),
                 length - bytesRemaining, splitSize, blkLocations[blkIndex].getHosts(),
                     blkLocations[blkIndex].getCachedHosts(), FileFormat.ROW_V1, merger));

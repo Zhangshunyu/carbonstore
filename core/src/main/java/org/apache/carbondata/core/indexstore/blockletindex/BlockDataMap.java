@@ -973,13 +973,12 @@ public class BlockDataMap extends CoarseGrainDataMap
       boolean useMinMaxForPruning, byte[][] maxValues, byte[][] minValues) {
     short versionNumber = row.getShort(VERSION_INDEX);
     ExtendedBlocklet blocklet = new ExtendedBlocklet(fileName, blockletId + "", false,
-        ColumnarFormatVersion.valueOf(versionNumber));
+        ColumnarFormatVersion.valueOf(versionNumber),
+        new RangeColumnSplitMerger(getPrimaryKeyIndexes(), minValues, maxValues));
     blocklet.setDataMapRow(row);
     blocklet.setColumnCardinality(getColumnCardinality());
     blocklet.setLegacyStore(isLegacyStore);
     blocklet.setUseMinMaxForPruning(useMinMaxForPruning);
-    blocklet
-        .setSplitMerger(new RangeColumnSplitMerger(getPrimaryKeyIndexes(), minValues, maxValues));
     return blocklet;
   }
 

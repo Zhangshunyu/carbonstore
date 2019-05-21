@@ -590,10 +590,12 @@ public class CarbonCompactionUtil {
           minMaxVals[0] = ByteUtil.toDouble(minVal, 0, minVal.length);
           minMaxVals[1] = ByteUtil.toDouble(maxVal, 0, maxVal.length);
         } else {
-          minMaxVals[0] =
-              DataTypeUtil.getDataBasedOnDataTypeForNoDictionaryColumn(minVal, dataType, true);
-          minMaxVals[1] =
-              DataTypeUtil.getDataBasedOnDataTypeForNoDictionaryColumn(maxVal, dataType, true);
+          minMaxVals[0] = DataTypeUtil
+              .getDataBasedOnDataTypeForNoDictionaryColumn(minVal, dataType, true,
+                  DataTypeUtil.getDataTypeConverter());
+          minMaxVals[1] = DataTypeUtil
+              .getDataBasedOnDataTypeForNoDictionaryColumn(maxVal, dataType, true,
+                  DataTypeUtil.getDataTypeConverter());
         }
       }
 

@@ -454,8 +454,6 @@ public class QueryModel {
     queryModel.tableBlockInfos = new ArrayList<>(tableBlockInfos);
     queryModel.statisticsRecorder = statisticsRecorder;
     queryModel.vectorReader = vectorReader;
-    queryModel.invalidSegmentIds = invalidSegmentIds;
-    queryModel.invalidSegmentBlockIdMap = invalidSegmentBlockIdMap;
     queryModel.isFilterDimensions = isFilterDimensions;
     queryModel.isFilterMeasures = isFilterMeasures;
     queryModel.readPageByPage = readPageByPage;

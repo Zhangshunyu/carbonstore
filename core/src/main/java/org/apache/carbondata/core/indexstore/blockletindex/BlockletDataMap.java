@@ -263,7 +263,7 @@ public class BlockletDataMap extends BlockDataMap implements Serializable {
     }
     short versionNumber = row.getShort(VERSION_INDEX);
     ExtendedBlocklet blocklet = new ExtendedBlocklet(fileName, blockletId + "",
-        ColumnarFormatVersion.valueOf(versionNumber));
+        ColumnarFormatVersion.valueOf(versionNumber), null);
     blocklet.setColumnSchema(getColumnSchema());
     blocklet.setUseMinMaxForPruning(useMinMaxForPruning);
     blocklet.setIsBlockCache(false);

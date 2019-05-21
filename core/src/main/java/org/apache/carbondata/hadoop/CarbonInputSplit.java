@@ -150,9 +150,8 @@ public class CarbonInputSplit extends FileSplit
 
   public CarbonInputSplit(String segmentId, String blockletId, String filePath, long start,
       long length, String[] locations, int numberOfBlocklets, ColumnarFormatVersion version,
-      String[] deleteDeltaFiles, RangeColumnSplitMerger merger) {
-    this(segmentId, blockletId, filePath, start, length, version, deleteDeltaFiles, null, null,
-        merger);
+      String[] deleteDeltaFiles) {
+    this(segmentId, blockletId, filePath, start, length, version, deleteDeltaFiles, null, null);
     this.location = locations;
     this.numberOfBlocklets = numberOfBlocklets;
   }

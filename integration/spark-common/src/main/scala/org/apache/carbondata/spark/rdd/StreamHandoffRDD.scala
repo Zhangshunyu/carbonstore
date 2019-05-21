@@ -400,7 +400,7 @@ object StreamHandoffRDD {
       carbonInputFormat.getBlockRowCount(
         job,
         table,
-        null)
+        null, true)
     CarbonScalaUtil.checkAndUpdateStatusFiles(d,
       blockMappingVO, table,
       carbonLoadModel.getFactTimeStamp.toString, null, false)
