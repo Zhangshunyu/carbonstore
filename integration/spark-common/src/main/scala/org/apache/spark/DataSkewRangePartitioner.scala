@@ -150,7 +150,7 @@ class DataSkewRangePartitioner[K: Ordering : ClassTag, V](
       candidates: ArrayBuffer[(K, Float)],
       partitions: Int,
       withoutSkew: Boolean): (Array[K], Int, Array[Int], Array[Int]) = {
-    val ordered = candidates.sortBy(_._1)
+    val ordered = candidates.sortBy(_._1)(ordering)
     val numCandidates = ordered.size
     val sumWeights = ordered.map(_._2.toDouble).sum
     val step = sumWeights / partitions

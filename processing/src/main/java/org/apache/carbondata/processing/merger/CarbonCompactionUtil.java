@@ -479,124 +479,136 @@ public class CarbonCompactionUtil {
 
   // This method will return an Expression(And/Or) for each range based on the datatype
   // This Expression will be passed to each task as a Filter Query to get the data
-  public static Expression getFilterExpressionForRange(CarbonColumn rangeColumn, Object minVal,
-      Object maxVal, DataType dataType) {
-    Expression finalExpr;
+  public static Expression getFilterExpressionForRange(CarbonColumn[] rangeColumn, Object[] minVal,
+      Object[] maxVal, DataType[] dataType) {
+    Expression finalExpr = null;
     Expression exp1, exp2;
-    String colName = rangeColumn.getColName();
 
-    // In case of null values create an OrFilter expression and
-    // for other cases create and AndFilter Expression
-    if (null == minVal) {
-      // First task
-      exp1 = new EqualToExpression(new ColumnExpression(colName, dataType),
-          new LiteralExpression(null, dataType), true);
-      if (null == maxVal) {
-        // If both the min/max values are null, that means, if data contains only
-        // null value then pass only one expression as a filter expression
-        finalExpr = exp1;
-      } else {
-        exp2 = new LessThanEqualToExpression(new ColumnExpression(colName, dataType),
-            new LiteralExpression(maxVal, dataType));
-        if (rangeColumn.hasEncoding(Encoding.DICTIONARY)) {
-          exp2.setAlreadyResolved(true);
+    for (int i = 0; i < rangeColumn.length; i++) {
+      Expression curExpr;
+      // In case of null values create an OrFilter expression and
+      // for other cases create and AndFilter Expression
+      if (null == minVal || minVal[i] == null) {
+        // First task
+        exp1 = new EqualToExpression(new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
+            new LiteralExpression(null, dataType[i]), true);
+        if (null == maxVal || maxVal[i] == null) {
+          // If both the min/max values are null, that means, if data contains only
+          // null value then pass only one expression as a filter expression
+          curExpr = exp1;
+        } else {
+          exp2 = new LessThanEqualToExpression(new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
+              new LiteralExpression(maxVal[i], dataType[i]));
+          if (rangeColumn[i].hasEncoding(Encoding.DICTIONARY)) {
+            exp2.setAlreadyResolved(true);
+          }
+          curExpr = new OrExpression(exp1, exp2);
         }
-        finalExpr = new OrExpression(exp1, exp2);
+      } else if (null == maxVal || maxVal[i] == null) {
+        // Last task
+        curExpr = new GreaterThanExpression(new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
+            new LiteralExpression(minVal[i], dataType[i]));
+        if (rangeColumn[i].hasEncoding(Encoding.DICTIONARY)) {
+          curExpr.setAlreadyResolved(true);
+        }
+      } else {
+        // Remaining all intermediate ranges
+        exp1 = new GreaterThanExpression(new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
+            new LiteralExpression(minVal[i], dataType[i]));
+        exp2 = new LessThanEqualToExpression(new ColumnExpression(rangeColumn[i].getColName(), dataType[i]),
+            new LiteralExpression(maxVal[i], dataType[i]));
+        if (rangeColumn[i].hasEncoding(Encoding.DICTIONARY)) {
+          exp2.setAlreadyResolved(true);
+          exp1.setAlreadyResolved(true);
+        }
+        curExpr = new AndExpression(exp1, exp2);
       }
-    } else if (null == maxVal) {
-      // Last task
-      finalExpr = new GreaterThanExpression(new ColumnExpression(colName, dataType),
-          new LiteralExpression(minVal, dataType));
-      if (rangeColumn.hasEncoding(Encoding.DICTIONARY)) {
-        finalExpr.setAlreadyResolved(true);
+      if (finalExpr == null) {
+        finalExpr = curExpr;
       }
-    } else {
-      // Remaining all intermediate ranges
-      exp1 = new GreaterThanExpression(new ColumnExpression(colName, dataType),
-          new LiteralExpression(minVal, dataType));
-      exp2 = new LessThanEqualToExpression(new ColumnExpression(colName, dataType),
-          new LiteralExpression(maxVal, dataType));
-      if (rangeColumn.hasEncoding(Encoding.DICTIONARY)) {
-        exp2.setAlreadyResolved(true);
-        exp1.setAlreadyResolved(true);
-      }
-      finalExpr = new AndExpression(exp1, exp2);
+//      else {
+//        finalExpr = new AndExpression(finalExpr, curExpr);
+//      }
     }
+
     return finalExpr;
   }
 
-  public static Object[] getOverallMinMax(CarbonInputSplit[] carbonInputSplits,
-      CarbonColumn rangeCol, boolean isSortCol) {
-    byte[] minVal = null;
-    byte[] maxVal = null;
-    int dictMinVal = Integer.MAX_VALUE;
-    int dictMaxVal = Integer.MIN_VALUE;
+  public static Object[][] getOverallMinMax(CarbonInputSplit[] carbonInputSplits,
+      CarbonColumn[] rangeCol, boolean isSortCol) {
+    Object[] minVal = null;
+    Object[] maxVal = null;
     int idx = -1;
-    DataType dataType = rangeCol.getDataType();
-    Object[] minMaxVals = new Object[2];
-    boolean isDictEncode = rangeCol.hasEncoding(Encoding.DICTIONARY);
+    // TODO handle multiple range columns
+    DataType[] dataType = new DataType[rangeCol.length];
+    boolean[] isDictEncode = new boolean[rangeCol.length];rangeCol[0].hasEncoding(Encoding.DICTIONARY);
+    for (int i = 0; i < rangeCol.length; i++) {
+      dataType[i] = rangeCol[i].getDataType();
+      isDictEncode[i] = rangeCol[i].hasEncoding(Encoding.DICTIONARY);
+    }
+
+    Object[][] minMaxVals = new Object[2][rangeCol.length];
     try {
       for (CarbonInputSplit split : carbonInputSplits) {
         DataFileFooter dataFileFooter = null;
         dataFileFooter =
             CarbonUtil.readMetadataFile(CarbonInputSplit.getTableBlockInfo(split), true);
-
-        if (-1 == idx) {
+        Object[] minValTemp = new Object[rangeCol.length];
+        Object[] maxValTemp = new Object[rangeCol.length];
+        for (int k = 0; k < rangeCol.length; k++) {
           List<ColumnSchema> allColumns = dataFileFooter.getColumnInTable();
           for (int i = 0; i < allColumns.size(); i++) {
-            if (allColumns.get(i).getColumnName().equalsIgnoreCase(rangeCol.getColName())) {
+            if (allColumns.get(i).getColumnName().equalsIgnoreCase(rangeCol[k].getColName())) {
               idx = i;
               break;
             }
           }
-        }
-        if (isDictEncode) {
-          byte[] tempMin = dataFileFooter.getBlockletIndex().getMinMaxIndex().getMinValues()[idx];
-          int tempMinVal = CarbonUtil.getSurrogateInternal(tempMin, 0, tempMin.length);
-          byte[] tempMax = dataFileFooter.getBlockletIndex().getMinMaxIndex().getMaxValues()[idx];
-          int tempMaxVal = CarbonUtil.getSurrogateInternal(tempMax, 0, tempMax.length);
-          if (dictMinVal > tempMinVal) {
-            dictMinVal = tempMinVal;
-          }
-          if (dictMaxVal < tempMaxVal) {
-            dictMaxVal = tempMaxVal;
-          }
-        } else {
-          if (null == minVal) {
-            minVal = dataFileFooter.getBlockletIndex().getMinMaxIndex().getMinValues()[idx];
-            maxVal = dataFileFooter.getBlockletIndex().getMinMaxIndex().getMaxValues()[idx];
-          } else {
+
+          if (isDictEncode[k]) {
             byte[] tempMin = dataFileFooter.getBlockletIndex().getMinMaxIndex().getMinValues()[idx];
+            minValTemp[k] = CarbonUtil.getSurrogateInternal(tempMin, 0, tempMin.length);
             byte[] tempMax = dataFileFooter.getBlockletIndex().getMinMaxIndex().getMaxValues()[idx];
-            if (ByteUtil.compare(tempMin, minVal) <= 0) {
-              minVal = tempMin;
-            }
-            if (ByteUtil.compare(tempMax, maxVal) >= 0) {
-              maxVal = tempMax;
-            }
+            maxValTemp[k] = CarbonUtil.getSurrogateInternal(tempMax, 0, tempMax.length);
+          } else {
+            minValTemp[k] = dataFileFooter.getBlockletIndex().getMinMaxIndex().getMinValues()[idx];
+            maxValTemp[k] = dataFileFooter.getBlockletIndex().getMinMaxIndex().getMaxValues()[idx];
+          }
+        }
+        if (null == minVal) {
+          minVal = minValTemp;
+          maxVal = maxValTemp;
+        } else {
+          if (compare(minValTemp, minVal, isDictEncode) <= 0) {
+            minVal = minValTemp;
+          }
+          if (compare(maxValTemp, maxVal, isDictEncode) >= 0) {
+            maxVal = maxValTemp;
           }
         }
       }
 
-      // Based on how min/max value is stored in the footer we change the data
-      if (isDictEncode) {
-        minMaxVals[0] = dictMinVal;
-        minMaxVals[1] = dictMaxVal;
-      } else {
-        if (!isSortCol && (dataType == DataTypes.INT || dataType == DataTypes.LONG)) {
-          minMaxVals[0] = ByteUtil.toLong(minVal, 0, minVal.length);
-          minMaxVals[1] = ByteUtil.toLong(maxVal, 0, maxVal.length);
-        } else if (dataType == DataTypes.DOUBLE) {
-          minMaxVals[0] = ByteUtil.toDouble(minVal, 0, minVal.length);
-          minMaxVals[1] = ByteUtil.toDouble(maxVal, 0, maxVal.length);
+      for (int i = 0; i < isDictEncode.length; i++) {
+        // Based on how min/max value is stored in the footer we change the data
+        if (isDictEncode[i]) {
+          minMaxVals[0][i] = minVal[i];
+          minMaxVals[1][i] = maxVal[i];
         } else {
-          minMaxVals[0] = DataTypeUtil
-              .getDataBasedOnDataTypeForNoDictionaryColumn(minVal, dataType, true,
-                  DataTypeUtil.getDataTypeConverter());
-          minMaxVals[1] = DataTypeUtil
-              .getDataBasedOnDataTypeForNoDictionaryColumn(maxVal, dataType, true,
-                  DataTypeUtil.getDataTypeConverter());
+          if (!isSortCol && (dataType[i] == DataTypes.INT || dataType[i] == DataTypes.LONG)) {
+            minMaxVals[0][i] = ByteUtil.toLong((byte[]) minVal[i], 0, ((byte[])minVal[i]).length);
+            minMaxVals[1][i] = ByteUtil.toLong((byte[]) maxVal[i], 0, ((byte[])maxVal[i]).length);
+          } else if (dataType[i] == DataTypes.DOUBLE) {
+            minMaxVals[0][i] = ByteUtil.toDouble((byte[]) minVal[i], 0, ((byte[])minVal[i]).length);
+            minMaxVals[1][i] = ByteUtil.toDouble((byte[]) maxVal[i], 0, ((byte[])maxVal[i]).length);
+          } else {
+            minMaxVals[0][i] = DataTypeUtil
+                .getDataBasedOnDataTypeForNoDictionaryColumn((byte[]) minVal[i], dataType[i], true,
+                    DataTypeUtil.getDataTypeConverter());
+            minMaxVals[1][i] = DataTypeUtil
+                .getDataBasedOnDataTypeForNoDictionaryColumn((byte[]) maxVal[i], dataType[i], true,
+                    DataTypeUtil.getDataTypeConverter());
+          }
         }
+
       }
 
     } catch (IOException e) {
@@ -612,6 +624,24 @@ public class CarbonCompactionUtil {
       taskIdSet.add(taskId);
     }
     return taskIdSet.size();
+  }
+
+  private static int compare(Object[] left, Object[] right, boolean[] isDictEncode) {
+    int compare = 0;
+    for (int i = 0; i < isDictEncode.length; i++) {
+      if (isDictEncode[i]) {
+        compare = Integer.compare((Integer) left[i], (Integer) right[i]);
+        if (compare != 0) {
+          return compare;
+        }
+      } else {
+        compare = ByteUtil.compare((byte[]) left[i], (byte[]) right[i]);
+        if (compare != 0) {
+          return compare;
+        }
+      }
+    }
+    return compare;
   }
 
   /**

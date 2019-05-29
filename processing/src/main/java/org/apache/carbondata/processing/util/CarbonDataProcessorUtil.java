@@ -418,6 +418,25 @@ public final class CarbonDataProcessorUtil {
   }
 
   /**
+   * Get the no dictionary data types on the table
+   *
+   * @param carbonTable
+   * @return
+   */
+  public static DataType[] getNoDictDataTypesOfPrimaryKey(CarbonTable carbonTable) {
+    List<CarbonDimension> dimensions =
+        carbonTable.getDimensionByTableName(carbonTable.getTableName());
+    List<DataType> type = new ArrayList<>();
+    for (int i = 0; i < dimensions.size(); i++) {
+      if (dimensions.get(i).getColumnSchema().isPrimaryKeyColumn()
+          && !dimensions.get(i).hasEncoding(Encoding.DICTIONARY)) {
+        type.add(dimensions.get(i).getDataType());
+      }
+    }
+    return type.toArray(new DataType[type.size()]);
+  }
+
+  /**
    * Get the no dictionary sort column mapping of the table
    *
    * @param carbonTable
@@ -429,6 +448,33 @@ public final class CarbonDataProcessorUtil {
     List<Boolean> noDicSortColMap = new ArrayList<>();
     for (int i = 0; i < dimensions.size(); i++) {
       if (dimensions.get(i).isSortColumn()) {
+        if (!dimensions.get(i).hasEncoding(Encoding.DICTIONARY)) {
+          noDicSortColMap.add(true);
+        } else {
+          noDicSortColMap.add(false);
+        }
+      }
+    }
+    Boolean[] mapping = noDicSortColMap.toArray(new Boolean[noDicSortColMap.size()]);
+    boolean[] noDicSortColMapping = new boolean[mapping.length];
+    for (int i = 0; i < mapping.length; i++) {
+      noDicSortColMapping[i] = mapping[i].booleanValue();
+    }
+    return noDicSortColMapping;
+  }
+
+  /**
+   * Get the no dictionary sort column mapping of the table
+   *
+   * @param carbonTable
+   * @return
+   */
+  public static boolean[] getNoDictPrimaryColMapping(CarbonTable carbonTable) {
+    List<CarbonDimension> dimensions =
+        carbonTable.getDimensionByTableName(carbonTable.getTableName());
+    List<Boolean> noDicSortColMap = new ArrayList<>();
+    for (int i = 0; i < dimensions.size(); i++) {
+      if (dimensions.get(i).getColumnSchema().isPrimaryKeyColumn()) {
         if (!dimensions.get(i).hasEncoding(Encoding.DICTIONARY)) {
           noDicSortColMap.add(true);
         } else {

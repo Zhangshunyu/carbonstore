@@ -19,7 +19,7 @@ package org.apache.carbondata.spark.rdd
 
 import java.io.IOException
 import java.util
-import java.util.{Collections, List, Map}
+import java.util.{Collections, Comparator, List, Map}
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.mutable
@@ -46,6 +46,7 @@ import org.apache.carbondata.core.indexstore.PartitionSpec
 import org.apache.carbondata.core.metadata.{AbsoluteTableIdentifier, CarbonTableIdentifier}
 import org.apache.carbondata.core.metadata.blocklet.DataFileFooter
 import org.apache.carbondata.core.metadata.datatype.{DataType, DataTypes}
+import org.apache.carbondata.core.metadata.encoder.Encoding
 import org.apache.carbondata.core.metadata.schema.table.CarbonTable
 import org.apache.carbondata.core.metadata.schema.table.column.{CarbonColumn, CarbonDimension, ColumnSchema}
 import org.apache.carbondata.core.mutate.UpdateVO
@@ -61,6 +62,7 @@ import org.apache.carbondata.hadoop.util.{CarbonInputFormatUtil, CarbonInputSpli
 import org.apache.carbondata.processing.loading.TableProcessingOperations
 import org.apache.carbondata.processing.loading.model.CarbonLoadModel
 import org.apache.carbondata.processing.merger._
+import org.apache.carbondata.processing.sort.sortdata.{NewRowComparator, NewRowComparatorForNormalDims}
 import org.apache.carbondata.processing.util.{CarbonDataProcessorUtil, CarbonLoaderUtil}
 import org.apache.carbondata.spark.MergeResult
 import org.apache.carbondata.spark.load.{ByteArrayOrdering, DataLoadProcessBuilderOnSpark, PrimtiveOrdering, StringOrdering}
@@ -296,18 +298,23 @@ class CarbonMergerRDD[K, V](
       tablePath, new CarbonTableIdentifier(databaseName, factTableName, tableId)
     )
     val carbonTable = carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable
-    var rangeColumn: CarbonColumn = null
+    var rangeColumn: Array[CarbonColumn] = null
     if (!carbonLoadModel.getCarbonDataLoadSchema.getCarbonTable.isHivePartitionTable) {
       // If the table is not a partition table then only we go for range column compaction flow
-      rangeColumn = carbonTable.getRangeColumn
+      if (carbonTable.getRangeColumn != null) {
+        rangeColumn = Array(carbonTable.getRangeColumn)
+      } else if (carbonTable.getTableInfo.getFactTable.getListOfColumns.asScala.exists(_.isPrimaryKeyColumn)) {
+        rangeColumn = carbonTable.getAllDimensions.asScala.
+          filter(_.getColumnSchema.isPrimaryKeyColumn).toArray
+      }
     }
-    val dataType: DataType = if (null != rangeColumn) {
-      rangeColumn.getDataType
+    val dataType: Array[DataType] = if (null != rangeColumn) {
+      rangeColumn.map(_.getDataType)
     } else {
       null
     }
-    val isRangeColSortCol = rangeColumn != null && rangeColumn.isDimension &&
-                            rangeColumn.asInstanceOf[CarbonDimension].isSortColumn
+    val isRangeColSortCol = rangeColumn != null && rangeColumn.exists(r => r.isDimension &&
+                            r.asInstanceOf[CarbonDimension].isSortColumn)
     val updateStatusManager: SegmentUpdateStatusManager = new SegmentUpdateStatusManager(
       carbonTable)
     val jobConf: JobConf = new JobConf(getConf)
@@ -395,7 +402,7 @@ class CarbonMergerRDD[K, V](
     }
     totalTaskCount = totalTaskCount / carbonMergerMapping.validSegments.size
     val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
-    var allRanges: Array[Object] = new Array[Object](0)
+    var allRanges: Array[Array[Object]] = new Array[Array[Object]](0)
     var singleRange = false
     if (rangeColumn != null) {
       // Calculate the number of ranges to be made, min 2 ranges/tasks to be made in any case
@@ -405,8 +412,7 @@ class CarbonMergerRDD[K, V](
         .max(CarbonCommonConstants.NUM_CORES_DEFAULT_VAL.toInt,
           Math.min(totalTaskCount, DataLoadProcessBuilderOnSpark
             .getNumPatitionsBasedOnSize(totalSize, carbonTable, carbonLoadModel, true)))
-      val colName = rangeColumn.getColName
-      LOGGER.info(s"Compacting on range column: $colName")
+      LOGGER.info(s"Compacting on range column: ${rangeColumn.map(_.getColName).mkString(",")}")
       allRanges = getRangesFromRDD(rangeColumn,
         carbonTable,
         numOfPartitions,
@@ -418,7 +424,7 @@ class CarbonMergerRDD[K, V](
         allRanges = CarbonCompactionUtil.getOverallMinMax(carbonInputSplits.toList.toArray,
           rangeColumn,
           isRangeColSortCol)
-        if(allRanges(0) == allRanges(1)) {
+        if(allRanges(0) sameElements  allRanges(1)) {
           // This will be true only if data has single values throughout
           singleRange = true
         }
@@ -444,12 +450,11 @@ class CarbonMergerRDD[K, V](
     val columnToCardinalityMap = new util.HashMap[java.lang.String, Integer]()
     val partitionTaskMap = new util.HashMap[PartitionSpec, String]()
     val counter = new AtomicInteger()
-    var indexOfRangeColumn = -1
     var taskIdCount = 0
     // As we are already handling null values in the filter expression separately so we
     // can remove the null from the ranges we get, else it may lead to duplicate data
     val newRanges = allRanges.filter { range =>
-      range != null
+      range != null && !range.forall(_ == null)
     }
     val noOfSplitsPerTask = Math.ceil(carbonInputSplits.size / defaultParallelism)
     var taskCount = 0
@@ -520,20 +525,12 @@ class CarbonMergerRDD[K, V](
           if (null == expressionMapForRangeCol) {
             expressionMapForRangeCol = new util.HashMap[Integer, Expression]()
           }
-          if (-1 == indexOfRangeColumn) {
-            val allColumns = dataFileFooter.getColumnInTable
-            for (i <- 0 until allColumns.size()) {
-              if (allColumns.get(i).getColumnName.equalsIgnoreCase(rangeColumn.getColName)) {
-                indexOfRangeColumn = i
-              }
-            }
-          }
           // Create ranges and add splits to the tasks
           for (i <- 0 until (newRanges.size + 1)) {
             if (null == expressionMapForRangeCol.get(i)) {
               // Creating FilterExpression for the range column
-              var minVal: Object = null
-              var maxVal: Object = null
+              var minVal: Array[Object] = null
+              var maxVal: Array[Object] = null
               // For first task we will create an Or Filter and also accomodate null values
               // For last task we will take as GreaterThan Expression of last value
               if (i != 0) {
@@ -639,15 +636,15 @@ class CarbonMergerRDD[K, V](
     result.toArray(new Array[Partition](result.size))
   }
 
-  private def getRangesFromRDD(rangeColumn: CarbonColumn,
+  private def getRangesFromRDD(rangeColumn: Array[CarbonColumn],
       carbonTable: CarbonTable,
       defaultParallelism: Int,
       allSplits: java.util.ArrayList[InputSplit],
-      dataType: DataType): Array[Object] = {
+      dataType: Array[DataType]): Array[Array[Object]] = {
     val inputMetricsStats: CarbonInputMetrics = new CarbonInputMetrics
     val projection = new CarbonProjection
-    projection.addColumn(rangeColumn.getColName)
-    val scanRdd = new CarbonScanRDD[InternalRow](
+    rangeColumn.map(col => projection.addColumn(col.getColName))
+    val scanRdd = new CarbonScanRDD[Array[Object]](
       ss,
       projection,
       null,
@@ -657,13 +654,42 @@ class CarbonMergerRDD[K, V](
       inputMetricsStats,
       partitionNames = null,
       splits = allSplits)
-    val objectOrdering: Ordering[Object] = createOrderingForColumn(rangeColumn)
-    val sparkDataType = Util.convertCarbonToSparkDataType(dataType)
+    if (rangeColumn.length > 1) {
+      getRangesOfPrimaryKeyFromRDD(scanRdd, carbonTable, Math.max(defaultParallelism, allSplits.size()))
+    } else {
+      val objectOrdering: Ordering[Object] = createOrderingForColumn(rangeColumn(0))
+      val sparkDataType = Util.convertCarbonToSparkDataType(dataType(0))
+      // Change string type to support all types
+      val sampleRdd = scanRdd.map(row => (row(0), null))
+      val value = new DataSkewRangePartitioner(
+        defaultParallelism, sampleRdd, true)(objectOrdering, classTag[Object])
+      value.rangeBounds.map(Array(_))
+    }
+  }
+
+  private def getRangesOfPrimaryKeyFromRDD(scanRdd: CarbonScanRDD[Array[Object]],
+      carbonTable: CarbonTable, defaultParallelism: Int): Array[Array[Object]] = {
+    val noDictCount =
+      carbonTable.getAllDimensions.asScala.count(!_.hasEncoding(Encoding.DICTIONARY))
+    val rowComparator: Comparator[Array[AnyRef]] =
+      if (noDictCount > 0) {
+        new NewRowComparator(CarbonDataProcessorUtil.getNoDictPrimaryColMapping(carbonTable),
+          CarbonDataProcessorUtil.getNoDictDataTypesOfPrimaryKey(carbonTable))
+      } else {
+        new NewRowComparatorForNormalDims(carbonTable.getAllDimensions.size())
+      }
+    object RowOrdering extends Ordering[Array[AnyRef]] {
+      def compare(rowA: Array[AnyRef], rowB: Array[AnyRef]): Int = {
+        rowComparator.compare(rowA, rowB)
+      }
+    }
+
+    val sparkDataTypes = carbonTable.getTableInfo.getFactTable.getListOfColumns.asScala.filter(
+      _.isPrimaryKeyColumn).map(col => Util.convertCarbonToSparkDataType(col.getDataType))
     // Change string type to support all types
-    val sampleRdd = scanRdd
-      .map(row => (row.get(0, sparkDataType), null))
+    val sampleRdd = scanRdd.map(row => (row, null))
     val value = new DataSkewRangePartitioner(
-      defaultParallelism, sampleRdd, true)(objectOrdering, classTag[Object])
+      defaultParallelism, sampleRdd, true)(RowOrdering, classTag[Array[AnyRef]])
     value.rangeBounds
   }
 
