@@ -124,8 +124,7 @@ public class RawResultIterator extends CarbonIterator<Object[]> {
     }
   }
 
-  private List<Object[]> fetchRows() throws Exception {
-    List<Object[]> converted = new ArrayList<>();
+  private List<Object[]> fetchRows(List<Object[]> converted) throws Exception {
     while (detailRawQueryResultIterator.hasNext()) {
       for (Object[] r : detailRawQueryResultIterator.next().getRows()) {
         converted.add(convertRow(r));
@@ -134,6 +133,7 @@ public class RawResultIterator extends CarbonIterator<Object[]> {
         break;
       }
     }
+    return converted;
   }
 
   private void fillDataFromPrefetch() {
